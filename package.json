@@ -1,0 +1,26 @@
+{
+  "name": "weddings-103",
+  "version": "1.0.0",
+  "description": "Digital wedding invitation, RSVP, and door check-in platform.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "db:migrate": "node db/migrate.js",
+    "db:seed-admin": "node db/seed-admin.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "connect-pg-simple": "^9.0.1",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "jsqr": "^1.4.0",
+    "multer": "^1.4.5-lts.1",
+    "nanoid": "^3.3.7",
+    "nodemailer": "^9.1.1",
+    "pg": "^8.12.0",
+    "qrcode": "^1.5.4"
+  }
+}

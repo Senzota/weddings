@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Weddings — Admin</title>
+</head>
+<body>
+  <h1>Your Weddings</h1>
+  <p><a href="/admin/events/new">+ Add Wedding</a> | <form method="POST" action="/admin/logout" style="display:inline"><button type="submit">Log out</button></form></p>
+  <ul>
+    <% events.forEach(function(event) { %>
+      <li>
+        <a href="/admin/events/<%= event.id %>">
+          <%= event.couple_names %> — <%= event.wedding_date %> (<%= event.status %>)
+        </a>
+      </li>
+    <% }) %>
+    <% if (events.length === 0) { %>
+      <li>No weddings yet.</li>
+    <% } %>
+  </ul>
+</body>
+</html>

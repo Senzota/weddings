@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>You're Invited</title>
+</head>
+<body>
+  <% if (state === 'not_found') { %>
+    <p>We couldn't find an invitation for this link.</p>
+
+  <% } else if (state === 'not_live') { %>
+    <p>This invitation isn't available yet. Please check back soon.</p>
+
+  <% } else if (state === 'responded') { %>
+    <h1><%= event.couple_names %></h1>
+    <% if (guest.rsvp_status === 'accepted') { %>
+      <p>You've already accepted this invitation. We can't wait to see you, <%= guest.name %>!</p>
+      <p>Check your email (<%= guest.email %>) for your gatepass QR code.</p>
+    <% } else { %>
+      <p>You've already declined this invitation. Thank you for letting us know, <%= guest.name %>.</p>
+    <% } %>
+
+  <% } else if (state === 'email_capture') { %>
+    <h1><%= event.couple_names %></h1>
+    <p>Hi <%= guest.name %>, enter your email to view your invitation.</p>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <p style="color: red;"><%= error %></p>
+    <% } %>
+    <form method="POST" action="/invite/<%= guest.passcode %>/email">
+      <input type="email" name="email" placeholder="you@example.com" required>
+      <button type="submit">View Invitation</button>
+    </form>
+
+  <% } else if (state === 'card') { %>
+    <div class="reveal">
+      <% if (event.card_image) { %>
+        <img src="<%= event.card_image %>" alt="Invitation card" style="max-width:400px">
+      <% } %>
+      <h1><%= event.couple_names %></h1>
+      <p><%= event.wedding_date %> — <%= event.venue %></p>
+      <p>Seats reserved: <%= guest.seat_count %></p>
+
+      <form method="POST" action="/invite/<%= guest.passcode %>/rsvp" style="display:inline">
+        <input type="hidden" name="response" value="accepted">
+        <button type="submit"><%= event.accept_button_text %></button>
+      </form>
+      <form method="POST" action="/invite/<%= guest.passcode %>/rsvp" style="display:inline">
+        <input type="hidden" name="response" value="declined">
+        <button type="submit"><%= event.decline_button_text %></button>
+      </form>
+    </div>
+  <% } %>
+</body>
+</html>

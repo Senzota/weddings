@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= event.couple_names %> — Dashboard</title>
+</head>
+<body>
+  <p><a href="/admin/events">&larr; All weddings</a></p>
+  <h1><%= event.couple_names %></h1>
+
+  <section>
+    <h2>Status: <%= event.status %></h2>
+    <form method="POST" action="/admin/events/<%= event.id %>/status">
+      <button type="submit"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Live stats</h2>
+    <ul>
+      <li>Total guests: <%= stats.total_guests %></li>
+      <li>Accepted: <%= stats.accepted %></li>
+      <li>Declined: <%= stats.declined %></li>
+      <li>Seats accepted: <%= stats.seats_accepted %></li>
+      <li>Checked in: <%= stats.checked_in %></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Wedding details</h2>
+    <form method="POST" action="/admin/events/<%= event.id %>" enctype="multipart/form-data">
+      <label>Couple names <input type="text" name="coupleNames" value="<%= event.couple_names %>" required></label><br>
+      <label>Wedding date <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required></label><br>
+      <label>Venue <input type="text" name="venue" value="<%= event.venue %>" required></label><br>
+      <label>Theme color <input type="color" name="themeColor" value="<%= event.theme_color %>"></label><br>
+      <label>Accept button text <input type="text" name="acceptButtonText" value="<%= event.accept_button_text %>"></label><br>
+      <label>Decline button text <input type="text" name="declineButtonText" value="<%= event.decline_button_text %>"></label><br>
+      <% if (event.card_image) { %>
+        <p>Current card: <img src="<%= event.card_image %>" alt="Invitation card" style="max-width:200px"></p>
+      <% } %>
+      <label>Card image <input type="file" name="cardImage" accept="image/png,image/jpeg,image/webp"></label><br>
+      <button type="submit">Save</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Add guests</h2>
+    <form method="POST" action="/admin/events/<%= event.id %>/guests">
+      <p>One guest per line: <code>Name, seat count</code></p>
+      <textarea name="guestList" rows="6" cols="40" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea><br>
+      <button type="submit">Add Guests</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Guest list</h2>
+    <table border="1" cellpadding="4">
+      <thead>
+        <tr><th>Name</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th>Checked in</th></tr>
+      </thead>
+      <tbody>
+        <% guests.forEach(function(guest) { %>
+          <tr>
+            <td><%= guest.name %></td>
+            <td><%= guest.seat_count %></td>
+            <td><%= guest.passcode %></td>
+            <td><%= guest.rsvp_status %></td>
+            <td><%= guest.checked_in ? 'Yes' : 'No' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>
