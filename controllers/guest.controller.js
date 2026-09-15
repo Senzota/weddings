@@ -60,7 +60,11 @@ async function submitRsvp(req, res) {
   if (response === 'accepted') {
     const gatepass = await gatepassModel.create(guest.id);
     const qrImageBuffer = await generateQrImageBuffer(gatepass.qr_token);
-    await sendGatepassEmail({
+    // Not awaited: the RSVP above is already durably recorded, and SMTP can
+    // be slow or unreachable (minutes, on a connection timeout) — the guest
+    // shouldn't sit on a loading page waiting for mail delivery that has no
+    // bearing on whether their response was accepted.
+    sendGatepassEmail({
       to: guest.email,
       coupleNames: event.couple_names,
       qrImageBuffer,

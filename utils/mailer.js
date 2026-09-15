@@ -7,6 +7,12 @@ const transporter = nodemailer.createTransport({
   auth: process.env.SMTP_USER
     ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
     : undefined,
+  // Nodemailer's defaults (2 min connection, socket, and greeting
+  // timeouts) let one bad send tie up a connection far longer than a
+  // gatepass email is worth failing fast on.
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
 // Never throws — gatepass delivery is a best-effort follow-up to a
