@@ -56,6 +56,14 @@ async function showDashboard(req, res) {
 
 async function updateEvent(req, res) {
   const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText } = req.body;
+  if (!coupleNames || !weddingDate || !venue) {
+    const event = await eventModel.findById(req.params.id);
+    const guests = await guestModel.findByEvent(req.params.id);
+    const stats = await eventModel.getStats(req.params.id);
+    return res.status(400).render('admin/dashboard', {
+      event, guests, stats, error: 'Couple names, date, and venue are required.',
+    });
+  }
   const cardImage = req.file ? `/uploads/${req.file.filename}` : null;
   await eventModel.update(req.params.id, {
     coupleNames, weddingDate, venue, themeColor,

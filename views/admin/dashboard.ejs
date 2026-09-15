@@ -28,6 +28,9 @@
 
   <section>
     <h2>Wedding details</h2>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <p style="color: red;"><%= error %></p>
+    <% } %>
     <form method="POST" action="/admin/events/<%= event.id %>" enctype="multipart/form-data">
       <label>Couple names <input type="text" name="coupleNames" value="<%= event.couple_names %>" required></label><br>
       <label>Wedding date <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required></label><br>

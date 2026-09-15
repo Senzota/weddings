@@ -3,18 +3,19 @@ const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const { requireAdmin } = require('../middleware/auth.middleware');
 const upload = require('../config/upload');
+const asyncHandler = require('../utils/asyncHandler');
 
 router.get('/login', adminController.showLogin);
-router.post('/login', adminController.login);
+router.post('/login', asyncHandler(adminController.login));
 router.post('/logout', requireAdmin, adminController.logout);
 
-router.get('/events', requireAdmin, adminController.listEvents);
+router.get('/events', requireAdmin, asyncHandler(adminController.listEvents));
 router.get('/events/new', requireAdmin, adminController.newEventForm);
-router.post('/events', requireAdmin, adminController.createEvent);
+router.post('/events', requireAdmin, asyncHandler(adminController.createEvent));
 
-router.get('/events/:id', requireAdmin, adminController.showDashboard);
-router.post('/events/:id', requireAdmin, upload.single('cardImage'), adminController.updateEvent);
-router.post('/events/:id/status', requireAdmin, adminController.toggleStatus);
-router.post('/events/:id/guests', requireAdmin, adminController.bulkAddGuests);
+router.get('/events/:id', requireAdmin, asyncHandler(adminController.showDashboard));
+router.post('/events/:id', requireAdmin, upload.single('cardImage'), asyncHandler(adminController.updateEvent));
+router.post('/events/:id/status', requireAdmin, asyncHandler(adminController.toggleStatus));
+router.post('/events/:id/guests', requireAdmin, asyncHandler(adminController.bulkAddGuests));
 
 module.exports = router;

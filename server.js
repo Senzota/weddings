@@ -44,5 +44,17 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something went wrong.');
 });
 
+// Last-resort safety net. Every route is wrapped in asyncHandler, so this
+// should rarely fire — but an uncaught error here previously crashed the
+// whole process silently (no log line, just a dead server). Logging first
+// means a crash is at least diagnosable instead of a mystery 502.
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  process.exit(1);
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Weddings 103 listening on port ${PORT}`));

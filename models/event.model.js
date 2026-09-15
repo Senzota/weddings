@@ -30,11 +30,13 @@ async function update(id, fields) {
   } = fields;
   const { rows } = await pool.query(
     `UPDATE events SET
-       couple_names = $1, wedding_date = $2, venue = $3, theme_color = $4,
-       accept_button_text = $5, decline_button_text = $6,
+       couple_names = $1, wedding_date = $2, venue = $3,
+       theme_color = COALESCE($4, theme_color),
+       accept_button_text = COALESCE($5, accept_button_text),
+       decline_button_text = COALESCE($6, decline_button_text),
        card_image = COALESCE($7, card_image)
      WHERE id = $8 RETURNING *`,
-    [coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, cardImage, id]
+    [coupleNames, weddingDate, venue, themeColor || null, acceptButtonText || null, declineButtonText || null, cardImage, id]
   );
   return rows[0];
 }
