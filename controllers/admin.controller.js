@@ -27,7 +27,8 @@ function logout(req, res) {
 
 async function listEvents(req, res) {
   const events = await eventModel.findAll();
-  res.render('admin/events-list', { events });
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  res.render('admin/events-list', { events, baseUrl });
 }
 
 function newEventForm(req, res) {

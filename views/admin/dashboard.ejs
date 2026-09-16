@@ -16,6 +16,13 @@
   </section>
 
   <section>
+    <h2>Door scanner</h2>
+    <p>Works for any event — no login needed. Hand this link to door staff on the wedding day.</p>
+    <a href="/scan">Open Door Scanner</a>
+    <button type="button" class="copy-btn" data-copy="<%= baseUrl %>/scan">Copy Link</button>
+  </section>
+
+  <section>
     <h2>Status: <%= event.status %></h2>
     <form method="POST" action="/admin/events/<%= event.id %>/status">
       <button type="submit"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>

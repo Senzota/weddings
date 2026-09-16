@@ -75,4 +75,44 @@ whatever was used to build/test it. Specifically:
 
 ## Issues found
 
-*(Claude Code: note anything unexpected here.)*
+**Open question resolved:** `/scan` was already reachable without an admin
+login — `routes/scan.routes.js` never had `requireAdmin` on it (only the
+`/admin/*` routes do). No change needed there; door staff can already use
+the scanner without admin credentials, matching the Guest/Admin/Door-staff
+role split in ARCHITECTURE.md.
+
+**What was verified locally (via curl/DB, not a real device):**
+- `GET /scan` returns 200 with no auth cookie at all.
+- "Door Scanner" link + Copy Link button render on both the main "Your
+  Weddings" list and each event's dashboard, next to the shareable invite
+  link, with the correct absolute URL.
+- Manual code entry and camera-decoded scans hit the exact same
+  `/scan/verify` endpoint via the same `verifyToken()` function — confirmed
+  by exercising that endpoint directly: a fresh gatepass token checks in
+  cleanly, a repeat of the same token is flagged as a duplicate rather than
+  re-admitted. There's no separate manual-entry code path to drift out of
+  sync with the camera path.
+
+**What could NOT be verified from here — needs a human on real hardware:**
+This environment has no camera and no device farm, so the actual
+`getUserMedia` behavior described in the spec (rear-camera preference,
+graceful fallback on a front-camera-only laptop, iOS Safari's
+tap-to-start requirement, permission-denied messaging, responsive video
+sizing on a real small screen) is implemented per the platform's
+documented constraint semantics and known iOS/Android quirks, but **not
+exercised on an actual Android Chrome, iOS Safari, or laptop-webcam
+device**. Specifically worth someone checking by hand before relying on
+it at a real door:
+- Camera actually defaults to the rear lens on a real phone.
+- The "Start Scanning" button actually satisfies iOS Safari's
+  user-gesture requirement (this is the one iOS is strict about — a
+  script-initiated `getUserMedia` call with no button tap silently fails
+  there, which the old auto-start code would have hit).
+- Denying the permission prompt on a real device shows the intended
+  message rather than a generic browser error screen.
+- The video preview actually looks right (not cropped, not tiny) on a
+  real small phone screen in portrait.
+
+Please test on whatever devices will actually be at the door before the
+wedding, and report back anything that doesn't match the above so it can
+be fixed with real device feedback instead of guessing further from here.

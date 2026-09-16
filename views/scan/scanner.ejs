@@ -2,12 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Door Scanner</title>
+  <style>
+    body { margin: 0; padding: 16px; box-sizing: border-box; }
+    .scanner-wrap { max-width: 500px; margin: 0 auto; }
+    #preview {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      background: #000;
+      display: none;
+    }
+    #preview.active { display: block; }
+    #manual-entry { margin-top: 16px; }
+    #manual-entry input { font-size: 1rem; padding: 6px; }
+    #manual-entry button, #start-btn { font-size: 1rem; padding: 8px 16px; }
+  </style>
 </head>
 <body>
-  <h1>Door Scanner</h1>
-  <p id="status">Point the camera at a guest's QR gatepass.</p>
-  <video id="preview" width="400" autoplay muted playsinline></video>
+  <div class="scanner-wrap">
+    <h1>Door Scanner</h1>
+    <p id="status">Tap below to start the camera.</p>
+
+    <button type="button" id="start-btn">Start Scanning</button>
+    <video id="preview" autoplay muted playsinline></video>
+
+    <div id="manual-entry">
+      <p>Camera not cooperating? Enter the gatepass code manually:</p>
+      <form id="manual-form">
+        <input type="text" id="manual-code" placeholder="Gatepass code" autocapitalize="off" autocomplete="off">
+        <button type="submit">Check In</button>
+      </form>
+    </div>
+  </div>
 
   <script src="/vendor/jsqr.js"></script>
   <script src="/assets/js/scanner.js"></script>

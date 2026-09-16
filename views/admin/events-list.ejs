@@ -7,6 +7,14 @@
 <body>
   <h1>Your Weddings</h1>
   <p><a href="/admin/events/new">+ Add Wedding</a> | <form method="POST" action="/admin/logout" style="display:inline"><button type="submit">Log out</button></form></p>
+
+  <section>
+    <h2>Door Scanner</h2>
+    <p>Works for any event — no login needed. Hand this link to door staff on the wedding day.</p>
+    <a href="/scan">Open Door Scanner</a>
+    <button type="button" class="copy-btn" data-copy="<%= baseUrl %>/scan">Copy Link</button>
+  </section>
+
   <ul>
     <% events.forEach(function(event) { %>
       <li>
@@ -19,5 +27,17 @@
       <li>No weddings yet.</li>
     <% } %>
   </ul>
+
+  <script>
+    document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+          var original = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(function () { btn.textContent = original; }, 1500);
+        });
+      });
+    });
+  </script>
 </body>
 </html>
