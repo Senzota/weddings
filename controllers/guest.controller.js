@@ -29,17 +29,37 @@ async function renderGuestState(res, event, guest, extra = {}) {
   return res.render('guest/invite', { state: 'qr', event, guest, qrDataUrl, checkedIn: gatepass.checked_in, ...extra });
 }
 
-async function showPasscodeForm(req, res) {
+// events.id is a plain serial integer — a non-numeric :eventId (an old
+// bookmarked link from before this route shape changed, or just a typo)
+// would otherwise reach the DB as "invalid input syntax for type integer"
+// and surface as a raw 500 instead of a clean 404. Also centralizes the
+// draft/live check shared by all three guest routes.
+async function resolveLiveEvent(req, res) {
+  if (!/^\d+$/.test(req.params.eventId)) {
+    res.status(404).render('guest/invite', { state: 'not_found' });
+    return null;
+  }
   const event = await eventModel.findById(req.params.eventId);
-  if (!event) return res.status(404).render('guest/invite', { state: 'not_found' });
-  if (event.status !== 'live') return res.render('guest/invite', { state: 'not_live' });
+  if (!event) {
+    res.status(404).render('guest/invite', { state: 'not_found' });
+    return null;
+  }
+  if (event.status !== 'live') {
+    res.render('guest/invite', { state: 'not_live' });
+    return null;
+  }
+  return event;
+}
+
+async function showPasscodeForm(req, res) {
+  const event = await resolveLiveEvent(req, res);
+  if (!event) return;
   return res.render('guest/invite', { state: 'passcode_form', event, error: null });
 }
 
 async function verifyPasscode(req, res) {
-  const event = await eventModel.findById(req.params.eventId);
-  if (!event) return res.status(404).render('guest/invite', { state: 'not_found' });
-  if (event.status !== 'live') return res.render('guest/invite', { state: 'not_live' });
+  const event = await resolveLiveEvent(req, res);
+  if (!event) return;
 
   const guest = await guestModel.findByEventAndPasscode(event.id, req.body.passcode || '');
   if (!guest) {
@@ -49,9 +69,8 @@ async function verifyPasscode(req, res) {
 }
 
 async function submitRsvp(req, res) {
-  const event = await eventModel.findById(req.params.eventId);
-  if (!event) return res.status(404).render('guest/invite', { state: 'not_found' });
-  if (event.status !== 'live') return res.render('guest/invite', { state: 'not_live' });
+  const event = await resolveLiveEvent(req, res);
+  if (!event) return;
 
   const guest = await guestModel.findByEventAndPasscode(event.id, req.body.passcode || '');
   if (!guest) {

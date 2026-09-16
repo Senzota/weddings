@@ -19,6 +19,10 @@ async function findAll() {
 }
 
 async function findById(id) {
+  // id is a serial integer column — anything non-numeric (a stray/old
+  // link, a typo) would otherwise reach Postgres as "invalid input syntax
+  // for type integer" instead of a normal not-found.
+  if (!/^\d+$/.test(String(id))) return undefined;
   const { rows } = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
   return rows[0];
 }

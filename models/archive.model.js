@@ -5,6 +5,8 @@ const pool = require('../config/db');
 // transaction: if the archive write fails, nothing is deleted — no guest
 // data disappears without the metrics surviving it first.
 async function archiveAndDelete(eventId) {
+  if (!/^\d+$/.test(String(eventId))) return null;
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
