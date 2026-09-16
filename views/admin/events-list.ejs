@@ -2,11 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Weddings — Admin</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f2; color: #222; }
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; background: #fff; border-bottom: 1px solid #ddd;
+    }
+    .app-header .brand { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; }
+    .app-main { max-width: 900px; margin: 0 auto; padding: 24px; }
+  </style>
 </head>
 <body>
+  <header class="app-header">
+    <span class="brand">Weddings</span>
+    <form method="POST" action="/admin/logout"><button type="submit">Log out</button></form>
+  </header>
+
+  <main class="app-main">
   <h1>Your Weddings</h1>
-  <p><a href="/admin/events/new">+ Add Wedding</a> | <form method="POST" action="/admin/logout" style="display:inline"><button type="submit">Log out</button></form></p>
+  <p><a href="/admin/events/new">+ Add Wedding</a></p>
 
   <section>
     <h2>Door Scanner</h2>
@@ -39,5 +55,6 @@
       });
     });
   </script>
+  </main>
 </body>
 </html>

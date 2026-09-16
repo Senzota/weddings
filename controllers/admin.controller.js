@@ -4,6 +4,7 @@ const pool = require('../config/db');
 const eventModel = require('../models/event.model');
 const guestModel = require('../models/guest.model');
 const galleryModel = require('../models/gallery.model');
+const cameoModel = require('../models/cameo.model');
 const { archiveAndDelete } = require('../models/archive.model');
 const { AVAILABLE_THEMES } = require('../config/themes');
 const { uploadImage, deleteImage } = require('../utils/cloudinary');
@@ -59,9 +60,16 @@ async function showDashboard(req, res) {
   if (!event) return res.status(404).send('Wedding not found.');
   const guests = await guestModel.findByEvent(event.id);
   const stats = await eventModel.getStats(event.id);
-  const photos = await galleryModel.findByEvent(event.id);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  res.render('admin/dashboard', { event, guests, stats, photos, error: null, baseUrl, themes: AVAILABLE_THEMES });
+  res.render('admin/dashboard', { event, guests, stats, error: null, baseUrl, themes: AVAILABLE_THEMES });
+}
+
+async function showAssets(req, res) {
+  const event = await eventModel.findById(req.params.id);
+  if (!event) return res.status(404).send('Wedding not found.');
+  const galleryPhotos = await galleryModel.findByEvent(event.id);
+  const cameoPhotos = await cameoModel.findByEvent(event.id);
+  res.render('admin/assets', { event, galleryPhotos, cameoPhotos });
 }
 
 async function updateEvent(req, res) {
@@ -73,10 +81,9 @@ async function updateEvent(req, res) {
     const event = await eventModel.findById(req.params.id);
     const guests = await guestModel.findByEvent(req.params.id);
     const stats = await eventModel.getStats(req.params.id);
-    const photos = await galleryModel.findByEvent(req.params.id);
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     return res.status(400).render('admin/dashboard', {
-      event, guests, stats, photos, baseUrl, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES,
+      event, guests, stats, baseUrl, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES,
     });
   }
 
@@ -143,7 +150,7 @@ async function uploadGalleryPhotos(req, res) {
     const result = await uploadImage(file.buffer, `weddings103/events/${req.params.id}/gallery`);
     await galleryModel.addPhoto(req.params.id, result.secure_url, result.public_id);
   }
-  res.redirect(`/admin/events/${req.params.id}`);
+  res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
 async function deleteGalleryPhoto(req, res) {
@@ -155,7 +162,30 @@ async function deleteGalleryPhoto(req, res) {
       console.error(`Failed to delete Cloudinary image ${photo.public_id}:`, err);
     }
   }
-  res.redirect(`/admin/events/${req.params.id}`);
+  res.redirect(`/admin/events/${req.params.id}/assets`);
+}
+
+// Cameos are uploaded one at a time with a title, unlike Gallery's
+// multi-file batch — each entry is meant to carry its own caption.
+async function uploadCameoPhoto(req, res) {
+  const { title } = req.body;
+  if (req.file && title) {
+    const result = await uploadImage(req.file.buffer, `weddings103/events/${req.params.id}/cameos`);
+    await cameoModel.addPhoto(req.params.id, result.secure_url, result.public_id, title);
+  }
+  res.redirect(`/admin/events/${req.params.id}/assets`);
+}
+
+async function deleteCameoPhoto(req, res) {
+  const photo = await cameoModel.deletePhoto(req.params.id, req.params.photoId);
+  if (photo) {
+    try {
+      await deleteImage(photo.public_id);
+    } catch (err) {
+      console.error(`Failed to delete Cloudinary image ${photo.public_id}:`, err);
+    }
+  }
+  res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
 async function exportGuestList(req, res) {
@@ -192,6 +222,7 @@ async function exportGuestList(req, res) {
 module.exports = {
   showLogin, login, logout,
   listEvents, newEventForm, createEvent,
-  showDashboard, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
+  showDashboard, showAssets, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
   exportGuestList, uploadGalleryPhotos, deleteGalleryPhoto,
+  uploadCameoPhoto, deleteCameoPhoto,
 };

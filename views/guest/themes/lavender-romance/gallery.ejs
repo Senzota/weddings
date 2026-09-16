@@ -6,13 +6,13 @@
   <title>Gallery — <%= event.couple_names %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
 <body class="bb-page">
   <section class="bb-section">
-    <img class="bb-section-motif" src="/themes/<%= event.theme %>/img/floral-illustration.png" alt="">
-    <h2 class="bb-script">Gallery</h2>
+    <span class="bb-motif-mark" style="top:-40px; right:-40px; transform:rotate(15deg);">✽</span>
+    <h2>Gallery</h2>
 
     <% if (!guest) { %>
       <p>Enter your passcode to view the gallery.</p>

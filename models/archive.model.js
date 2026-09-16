@@ -33,6 +33,11 @@ async function archiveAndDelete(eventId) {
     );
     imagePublicIds.push(...galleryRows.map((r) => r.public_id));
 
+    const { rows: cameoRows } = await client.query(
+      'SELECT public_id FROM cameo_photos WHERE event_id = $1', [eventId]
+    );
+    imagePublicIds.push(...cameoRows.map((r) => r.public_id));
+
     const { rows: statRows } = await client.query(
       `SELECT
          COUNT(*) AS total_guests,

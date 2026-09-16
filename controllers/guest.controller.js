@@ -2,6 +2,7 @@ const guestModel = require('../models/guest.model');
 const eventModel = require('../models/event.model');
 const gatepassModel = require('../models/gatepass.model');
 const galleryModel = require('../models/gallery.model');
+const cameoModel = require('../models/cameo.model');
 const { generateQrDataUrl } = require('../utils/qrGenerator');
 
 const CHECKED_IN_QR_WINDOW_HOURS = 6;
@@ -138,10 +139,27 @@ async function showGallery(req, res) {
   return res.render(`guest/themes/${event.theme}/gallery`, { event, guest, photos, error: null });
 }
 
+// Same passcode-gate pattern as Gallery — Cameos has real, event-specific
+// photos (and the family/friend circle's own names/captions) worth the
+// same protection.
+async function showCameos(req, res) {
+  const event = await resolveLiveEvent(req, res);
+  if (!event) return;
+
+  const guest = await guestModel.findByEventAndPasscode(event.id, req.query.passcode || '');
+  if (!guest) {
+    const error = req.query.passcode ? 'That passcode was not recognized.' : null;
+    return res.render(`guest/themes/${event.theme}/cameos`, { event, guest: null, photos: null, error });
+  }
+
+  const photos = await cameoModel.findByEvent(event.id);
+  return res.render(`guest/themes/${event.theme}/cameos`, { event, guest, photos, error: null });
+}
+
 async function showOtherDetails(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
   return res.render(`guest/themes/${event.theme}/other-details`, { event });
 }
 
-module.exports = { showInvitation, verifyPasscode, submitRsvp, showGallery, showOtherDetails };
+module.exports = { showInvitation, verifyPasscode, submitRsvp, showGallery, showCameos, showOtherDetails };

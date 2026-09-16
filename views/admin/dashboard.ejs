@@ -10,10 +10,20 @@
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
 <body class="bb-admin">
-  <div class="bb-admin-wrap">
-    <p class="bb-admin-back"><a href="/admin/events">&larr; All weddings</a></p>
-    <h1><%= event.couple_names %></h1>
+  <header class="bb-admin-header">
+    <div class="bb-admin-header-inner">
+      <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>"><%= event.couple_names %></a>
+      <nav class="bb-admin-nav">
+        <a href="#guest-list">Guest List</a>
+        <a href="#wedding-details">Wedding Details</a>
+        <a href="/admin/events/<%= event.id %>/assets">Assets</a>
+        <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+        <a href="/admin/events">All weddings</a>
+      </nav>
+    </div>
+  </header>
 
+  <div class="bb-admin-wrap">
     <!-- 1. Top row: photo + quick-action tiles -->
     <div class="bb-admin-section bb-admin-top">
       <div class="bb-admin-photo-panel">
@@ -57,7 +67,7 @@
     </div>
 
     <!-- 3/4. Wedding details as a reflowing tile grid -->
-    <div class="bb-admin-section">
+    <div class="bb-admin-section" id="wedding-details">
       <h2>Wedding details</h2>
       <% if (typeof error !== 'undefined' && error) { %>
         <p class="bb-error"><%= error %></p>
@@ -128,33 +138,8 @@
       </form>
     </div>
 
-    <!-- Gallery management -->
-    <div class="bb-admin-section">
-      <div class="bb-admin-card">
-        <h2>Gallery</h2>
-        <form method="POST" action="/admin/events/<%= event.id %>/gallery" enctype="multipart/form-data">
-          <input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple>
-          <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Upload Photos</button>
-        </form>
-        <% if (photos.length > 0) { %>
-          <div class="bb-admin-gallery-grid">
-            <% photos.forEach(function (photo) { %>
-              <div class="bb-admin-gallery-item">
-                <img src="<%= photo.image_url %>" alt="">
-                <form method="POST" action="/admin/events/<%= event.id %>/gallery/<%= photo.id %>/delete" onsubmit="return confirm('Delete this photo?');">
-                  <button type="submit" title="Delete photo">&times;</button>
-                </form>
-              </div>
-            <% }) %>
-          </div>
-        <% } else { %>
-          <p>No photos uploaded yet.</p>
-        <% } %>
-      </div>
-    </div>
-
     <!-- 5. Guest management: form+table (left) / instructions (right) -->
-    <div class="bb-admin-section bb-guest-mgmt">
+    <div class="bb-admin-section bb-guest-mgmt" id="guest-list">
       <div>
         <div class="bb-admin-card" style="margin-bottom:1.5rem;">
           <h2>Add guests</h2>

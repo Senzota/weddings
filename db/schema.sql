@@ -84,6 +84,20 @@ CREATE TABLE IF NOT EXISTS gallery_photos (
 
 CREATE INDEX IF NOT EXISTS idx_gallery_photos_event_id ON gallery_photos(event_id);
 
+-- Cameos: photos of family/friends "who wish to be seen," each with a
+-- title/caption -- that's what distinguishes this from gallery_photos.
+-- Same Cloudinary-backed pattern (URL + public_id only, never bytes).
+CREATE TABLE IF NOT EXISTS cameo_photos (
+  id           SERIAL PRIMARY KEY,
+  event_id     INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  image_url    TEXT NOT NULL,
+  public_id    TEXT NOT NULL,
+  title        TEXT NOT NULL,
+  uploaded_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cameo_photos_event_id ON cameo_photos(event_id);
+
 -- Anonymous summary metrics preserved when an event is deleted (manually or
 -- by the 30-day auto-sweep). Never purged by anything.
 CREATE TABLE IF NOT EXISTS event_archive (

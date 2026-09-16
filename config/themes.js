@@ -4,6 +4,7 @@
 // changing either form.
 const AVAILABLE_THEMES = [
   { slug: 'botanical-bloom', label: 'Botanical Bloom' },
+  { slug: 'lavender-romance', label: 'Lavender Romance' },
 ];
 
 const DEFAULT_THEME = 'botanical-bloom';

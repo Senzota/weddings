@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assets — <%= event.couple_names %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="bb-admin">
+  <header class="bb-admin-header">
+    <div class="bb-admin-header-inner">
+      <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>"><%= event.couple_names %></a>
+      <nav class="bb-admin-nav">
+        <a href="/admin/events/<%= event.id %>#guest-list">Guest List</a>
+        <a href="/admin/events/<%= event.id %>#wedding-details">Wedding Details</a>
+        <a href="/admin/events/<%= event.id %>/assets" class="bb-admin-nav-active">Assets</a>
+        <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+        <a href="/admin/events">All weddings</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="bb-admin-wrap">
+    <h1>Assets</h1>
+    <p>Manage Gallery and Cameos photos for this wedding from one screen.</p>
+
+    <div class="bb-admin-section bb-assets-grid">
+      <div class="bb-admin-card">
+        <h2>Gallery</h2>
+        <p>Plain photos — no caption, shown to every guest who's entered their passcode.</p>
+        <form method="POST" action="/admin/events/<%= event.id %>/gallery" enctype="multipart/form-data">
+          <input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple>
+          <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Upload Photos</button>
+        </form>
+        <% if (galleryPhotos.length > 0) { %>
+          <div class="bb-admin-gallery-grid">
+            <% galleryPhotos.forEach(function (photo) { %>
+              <div class="bb-admin-gallery-item">
+                <img src="<%= photo.image_url %>" alt="">
+                <form method="POST" action="/admin/events/<%= event.id %>/gallery/<%= photo.id %>/delete" onsubmit="return confirm('Delete this photo?');">
+                  <button type="submit" title="Delete photo">&times;</button>
+                </form>
+              </div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p>No gallery photos uploaded yet.</p>
+        <% } %>
+      </div>
+
+      <div class="bb-admin-card">
+        <h2>Cameos</h2>
+        <p>Photos of family/friends "who wish to be seen" — each needs a title/caption.</p>
+        <form method="POST" action="/admin/events/<%= event.id %>/cameos" enctype="multipart/form-data">
+          <label>Title <input type="text" name="title" placeholder="e.g. The Best Man, or a Save-the-Date for Aisha &amp; Zuberi" required></label>
+          <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required style="margin-top:0.6rem;">
+          <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Upload Cameo</button>
+        </form>
+        <% if (cameoPhotos.length > 0) { %>
+          <div class="bb-admin-gallery-grid">
+            <% cameoPhotos.forEach(function (photo) { %>
+              <div class="bb-admin-gallery-item">
+                <img src="<%= photo.image_url %>" alt="<%= photo.title %>">
+                <span class="bb-admin-gallery-caption"><%= photo.title %></span>
+                <form method="POST" action="/admin/events/<%= event.id %>/cameos/<%= photo.id %>/delete" onsubmit="return confirm('Delete this cameo?');">
+                  <button type="submit" title="Delete cameo">&times;</button>
+                </form>
+              </div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p>No cameos uploaded yet.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
