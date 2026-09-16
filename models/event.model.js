@@ -1,16 +1,17 @@
 const pool = require('../config/db');
+const { DEFAULT_THEME } = require('../config/themes');
 
 const DEFAULT_DECLINE_MESSAGE = "Thank you for letting us know. You are always welcome — if your plans change, we'd love to have you with us.";
 
 async function create(fields) {
   const {
     coupleNames, weddingDate, venue, themeColor,
-    acceptButtonText, declineButtonText, declineMessage,
+    acceptButtonText, declineButtonText, declineMessage, theme,
   } = fields;
   const { rows } = await pool.query(
-    `INSERT INTO events (couple_names, wedding_date, venue, theme_color, accept_button_text, decline_button_text, decline_message)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage || DEFAULT_DECLINE_MESSAGE]
+    `INSERT INTO events (couple_names, wedding_date, venue, theme_color, accept_button_text, decline_button_text, decline_message, theme)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    [coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage || DEFAULT_DECLINE_MESSAGE, theme || DEFAULT_THEME]
   );
   return rows[0];
 }
@@ -33,7 +34,7 @@ async function update(id, fields) {
   const {
     coupleNames, weddingDate, venue, themeColor,
     acceptButtonText, declineButtonText, declineMessage, cardImage,
-    itinerary, invitationMessage, contactDetails,
+    itinerary, invitationMessage, contactDetails, theme,
   } = fields;
   const { rows } = await pool.query(
     `UPDATE events SET
@@ -45,9 +46,10 @@ async function update(id, fields) {
        card_image = COALESCE($8, card_image),
        itinerary = $9,
        invitation_message = $10,
-       contact_details = $11
-     WHERE id = $12 RETURNING *`,
-    [coupleNames, weddingDate, venue, themeColor || null, acceptButtonText || null, declineButtonText || null, declineMessage || null, cardImage, itinerary || null, invitationMessage || null, contactDetails || null, id]
+       contact_details = $11,
+       theme = COALESCE($12, theme)
+     WHERE id = $13 RETURNING *`,
+    [coupleNames, weddingDate, venue, themeColor || null, acceptButtonText || null, declineButtonText || null, declineMessage || null, cardImage, itinerary || null, invitationMessage || null, contactDetails || null, theme || null, id]
   );
   return rows[0];
 }

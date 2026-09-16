@@ -9,9 +9,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
-<body class="bb-page">
+<body class="bb-page<%= guest ? '' : ' bb-locked' %>">
 
-  <!-- 1. Hero -->
+  <!-- 1. Hero — the only thing shown (with the overlay) before a correct
+       passcode is verified. -->
   <section class="bb-hero">
     <% if (event.card_image) { %>
       <img class="bb-hero-photo" src="<%= event.card_image %>" alt="<%= event.couple_names %>">
@@ -22,28 +23,34 @@
       <img class="bb-hero-floral" src="/themes/<%= event.theme %>/img/floral-illustration.png" alt="">
       <p class="bb-label bb-hero-meta"><%= formatEventDate(event.wedding_date) %> — <%= event.venue %></p>
       <h1 class="bb-script bb-hero-names"><%= event.couple_names %></h1>
-      <% if (!guest) { %>
-        <button type="button" class="bb-btn" id="open-overlay">Come on in</button>
-      <% } %>
     </div>
   </section>
 
-  <!-- 2. Code-entry overlay -->
-  <div class="bb-overlay" id="passcode-overlay">
-    <div class="bb-overlay-card">
-      <button type="button" class="bb-overlay-close" id="close-overlay" aria-label="Close">&times;</button>
-      <p class="bb-label bb-overlay-label">Enter your passcode</p>
-      <% if (typeof error !== 'undefined' && error) { %>
-        <p class="bb-error"><%= error %></p>
-      <% } %>
-      <form method="POST" action="/invite/<%= event.id %>/verify">
-        <input type="text" name="passcode" placeholder="Passcode" required autocapitalize="characters" autocomplete="off">
-        <button type="submit" class="bb-btn">View Invitation</button>
-      </form>
+  <% if (!guest) { %>
+    <!-- 2. Code-entry overlay — always shown until a correct passcode is
+         submitted. No close button, no way to dismiss it: this is a
+         security boundary, not a dismissible UI affordance. Everything
+         past the Hero is omitted from the response entirely below (not
+         just hidden by CSS), so there's nothing behind it to bypass to
+         even if a guest tried. -->
+    <div class="bb-overlay">
+      <div class="bb-overlay-card">
+        <p class="bb-label bb-overlay-label">Enter your passcode</p>
+        <% if (typeof error !== 'undefined' && error) { %>
+          <p class="bb-error"><%= error %></p>
+        <% } %>
+        <form method="POST" action="/invite/<%= event.id %>/verify">
+          <input type="text" name="passcode" placeholder="Passcode" required autocapitalize="characters" autocomplete="off" autofocus>
+          <button type="submit" class="bb-btn">View Invitation</button>
+        </form>
+      </div>
     </div>
-  </div>
 
-  <% if (guest) { %>
+  <% } else { %>
+    <!-- Everything below only ever renders in a response where the
+         passcode for this exact guest has already been verified
+         server-side (POST /verify or /rsvp) — never on a plain GET. -->
+
     <!-- 3. QR / accept-decline / banners -->
     <div class="bb-state-area">
       <% if (state === 'card' && welcomeBack) { %>
@@ -89,49 +96,39 @@
         <p><%= event.invitation_message %></p>
       </div>
     <% } %>
+
+    <!-- 5. Button row -->
+    <div class="bb-tile-row">
+      <a class="bb-tile" href="#itinerary">Itinerary</a>
+      <a class="bb-tile" href="/invite/<%= event.id %>/gallery">Gallery</a>
+      <a class="bb-tile" href="/invite/<%= event.id %>/other-details">Other Details</a>
+    </div>
+
+    <!-- 6. Itinerary section -->
+    <section class="bb-section" id="itinerary">
+      <img class="bb-section-motif" src="/themes/<%= event.theme %>/img/floral-illustration.png" alt="">
+      <h2 class="bb-script">Itinerary</h2>
+      <% const itineraryItems = (event.itinerary || '').split('\n').map(function (line) { return line.trim(); }).filter(Boolean); %>
+      <% if (itineraryItems.length > 0) { %>
+        <ul>
+          <% itineraryItems.forEach(function (item) { %>
+            <li><%= item %></li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p>The schedule for the day will be shared here soon.</p>
+      <% } %>
+    </section>
+
+    <!-- 7. Couple's own contact details -->
+    <section class="bb-section bb-contacts">
+      <h2 class="bb-script">Get in Touch</h2>
+      <% if (event.contact_details) { %>
+        <p><%= event.contact_details %></p>
+      <% } else { %>
+        <p>Contact details will be shared here soon.</p>
+      <% } %>
+    </section>
   <% } %>
-
-  <!-- 5. Button row -->
-  <div class="bb-tile-row">
-    <a class="bb-tile" href="#itinerary">Itinerary</a>
-    <a class="bb-tile" href="/invite/<%= event.id %>/gallery">Gallery</a>
-    <a class="bb-tile" href="/invite/<%= event.id %>/other-details">Other Details</a>
-  </div>
-
-  <!-- 6. Itinerary section -->
-  <section class="bb-section" id="itinerary">
-    <img class="bb-section-motif" src="/themes/<%= event.theme %>/img/floral-illustration.png" alt="">
-    <h2 class="bb-script">Itinerary</h2>
-    <% const itineraryItems = (event.itinerary || '').split('\n').map(function (line) { return line.trim(); }).filter(Boolean); %>
-    <% if (itineraryItems.length > 0) { %>
-      <ul>
-        <% itineraryItems.forEach(function (item) { %>
-          <li><%= item %></li>
-        <% }) %>
-      </ul>
-    <% } else { %>
-      <p>The schedule for the day will be shared here soon.</p>
-    <% } %>
-  </section>
-
-  <!-- 7. Couple's own contact details -->
-  <section class="bb-section bb-contacts">
-    <h2 class="bb-script">Get in Touch</h2>
-    <% if (event.contact_details) { %>
-      <p><%= event.contact_details %></p>
-    <% } else { %>
-      <p>Contact details will be shared here soon.</p>
-    <% } %>
-  </section>
-
-  <script>
-    var overlay = document.getElementById('passcode-overlay');
-    var openBtn = document.getElementById('open-overlay');
-    if (openBtn) openBtn.addEventListener('click', function () { overlay.classList.add('is-open'); });
-    document.getElementById('close-overlay').addEventListener('click', function () { overlay.classList.remove('is-open'); });
-    <% if (typeof error !== 'undefined' && error) { %>
-    overlay.classList.add('is-open');
-    <% } %>
-  </script>
 </body>
 </html>

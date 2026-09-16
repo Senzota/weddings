@@ -4,6 +4,7 @@ const pool = require('../config/db');
 const eventModel = require('../models/event.model');
 const guestModel = require('../models/guest.model');
 const { archiveAndDelete } = require('../models/archive.model');
+const { AVAILABLE_THEMES } = require('../config/themes');
 
 function showLogin(req, res) {
   res.render('admin/login', { error: null });
@@ -32,13 +33,13 @@ async function listEvents(req, res) {
 }
 
 function newEventForm(req, res) {
-  res.render('admin/event-form', { event: null, error: null });
+  res.render('admin/event-form', { event: null, error: null, themes: AVAILABLE_THEMES });
 }
 
 async function createEvent(req, res) {
-  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage } = req.body;
+  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage, theme } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
-    return res.render('admin/event-form', { event: null, error: 'Couple names, date, and venue are required.' });
+    return res.render('admin/event-form', { event: null, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES });
   }
   const event = await eventModel.create({
     coupleNames, weddingDate, venue,
@@ -46,6 +47,7 @@ async function createEvent(req, res) {
     acceptButtonText: acceptButtonText || 'Accept with pleasure',
     declineButtonText: declineButtonText || 'Decline with regret',
     declineMessage: declineMessage || undefined,
+    theme,
   });
   res.redirect(`/admin/events/${event.id}`);
 }
@@ -56,13 +58,13 @@ async function showDashboard(req, res) {
   const guests = await guestModel.findByEvent(event.id);
   const stats = await eventModel.getStats(event.id);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  res.render('admin/dashboard', { event, guests, stats, error: null, baseUrl });
+  res.render('admin/dashboard', { event, guests, stats, error: null, baseUrl, themes: AVAILABLE_THEMES });
 }
 
 async function updateEvent(req, res) {
   const {
     coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText,
-    declineMessage, itinerary, invitationMessage, contactDetails,
+    declineMessage, itinerary, invitationMessage, contactDetails, theme,
   } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
     const event = await eventModel.findById(req.params.id);
@@ -70,14 +72,14 @@ async function updateEvent(req, res) {
     const stats = await eventModel.getStats(req.params.id);
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     return res.status(400).render('admin/dashboard', {
-      event, guests, stats, baseUrl, error: 'Couple names, date, and venue are required.',
+      event, guests, stats, baseUrl, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES,
     });
   }
   const cardImage = req.file ? `/uploads/${req.file.filename}` : null;
   await eventModel.update(req.params.id, {
     coupleNames, weddingDate, venue, themeColor,
     acceptButtonText, declineButtonText, declineMessage, cardImage,
-    itinerary, invitationMessage, contactDetails,
+    itinerary, invitationMessage, contactDetails, theme,
   });
   res.redirect(`/admin/events/${req.params.id}`);
 }

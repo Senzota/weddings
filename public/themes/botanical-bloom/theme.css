@@ -94,23 +94,31 @@ body.bb-page * { box-sizing: border-box; }
 }
 
 /* ---------- Passcode overlay ----------
-   Fix for the muddy #8f887e page-background bug: that color is exactly
-   this backdrop's rgba(58,49,40,0.55) composited over the cream page,
-   confirming the overlay was rendering at all times. The old approach
-   ([hidden] attribute + an unconditional `display:flex` on the same
-   selector) was fragile; this version defaults closed and only opens via
-   an explicit class, no specificity tricks. */
+   input_8 fix for the muddy #8f887e page-background bug: that color was
+   exactly this backdrop's rgba(58,49,40,0.55) composited over the cream
+   page, from a fragile [hidden]-attribute/specificity toggle. input_9
+   removes the toggle question entirely — the overlay markup is only ever
+   in the response at all when the guest is unverified (see
+   invitation.ejs), so it can just always be `display: flex` whenever
+   it's present. No JS-driven open/close state, no close button: this is
+   a real access boundary, not a dismissible modal. */
 .bb-overlay {
   position: fixed;
   inset: 0;
   background: rgba(58, 49, 40, 0.55);
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   z-index: 10;
 }
-.bb-overlay.is-open { display: flex; }
+/* Belt-and-suspenders: the Hero is 100vh so there's nothing to scroll to
+   anyway while unverified (the rest of the page isn't sent at all), but
+   lock scrolling explicitly too rather than relying on that. */
+body.bb-locked {
+  overflow: hidden;
+  height: 100vh;
+}
 .bb-overlay-card {
   background: var(--bb-cream);
   border-radius: 12px;
@@ -119,17 +127,6 @@ body.bb-page * { box-sizing: border-box; }
   width: 100%;
   text-align: center;
   position: relative;
-}
-.bb-overlay-close {
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--bb-rose);
-  cursor: pointer;
-  line-height: 1;
 }
 .bb-overlay-label { margin: 0 0 1rem; }
 .bb-overlay-card input[type="text"] {
@@ -240,3 +237,70 @@ body.bb-page * { box-sizing: border-box; }
 }
 .bb-section li:last-child { border-bottom: none; }
 .bb-section.bb-contacts { background: var(--bb-cream-deep); }
+
+/* ---------- Per-event admin page (input_9 §2) ----------
+   Reuses the same tokens/fonts as the guest-facing pages so this wedding's
+   admin page feels like part of its overall look, not a generic panel. */
+.bb-admin {
+  background: var(--bb-cream);
+  color: var(--bb-ink);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 17px;
+  margin: 0;
+  padding: 2rem 4vw 4rem;
+}
+.bb-admin * { box-sizing: border-box; }
+.bb-admin a { color: var(--bb-rose); }
+.bb-admin h1 {
+  font-family: 'Beau Rivage', cursive;
+  color: var(--bb-rose);
+  font-weight: 400;
+  font-size: 2.6rem;
+  margin: 0.2rem 0 1.5rem;
+}
+.bb-admin h2 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  color: var(--bb-rose);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 1rem;
+  margin: 0 0 1rem;
+}
+.bb-admin-back { display: inline-block; margin-bottom: 1rem; }
+.bb-admin-card {
+  background: #fffdf9;
+  border: 1px solid var(--bb-cream-deep);
+  border-radius: 10px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+}
+.bb-admin label { display: block; margin-bottom: 0.9rem; font-size: 0.95rem; }
+.bb-admin input[type="text"],
+.bb-admin input[type="date"],
+.bb-admin input[type="email"],
+.bb-admin input[type="password"],
+.bb-admin input[type="color"],
+.bb-admin input[type="file"],
+.bb-admin textarea,
+.bb-admin select {
+  display: block;
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.55em 0.75em;
+  border: 1px solid var(--bb-rose-soft);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--bb-ink);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1rem;
+}
+.bb-admin input[readonly] { background: var(--bb-cream-deep); }
+.bb-admin table { width: 100%; border-collapse: collapse; }
+.bb-admin th, .bb-admin td { border-bottom: 1px solid var(--bb-cream-deep); padding: 0.6em 0.5em; text-align: left; }
+.bb-admin th { color: var(--bb-rose); font-weight: 600; letter-spacing: 0.03em; }
+.bb-admin .bb-btn { padding: 0.6em 1.6em; font-size: 0.95rem; }
+.bb-admin .bb-stats { list-style: none; padding: 0; margin: 0; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.bb-admin .bb-stats li { font-size: 1rem; }
+.bb-admin .bb-stats strong { display: block; font-size: 1.6rem; color: var(--bb-rose); font-weight: 400; }
+.bb-admin .bb-danger { border-color: var(--bb-rose); }
+.bb-admin .bb-error { color: #b3261e; }

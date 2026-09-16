@@ -2,81 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= event.couple_names %> — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
-<body>
-  <p><a href="/admin/events">&larr; All weddings</a></p>
+<body class="bb-admin">
+  <p class="bb-admin-back"><a href="/admin/events">&larr; All weddings</a></p>
   <h1><%= event.couple_names %></h1>
 
-  <section>
+  <div class="bb-admin-card">
     <h2>Shareable invite link</h2>
     <p>Share this one link everywhere (WhatsApp status, a group, etc.) — every guest uses it with their own passcode.</p>
-    <input type="text" readonly value="<%= baseUrl %>/invite/<%= event.id %>" style="width: 320px;" onclick="this.select()">
-    <button type="button" class="copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Link</button>
-  </section>
+    <input type="text" readonly value="<%= baseUrl %>/invite/<%= event.id %>" onclick="this.select()">
+    <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Link</button>
+  </div>
 
-  <section>
+  <div class="bb-admin-card">
     <h2>Door scanner</h2>
     <p>Works for any event — no login needed. Hand this link to door staff on the wedding day.</p>
-    <a href="/scan">Open Door Scanner</a>
-    <button type="button" class="copy-btn" data-copy="<%= baseUrl %>/scan">Copy Link</button>
-  </section>
+    <a class="bb-btn" href="/scan">Open Door Scanner</a>
+    <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/scan">Copy Link</button>
+  </div>
 
-  <section>
+  <div class="bb-admin-card">
     <h2>Status: <%= event.status %></h2>
     <form method="POST" action="/admin/events/<%= event.id %>/status">
-      <button type="submit"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
+      <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
     </form>
-  </section>
+  </div>
 
-  <section>
+  <div class="bb-admin-card">
     <h2>Live stats</h2>
-    <ul>
-      <li>Total guests: <%= stats.total_guests %></li>
-      <li>Accepted: <%= stats.accepted %></li>
-      <li>Declined: <%= stats.declined %></li>
-      <li>Seats accepted: <%= stats.seats_accepted %></li>
-      <li>Checked in: <%= stats.checked_in %></li>
+    <ul class="bb-stats">
+      <li><strong><%= stats.total_guests %></strong> Total guests</li>
+      <li><strong><%= stats.accepted %></strong> Accepted</li>
+      <li><strong><%= stats.declined %></strong> Declined</li>
+      <li><strong><%= stats.seats_accepted %></strong> Seats accepted</li>
+      <li><strong><%= stats.checked_in %></strong> Checked in</li>
     </ul>
-  </section>
+  </div>
 
-  <section>
+  <div class="bb-admin-card">
     <h2>Wedding details</h2>
     <% if (typeof error !== 'undefined' && error) { %>
-      <p style="color: red;"><%= error %></p>
+      <p class="bb-error"><%= error %></p>
     <% } %>
     <form method="POST" action="/admin/events/<%= event.id %>" enctype="multipart/form-data">
-      <label>Couple names <input type="text" name="coupleNames" value="<%= event.couple_names %>" required></label><br>
-      <label>Wedding date <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required></label><br>
-      <label>Venue <input type="text" name="venue" value="<%= event.venue %>" required></label><br>
-      <label>Theme color <input type="color" name="themeColor" value="<%= event.theme_color %>"></label><br>
-      <label>Accept button text <input type="text" name="acceptButtonText" value="<%= event.accept_button_text %>"></label><br>
-      <label>Decline button text <input type="text" name="declineButtonText" value="<%= event.decline_button_text %>"></label><br>
-      <label>Decline message <textarea name="declineMessage" rows="3" cols="50"><%= event.decline_message %></textarea></label><br>
+      <label>Couple names <input type="text" name="coupleNames" value="<%= event.couple_names %>" required></label>
+      <label>Wedding date <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required></label>
+      <label>Venue <input type="text" name="venue" value="<%= event.venue %>" required></label>
+      <label>Theme color <input type="color" name="themeColor" value="<%= event.theme_color %>"></label>
+      <label>Theme
+        <select name="theme">
+          <% themes.forEach(function (t) { %>
+            <option value="<%= t.slug %>" <%= event.theme === t.slug ? 'selected' : '' %>><%= t.label %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Accept button text <input type="text" name="acceptButtonText" value="<%= event.accept_button_text %>"></label>
+      <label>Decline button text <input type="text" name="declineButtonText" value="<%= event.decline_button_text %>"></label>
+      <label>Decline message <textarea name="declineMessage" rows="3"><%= event.decline_message %></textarea></label>
       <% if (event.card_image) { %>
         <p>Current card: <img src="<%= event.card_image %>" alt="Invitation card" style="max-width:200px"></p>
       <% } %>
-      <label>Card image <input type="file" name="cardImage" accept="image/png,image/jpeg,image/webp"></label><br>
-      <label>Itinerary <textarea name="itinerary" rows="6" cols="50" placeholder="One item per line, e.g.&#10;4:00 PM - Ceremony&#10;5:30 PM - Cocktail hour&#10;7:00 PM - Reception"><%= event.itinerary || '' %></textarea></label><br>
-      <label>Invitation message <textarea name="invitationMessage" rows="4" cols="50" placeholder="A personal note from the couple to their guests."><%= event.invitation_message || '' %></textarea></label><br>
-      <label>Contact details <textarea name="contactDetails" rows="3" cols="50" placeholder="How guests can reach the couple, e.g. phone/email."><%= event.contact_details || '' %></textarea></label><br>
-      <button type="submit">Save</button>
+      <label>Card image <input type="file" name="cardImage" accept="image/png,image/jpeg,image/webp"></label>
+      <label>Itinerary <textarea name="itinerary" rows="6" placeholder="One item per line, e.g.&#10;4:00 PM - Ceremony&#10;5:30 PM - Cocktail hour&#10;7:00 PM - Reception"><%= event.itinerary || '' %></textarea></label>
+      <label>Invitation message <textarea name="invitationMessage" rows="4" placeholder="A personal note from the couple to their guests."><%= event.invitation_message || '' %></textarea></label>
+      <label>Contact details <textarea name="contactDetails" rows="3" placeholder="How guests can reach the couple, e.g. phone/email."><%= event.contact_details || '' %></textarea></label>
+      <button type="submit" class="bb-btn">Save</button>
     </form>
-  </section>
+  </div>
 
-  <section>
+  <div class="bb-admin-card">
     <h2>Add guests</h2>
     <form method="POST" action="/admin/events/<%= event.id %>/guests">
       <p>One guest per line: <code>Name, seat count</code></p>
-      <textarea name="guestList" rows="6" cols="40" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea><br>
-      <button type="submit">Add Guests</button>
+      <textarea name="guestList" rows="6" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea>
+      <button type="submit" class="bb-btn">Add Guests</button>
     </form>
-  </section>
+  </div>
 
-  <section>
+  <div class="bb-admin-card">
     <h2>Guest list</h2>
-    <p><a href="/admin/events/<%= event.id %>/export">Download Guest List (Excel)</a></p>
-    <table border="1" cellpadding="4">
+    <p><a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Guest List (Excel)</a></p>
+    <table>
       <thead>
         <tr><th>Name</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>
       </thead>
@@ -86,21 +98,21 @@
             <td><%= guest.name %></td>
             <td><%= guest.seat_count %></td>
             <td><%= guest.passcode %></td>
-            <td><button type="button" class="copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button></td>
+            <td><button type="button" class="bb-btn copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button></td>
             <td><%= guest.rsvp_status %></td>
             <td><%= guest.checked_in ? 'Yes' : 'No' %></td>
           </tr>
         <% }) %>
       </tbody>
     </table>
-  </section>
+  </div>
 
-  <section>
+  <div class="bb-admin-card bb-danger">
     <h2>Danger zone</h2>
     <form method="POST" action="/admin/events/<%= event.id %>/delete" onsubmit="return confirm('Delete this wedding permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
-      <button type="submit">Delete Wedding</button>
+      <button type="submit" class="bb-btn">Delete Wedding</button>
     </form>
-  </section>
+  </div>
 
   <script>
     document.querySelectorAll('.copy-btn').forEach(function (btn) {
