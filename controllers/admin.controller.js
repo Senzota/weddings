@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const ExcelJS = require('exceljs');
 const pool = require('../config/db');
 const eventModel = require('../models/event.model');
 const guestModel = require('../models/guest.model');
@@ -34,7 +35,7 @@ function newEventForm(req, res) {
 }
 
 async function createEvent(req, res) {
-  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText } = req.body;
+  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
     return res.render('admin/event-form', { event: null, error: 'Couple names, date, and venue are required.' });
   }
@@ -43,6 +44,7 @@ async function createEvent(req, res) {
     themeColor: themeColor || '#8a6d3b',
     acceptButtonText: acceptButtonText || 'Accept with pleasure',
     declineButtonText: declineButtonText || 'Decline with regret',
+    declineMessage: declineMessage || undefined,
   });
   res.redirect(`/admin/events/${event.id}`);
 }
@@ -57,7 +59,7 @@ async function showDashboard(req, res) {
 }
 
 async function updateEvent(req, res) {
-  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText } = req.body;
+  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
     const event = await eventModel.findById(req.params.id);
     const guests = await guestModel.findByEvent(req.params.id);
@@ -70,7 +72,7 @@ async function updateEvent(req, res) {
   const cardImage = req.file ? `/uploads/${req.file.filename}` : null;
   await eventModel.update(req.params.id, {
     coupleNames, weddingDate, venue, themeColor,
-    acceptButtonText, declineButtonText, cardImage,
+    acceptButtonText, declineButtonText, declineMessage, cardImage,
   });
   res.redirect(`/admin/events/${req.params.id}`);
 }
@@ -105,8 +107,40 @@ async function deleteEvent(req, res) {
   res.redirect('/admin/events');
 }
 
+async function exportGuestList(req, res) {
+  const event = await eventModel.findById(req.params.id);
+  if (!event) return res.status(404).send('Wedding not found.');
+  const guests = await guestModel.findByEvent(event.id);
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Guests');
+  sheet.columns = [
+    { header: 'Name', key: 'name', width: 30 },
+    { header: 'Seats', key: 'seats', width: 10 },
+    { header: 'Passcode', key: 'passcode', width: 15 },
+    { header: 'RSVP Status', key: 'rsvp', width: 15 },
+    { header: 'Checked In', key: 'checkedIn', width: 12 },
+  ];
+  for (const guest of guests) {
+    sheet.addRow({
+      name: guest.name,
+      seats: guest.seat_count,
+      passcode: guest.passcode,
+      rsvp: guest.rsvp_status,
+      checkedIn: guest.checked_in ? 'Yes' : 'No',
+    });
+  }
+
+  const safeName = event.couple_names.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}-guests.xlsx"`);
+  await workbook.xlsx.write(res);
+  res.end();
+}
+
 module.exports = {
   showLogin, login, logout,
   listEvents, newEventForm, createEvent,
   showDashboard, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
+  exportGuestList,
 };

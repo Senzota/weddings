@@ -25,6 +25,10 @@
     </form>
 
   <% } else if (state === 'card') { %>
+    <% if (welcomeBack) { %>
+      <p><%= event.decline_message %></p>
+      <p><strong>We will be delighted if your schedule has now allowed you to participate.</strong></p>
+    <% } %>
     <div class="reveal">
       <% if (event.card_image) { %>
         <img src="<%= event.card_image %>" alt="Invitation card" style="max-width:400px">
@@ -38,15 +42,24 @@
         <input type="hidden" name="response" value="accepted">
         <button type="submit"><%= event.accept_button_text %></button>
       </form>
-      <form method="POST" action="/invite/<%= event.id %>/rsvp" style="display:inline">
-        <input type="hidden" name="passcode" value="<%= guest.passcode %>">
-        <input type="hidden" name="response" value="declined">
-        <button type="submit"><%= event.decline_button_text %></button>
-      </form>
+      <% if (!welcomeBack) { %>
+        <form method="POST" action="/invite/<%= event.id %>/rsvp" style="display:inline">
+          <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+          <input type="hidden" name="response" value="declined">
+          <button type="submit"><%= event.decline_button_text %></button>
+        </form>
+      <% } %>
     </div>
 
   <% } else if (state === 'qr') { %>
-    <h1><%= event.couple_names %></h1>
+    <div class="reveal">
+      <% if (event.card_image) { %>
+        <img src="<%= event.card_image %>" alt="Invitation card" style="max-width:400px">
+      <% } %>
+      <h1><%= event.couple_names %></h1>
+      <p><%= event.wedding_date %> — <%= event.venue %></p>
+      <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %></p>
+    </div>
     <p>You're on the list, <%= guest.name %>! Show this QR code at the door.</p>
     <% if (checkedIn) { %>
       <p><strong>You're already checked in.</strong> This still works if you need to show it again.</p>
@@ -56,10 +69,6 @@
   <% } else if (state === 'expired') { %>
     <h1><%= event.couple_names %></h1>
     <p>This invite is no longer active. Thanks for celebrating with <%= event.couple_names %>!</p>
-
-  <% } else if (state === 'declined') { %>
-    <h1><%= event.couple_names %></h1>
-    <p>You've already responded — you declined this invitation. Thank you for letting us know, <%= guest.name %>.</p>
   <% } %>
 </body>
 </html>

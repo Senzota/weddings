@@ -45,6 +45,7 @@
       <label>Theme color <input type="color" name="themeColor" value="<%= event.theme_color %>"></label><br>
       <label>Accept button text <input type="text" name="acceptButtonText" value="<%= event.accept_button_text %>"></label><br>
       <label>Decline button text <input type="text" name="declineButtonText" value="<%= event.decline_button_text %>"></label><br>
+      <label>Decline message <textarea name="declineMessage" rows="3" cols="50"><%= event.decline_message %></textarea></label><br>
       <% if (event.card_image) { %>
         <p>Current card: <img src="<%= event.card_image %>" alt="Invitation card" style="max-width:200px"></p>
       <% } %>
@@ -64,6 +65,7 @@
 
   <section>
     <h2>Guest list</h2>
+    <p><a href="/admin/events/<%= event.id %>/export">Download Guest List (Excel)</a></p>
     <table border="1" cellpadding="4">
       <thead>
         <tr><th>Name</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>

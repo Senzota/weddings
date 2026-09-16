@@ -43,11 +43,15 @@ async function findByEventAndPasscode(eventId, passcode) {
   return rows[0];
 }
 
+// Accept is final and can be reached from 'pending' or 'declined' — a
+// guest who declined can still change their mind. Decline is only ever
+// reachable from 'pending' — once accepted, nothing can move it again.
 async function recordRsvp(id, status) {
+  const allowedFrom = status === 'accepted' ? ['pending', 'declined'] : ['pending'];
   const { rows } = await pool.query(
     `UPDATE guests SET rsvp_status = $1, responded_at = now()
-     WHERE id = $2 AND rsvp_status = 'pending' RETURNING *`,
-    [status, id]
+     WHERE id = $2 AND rsvp_status = ANY($3::text[]) RETURNING *`,
+    [status, id, allowedFrom]
   );
   return rows[0];
 }

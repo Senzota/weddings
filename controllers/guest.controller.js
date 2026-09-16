@@ -9,13 +9,18 @@ const CHECKED_IN_QR_WINDOW_HOURS = 6;
 // "whatever this guest's current state is" after resolving who they are.
 async function renderGuestState(res, event, guest, extra = {}) {
   if (guest.rsvp_status === 'pending') {
-    return res.render('guest/invite', { state: 'card', event, guest, ...extra });
+    return res.render('guest/invite', { state: 'card', event, guest, welcomeBack: false, ...extra });
   }
   if (guest.rsvp_status === 'declined') {
-    return res.render('guest/invite', { state: 'declined', event, guest, ...extra });
+    // Decline isn't final — this is the same card as 'pending', plus a
+    // welcome-back banner, and only the Accept action (no point offering
+    // "decline" again).
+    return res.render('guest/invite', { state: 'card', event, guest, welcomeBack: true, ...extra });
   }
 
-  // accepted
+  // accepted — final, and shown with the invitation card alongside the QR
+  // rather than replacing it (the guest should still feel like they're
+  // looking at "their invitation," with the gatepass as an addition).
   let gatepass = await gatepassModel.findByGuestId(guest.id);
   if (!gatepass) gatepass = await gatepassModel.create(guest.id);
 
@@ -77,8 +82,15 @@ async function submitRsvp(req, res) {
     return res.render('guest/invite', { state: 'passcode_form', event, error: 'That passcode was not recognized.' });
   }
 
+  // Accept is final and reachable from 'pending' or 'declined' (a guest
+  // can change their mind). Decline is only reachable from 'pending' —
+  // once accepted, nothing can move the status again. guest.model.js's
+  // recordRsvp enforces this same rule at the query level; the check here
+  // just avoids a pointless write attempt.
   const { response } = req.body;
-  if (guest.rsvp_status === 'pending' && (response === 'accepted' || response === 'declined')) {
+  const canAccept = response === 'accepted' && (guest.rsvp_status === 'pending' || guest.rsvp_status === 'declined');
+  const canDecline = response === 'declined' && guest.rsvp_status === 'pending';
+  if (canAccept || canDecline) {
     // Written unconditionally, before the gatepass/QR step — a guest's
     // response must never be lost, and there's no email delivery left in
     // this path at all to fail on.
