@@ -57,6 +57,7 @@
         <p>Current card: <img src="<%= event.card_image %>" alt="Invitation card" style="max-width:200px"></p>
       <% } %>
       <label>Card image <input type="file" name="cardImage" accept="image/png,image/jpeg,image/webp"></label><br>
+      <label>Itinerary <textarea name="itinerary" rows="6" cols="50" placeholder="One item per line, e.g.&#10;4:00 PM - Ceremony&#10;5:30 PM - Cocktail hour&#10;7:00 PM - Reception"><%= event.itinerary || '' %></textarea></label><br>
       <button type="submit">Save</button>
     </form>
   </section>

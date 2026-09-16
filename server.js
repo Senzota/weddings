@@ -16,8 +16,10 @@ const guestRoutes = require('./routes/guest.routes');
 const adminRoutes = require('./routes/admin.routes');
 const scanRoutes = require('./routes/scan.routes');
 const { startEventLifecycleSweep } = require('./utils/eventLifecycle');
+const { formatEventDate } = require('./utils/formatDate');
 
 const app = express();
+app.locals.formatEventDate = formatEventDate;
 
 // Render terminates TLS at its edge and forwards to this app over plain
 // HTTP, so req.protocol would otherwise always read 'http' — which leaked

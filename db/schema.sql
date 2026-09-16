@@ -18,14 +18,18 @@ CREATE TABLE IF NOT EXISTS events (
   accept_button_text   TEXT NOT NULL DEFAULT 'Accept with pleasure',
   decline_button_text  TEXT NOT NULL DEFAULT 'Decline with regret',
   decline_message      TEXT NOT NULL DEFAULT 'Thank you for letting us know. You are always welcome — if your plans change, we''d love to have you with us.',
+  theme                TEXT NOT NULL DEFAULT 'design-1',
+  itinerary            TEXT,
   status               TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'live')),
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- For databases that already had the events table before decline_message
--- existed (CREATE TABLE IF NOT EXISTS above won't add it retroactively).
+-- For databases that already had the events table before these columns
+-- existed (CREATE TABLE IF NOT EXISTS above won't add them retroactively).
 ALTER TABLE events ADD COLUMN IF NOT EXISTS decline_message TEXT NOT NULL
   DEFAULT 'Thank you for letting us know. You are always welcome — if your plans change, we''d love to have you with us.';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'design-1';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS itinerary TEXT;
 
 CREATE TABLE IF NOT EXISTS guests (
   id            SERIAL PRIMARY KEY,

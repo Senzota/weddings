@@ -32,7 +32,7 @@ async function findById(id) {
 async function update(id, fields) {
   const {
     coupleNames, weddingDate, venue, themeColor,
-    acceptButtonText, declineButtonText, declineMessage, cardImage,
+    acceptButtonText, declineButtonText, declineMessage, cardImage, itinerary,
   } = fields;
   const { rows } = await pool.query(
     `UPDATE events SET
@@ -41,9 +41,10 @@ async function update(id, fields) {
        accept_button_text = COALESCE($5, accept_button_text),
        decline_button_text = COALESCE($6, decline_button_text),
        decline_message = COALESCE($7, decline_message),
-       card_image = COALESCE($8, card_image)
-     WHERE id = $9 RETURNING *`,
-    [coupleNames, weddingDate, venue, themeColor || null, acceptButtonText || null, declineButtonText || null, declineMessage || null, cardImage, id]
+       card_image = COALESCE($8, card_image),
+       itinerary = $9
+     WHERE id = $10 RETURNING *`,
+    [coupleNames, weddingDate, venue, themeColor || null, acceptButtonText || null, declineButtonText || null, declineMessage || null, cardImage, itinerary || null, id]
   );
   return rows[0];
 }

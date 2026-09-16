@@ -1,0 +1,177 @@
+/* Design 1 — colors and the "Placeholder Names of weds" script sampled
+   directly from design-1-landing-reference.png, not guessed. */
+:root {
+  --d1-cream: #f6f2e7;
+  --d1-cream-deep: #efe9d9;
+  --d1-rose: #9f5b4c;
+  --d1-rose-soft: #c98f7c;
+  --d1-sage: #7f8f5f;
+  --d1-ink: #3a3128;
+}
+
+.d1-page {
+  margin: 0;
+  background: var(--d1-cream);
+  color: var(--d1-ink);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+.d1-page * { box-sizing: border-box; }
+
+.d1-script {
+  font-family: 'Beau Rivage', cursive;
+  color: var(--d1-rose);
+}
+
+.d1-label {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--d1-rose);
+  font-size: 0.85rem;
+}
+
+.d1-btn {
+  display: inline-block;
+  border: 1.5px solid var(--d1-rose);
+  color: var(--d1-rose);
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.85em 2.4em;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.d1-btn:hover { background: var(--d1-rose); color: var(--d1-cream); }
+
+/* ---------- Landing page ---------- */
+.d1-landing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+}
+.d1-landing-left {
+  padding: 6vw 6vw 8vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.25rem;
+}
+.d1-floral {
+  width: min(80%, 320px);
+  height: auto;
+}
+.d1-date { margin: 0; }
+.d1-names {
+  margin: 0;
+  font-size: clamp(2.8rem, 6vw, 4.6rem);
+  line-height: 1.05;
+  font-weight: 400;
+}
+.d1-landing-left .d1-btn { align-self: flex-start; margin-top: 1rem; }
+
+.d1-landing-right { position: relative; overflow: hidden; }
+.d1-landing-right img,
+.d1-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.d1-photo-placeholder { background: var(--d1-cream-deep); }
+
+@media (max-width: 760px) {
+  .d1-landing-grid { grid-template-columns: 1fr; }
+  .d1-landing-right { height: 46vh; order: -1; }
+  .d1-landing-left { padding: 8vw 8vw 10vw; align-items: center; text-align: center; }
+  .d1-landing-left .d1-btn { align-self: center; }
+  .d1-floral { width: min(70%, 240px); }
+}
+
+/* ---------- Passcode overlay ---------- */
+.d1-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(58, 49, 40, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10;
+}
+.d1-overlay[hidden] { display: none; }
+.d1-overlay-card {
+  background: var(--d1-cream);
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+}
+.d1-overlay-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--d1-rose);
+  cursor: pointer;
+  line-height: 1;
+}
+.d1-overlay-label { margin: 0 0 1rem; }
+.d1-overlay-card input[type="text"] {
+  width: 100%;
+  padding: 0.7em 1em;
+  margin-bottom: 1rem;
+  border: 1px solid var(--d1-rose-soft);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  text-align: center;
+}
+.d1-error { color: #b3261e; margin: 0 0 1rem; }
+
+/* ---------- Reveal (invitation) page ---------- */
+.d1-reveal {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8vw 6vw;
+  text-align: center;
+}
+.d1-reveal .d1-card-img {
+  width: 100%;
+  max-width: 340px;
+  border-radius: 8px;
+  margin: 0 auto 1.5rem;
+  display: block;
+}
+.d1-reveal .d1-names { font-size: clamp(2.2rem, 8vw, 3.2rem); margin-bottom: 0.4rem; }
+.d1-reveal .d1-meta { margin: 0 0 1.5rem; }
+.d1-reveal .d1-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+.d1-banner {
+  background: var(--d1-cream-deep);
+  border: 1px solid var(--d1-rose-soft);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.d1-qr { width: 240px; max-width: 100%; margin: 1.5rem auto 0; display: block; }
+.d1-itinerary-link { display: inline-block; margin-top: 2rem; font-family: 'Cormorant Garamond', Georgia, serif; color: var(--d1-rose); }
+
+/* ---------- Itinerary page ---------- */
+.d1-itinerary { max-width: 480px; margin: 0 auto; padding: 8vw 6vw; text-align: center; }
+.d1-itinerary ul { list-style: none; padding: 0; margin: 2rem 0 0; text-align: left; }
+.d1-itinerary li {
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--d1-cream-deep);
+  font-size: 1.15rem;
+}
+.d1-itinerary li:last-child { border-bottom: none; }
