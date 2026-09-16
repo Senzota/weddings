@@ -92,11 +92,14 @@ CREATE TABLE IF NOT EXISTS cameo_photos (
   event_id     INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   image_url    TEXT NOT NULL,
   public_id    TEXT NOT NULL,
-  title        TEXT NOT NULL,
+  title        TEXT,
   uploaded_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_cameo_photos_event_id ON cameo_photos(event_id);
+
+-- input_13 Part B: a Cameo photo no longer requires a caption.
+ALTER TABLE cameo_photos ALTER COLUMN title DROP NOT NULL;
 
 -- Anonymous summary metrics preserved when an event is deleted (manually or
 -- by the 30-day auto-sweep). Never purged by anything.

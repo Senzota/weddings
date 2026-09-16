@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= event.couple_names %> — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="bb-admin">
+  <header class="bb-admin-header">
+    <div class="bb-admin-header-inner">
+      <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>"><%= event.couple_names %></a>
+      <nav class="bb-admin-nav">
+        <a href="#guest-list">Guest List</a>
+        <a href="/admin/events/<%= event.id %>/edit">Wedding Details</a>
+        <a href="/admin/events/<%= event.id %>/assets">Assets</a>
+        <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+        <a href="/admin/events">All weddings</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="bb-admin-wrap">
+    <div class="lr-topline">
+      <div>
+        <p class="bb-label">Your wedding atelier</p>
+        <h1><%= event.couple_names %></h1>
+        <p class="lr-intro"><%= event.venue %></p>
+      </div>
+      <div class="lr-date-pill"><%= formatEventDate(event.wedding_date) %></div>
+    </div>
+
+    <div class="lr-dashboard-grid">
+      <!-- Profile card -->
+      <article class="lr-card lr-profile">
+        <div class="lr-profile-photo-wrap">
+          <% if (event.card_image) { %>
+            <img class="lr-profile-photo" src="<%= event.card_image %>" alt="<%= event.couple_names %>">
+          <% } else { %>
+            <div class="lr-profile-photo lr-profile-photo-placeholder"></div>
+          <% } %>
+          <span class="lr-monogram"><%= event.couple_names.charAt(0) %></span>
+        </div>
+        <div class="lr-profile-content">
+          <p class="bb-label">The happy couple</p>
+          <h2><%= event.couple_names %></h2>
+          <p><%= event.venue %></p>
+          <div class="lr-btn-row">
+            <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Wedding Link</button>
+            <a class="lr-plain-btn" href="/admin/events/<%= event.id %>/edit">Edit details &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Hero image -->
+      <article class="lr-card lr-hero-image">
+        <% if (event.card_image) { %><img src="<%= event.card_image %>" alt=""><% } %>
+        <div class="lr-hero-caption">
+          <div><small>Our story</small><strong>Forever begins here</strong></div>
+          <a class="lr-round-icon" href="/invite/<%= event.id %>" target="_blank" title="View invitation">&#8599;</a>
+        </div>
+      </article>
+
+      <!-- Stats -->
+      <article class="lr-card lr-stats">
+        <div class="lr-section-head"><h2>At a glance</h2></div>
+        <div class="lr-bubble-grid">
+          <div class="lr-stat"><div class="lr-bubble"><%= stats.total_guests %></div><div><p>Invited guests</p><span>Door Scanner: <a href="/scan" target="_blank">open</a></span></div></div>
+          <div class="lr-stat"><div class="lr-bubble"><%= stats.responded %></div><div><p>RSVPs received</p><span><%= stats.total_guests > 0 ? Math.round(stats.responded / stats.total_guests * 100) : 0 %>% response rate</span></div></div>
+          <div class="lr-stat"><div class="lr-bubble"><%= daysToGo %></div><div><p>Days to go</p><span>Your moment is near</span></div></div>
+          <div class="lr-stat"><div class="lr-bubble"><%= stats.checked_in %></div><div><p>Checked in</p><span><%= stats.seats_accepted %> seats accepted</span></div></div>
+        </div>
+      </article>
+
+      <!-- Itinerary -->
+      <article class="lr-card lr-itinerary">
+        <p class="bb-label">The day unfolds</p>
+        <h2 class="bb-script">The Itinerary</h2>
+        <% const itineraryItems = (event.itinerary || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean); %>
+        <% if (itineraryItems.length > 0) { %>
+          <div class="lr-timeline">
+            <% itineraryItems.forEach(function (item) { %>
+              <div class="lr-event"><p><%= item %></p></div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p>Add itinerary items from Wedding Details.</p>
+        <% } %>
+      </article>
+
+      <!-- Gallery/Assets preview -->
+      <article class="lr-card lr-gallery">
+        <div class="lr-section-head"><h2>Visual direction</h2><a href="/admin/events/<%= event.id %>/assets">Open Assets &rarr;</a></div>
+        <div class="lr-gallery-grid">
+          <% const previewPhotos = galleryPhotos.slice(0, 3); %>
+          <% if (previewPhotos.length > 0) { %>
+            <% previewPhotos.forEach(function (photo, i) { %>
+              <div class="lr-gallery-thumb <%= i === 0 ? 'lr-gallery-main' : '' %>" style="background-image:url('<%= photo.image_url %>')"></div>
+            <% }) %>
+          <% } else { %>
+            <p>No photos yet — add some from Assets.</p>
+          <% } %>
+        </div>
+      </article>
+
+      <!-- Guests -->
+      <article class="lr-card lr-guests" id="guest-list">
+        <div class="lr-section-head">
+          <div><p class="bb-label">Your inner circle</p><h2>Guest list</h2></div>
+          <a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Excel</a>
+        </div>
+        <div class="lr-table-wrap">
+          <table>
+            <thead><tr><th>Guest</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th></th></tr></thead>
+            <tbody>
+              <% guests.forEach(function (guest) { %>
+                <tr>
+                  <td><div class="lr-guest"><span class="lr-avatar"><%= guest.name.charAt(0) %></span><%= guest.name %></div></td>
+                  <td><%= guest.seat_count %></td>
+                  <td><span class="lr-code"><%= guest.passcode %></span></td>
+                  <td><span class="lr-status"><%= guest.rsvp_status %></span></td>
+                  <td><button type="button" class="lr-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <form method="POST" action="/admin/events/<%= event.id %>/guests" style="margin-top:1rem;">
+          <p>One guest per line: <code>Name, seat count</code></p>
+          <textarea name="guestList" rows="4" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea>
+          <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
+        </form>
+      </article>
+    </div>
+
+    <div class="bb-admin-section" style="margin-top:2rem;">
+      <div class="bb-admin-card bb-danger">
+        <h2>Danger zone</h2>
+        <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
+          <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
+        </form>
+        <form method="POST" action="/admin/events/<%= event.id %>/delete" style="display:inline-block;" onsubmit="return confirm('Delete this wedding permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
+          <button type="submit" class="bb-btn">Delete Wedding</button>
+        </form>
+        <p style="margin-top:0.75rem;">Status: <%= event.status %></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+          var original = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(function () { btn.textContent = original; }, 1300);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit — <%= event.couple_names %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="bb-admin">
+  <div class="bb-admin-wrap">
+    <p class="bb-admin-back"><a href="/admin/events/<%= event.id %>">&larr; Back to <%= event.couple_names %></a></p>
+    <h1>Edit Wedding</h1>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <p class="bb-error"><%= error %></p>
+    <% } %>
+    <form method="POST" action="/admin/events/<%= event.id %>" enctype="multipart/form-data">
+      <div class="bb-details-grid">
+        <div class="bb-admin-tile">
+          <label>Couple names</label>
+          <input type="text" name="coupleNames" value="<%= event.couple_names %>" required>
+        </div>
+        <div class="bb-admin-tile">
+          <label>Wedding date</label>
+          <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required>
+        </div>
+        <div class="bb-admin-tile">
+          <label>Venue</label>
+          <input type="text" name="venue" value="<%= event.venue %>" required>
+        </div>
+        <div class="bb-admin-tile">
+          <label>Theme</label>
+          <select name="theme">
+            <% themes.forEach(function (t) { %>
+              <option value="<%= t.slug %>" <%= event.theme === t.slug ? 'selected' : '' %>><%= t.label %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="bb-admin-tile">
+          <label>Theme color</label>
+          <input type="color" name="themeColor" value="<%= event.theme_color %>">
+        </div>
+        <div class="bb-admin-tile">
+          <label>Accept button text</label>
+          <input type="text" name="acceptButtonText" value="<%= event.accept_button_text %>">
+        </div>
+        <div class="bb-admin-tile">
+          <label>Decline button text</label>
+          <input type="text" name="declineButtonText" value="<%= event.decline_button_text %>">
+        </div>
+
+        <div class="bb-admin-tile">
+          <label>Card image</label>
+          <% if (event.card_image) { %>
+            <a class="bb-admin-thumb" href="<%= event.card_image %>" target="_blank" title="View full image">
+              <img src="<%= event.card_image %>" alt="Current card">
+            </a>
+          <% } %>
+          <input type="file" name="cardImage" accept="image/png,image/jpeg,image/webp">
+        </div>
+
+        <div class="bb-admin-tile bb-tile-wide">
+          <label>Decline message</label>
+          <textarea name="declineMessage"><%= event.decline_message %></textarea>
+        </div>
+        <div class="bb-admin-tile bb-tile-wide">
+          <label>Invitation message</label>
+          <textarea name="invitationMessage" placeholder="A personal note from the couple to their guests."><%= event.invitation_message || '' %></textarea>
+        </div>
+        <div class="bb-admin-tile bb-tile-wide">
+          <label>Itinerary</label>
+          <textarea name="itinerary" placeholder="One item per line, e.g.&#10;4:00 PM - Ceremony&#10;5:30 PM - Cocktail hour&#10;7:00 PM - Reception"><%= event.itinerary || '' %></textarea>
+        </div>
+        <div class="bb-admin-tile bb-tile-wide">
+          <label>Contact details</label>
+          <textarea name="contactDetails" placeholder="How guests can reach the couple, e.g. phone/email."><%= event.contact_details || '' %></textarea>
+        </div>
+      </div>
+      <button type="submit" class="bb-btn" style="margin-top:1.25rem;">Save Changes</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -55,13 +55,34 @@ async function createEvent(req, res) {
   res.redirect(`/admin/events/${event.id}`);
 }
 
+// Wedding date is a plain 'YYYY-MM-DD' string (see config/db.js's type
+// parser) — building the Date from an explicit local-midnight literal
+// avoids the same UTC-shift bug that parser exists to prevent.
+function daysUntil(dateStr) {
+  const target = new Date(`${dateStr}T00:00:00`);
+  const diffMs = target.getTime() - new Date().setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round(diffMs / 86400000));
+}
+
 async function showDashboard(req, res) {
   const event = await eventModel.findById(req.params.id);
   if (!event) return res.status(404).send('Wedding not found.');
   const guests = await guestModel.findByEvent(event.id);
   const stats = await eventModel.getStats(event.id);
+  const galleryPhotos = await galleryModel.findByEvent(event.id);
+  const cameoPhotos = await cameoModel.findByEvent(event.id);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  res.render('admin/dashboard', { event, guests, stats, error: null, baseUrl, themes: AVAILABLE_THEMES });
+  res.render(`admin/themes/${event.theme}/dashboard`, {
+    event, guests, stats, galleryPhotos, cameoPhotos, baseUrl,
+    daysToGo: daysUntil(event.wedding_date), themes: AVAILABLE_THEMES,
+  });
+}
+
+async function showEditForm(req, res) {
+  const event = await eventModel.findById(req.params.id);
+  if (!event) return res.status(404).send('Wedding not found.');
+  const error = req.query.error ? 'Couple names, date, and venue are required.' : null;
+  res.render('admin/edit-event', { event, error, themes: AVAILABLE_THEMES });
 }
 
 async function showAssets(req, res) {
@@ -78,13 +99,12 @@ async function updateEvent(req, res) {
     declineMessage, itinerary, invitationMessage, contactDetails, theme,
   } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
-    const event = await eventModel.findById(req.params.id);
-    const guests = await guestModel.findByEvent(req.params.id);
-    const stats = await eventModel.getStats(req.params.id);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    return res.status(400).render('admin/dashboard', {
-      event, guests, stats, baseUrl, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES,
-    });
+    // Both the dedicated edit page and Botanical Bloom's inline dashboard
+    // form post here — redirecting to the edit page on failure (rather
+    // than re-rendering whichever page submitted) keeps this one handler
+    // simple; browsers already block empty required fields client-side,
+    // so this path is rare.
+    return res.redirect(`/admin/events/${req.params.id}/edit?error=1`);
   }
 
   let cardImage;
@@ -169,9 +189,9 @@ async function deleteGalleryPhoto(req, res) {
 // multi-file batch — each entry is meant to carry its own caption.
 async function uploadCameoPhoto(req, res) {
   const { title } = req.body;
-  if (req.file && title) {
+  if (req.file) {
     const result = await uploadImage(req.file.buffer, `weddings103/events/${req.params.id}/cameos`);
-    await cameoModel.addPhoto(req.params.id, result.secure_url, result.public_id, title);
+    await cameoModel.addPhoto(req.params.id, result.secure_url, result.public_id, title || null);
   }
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
@@ -222,7 +242,7 @@ async function exportGuestList(req, res) {
 module.exports = {
   showLogin, login, logout,
   listEvents, newEventForm, createEvent,
-  showDashboard, showAssets, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
+  showDashboard, showEditForm, showAssets, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
   exportGuestList, uploadGalleryPhotos, deleteGalleryPhoto,
   uploadCameoPhoto, deleteCameoPhoto,
 };

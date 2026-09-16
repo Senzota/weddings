@@ -7,11 +7,13 @@
   <style>
     body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f2; color: #222; }
     .app-header {
+      position: sticky; top: 0; z-index: 10;
       display: flex; align-items: center; justify-content: space-between;
       padding: 16px 24px; background: #fff; border-bottom: 1px solid #ddd;
     }
     .app-header .brand { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; }
     .app-main { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .event-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
   </style>
 </head>
 <body>
@@ -33,10 +35,11 @@
 
   <ul>
     <% events.forEach(function(event) { %>
-      <li>
+      <li class="event-row">
         <a href="/admin/events/<%= event.id %>">
           <%= event.couple_names %> — <%= event.wedding_date %> (<%= event.status %>)
         </a>
+        <a href="/admin/events/<%= event.id %>/edit">Edit</a>
       </li>
     <% }) %>
     <% if (events.length === 0) { %>

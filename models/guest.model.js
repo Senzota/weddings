@@ -43,6 +43,16 @@ async function findByEventAndPasscode(eventId, passcode) {
   return rows[0];
 }
 
+// For session-based re-identification (input_13 Part C) — scoped to the
+// event so a session value can't be replayed against a different wedding.
+async function findByEventAndId(eventId, guestId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM guests WHERE event_id = $1 AND id = $2',
+    [eventId, guestId]
+  );
+  return rows[0];
+}
+
 // Accept is final and can be reached from 'pending' or 'declined' — a
 // guest who declined can still change their mind. Decline is only ever
 // reachable from 'pending' — once accepted, nothing can move it again.
@@ -60,5 +70,6 @@ module.exports = {
   bulkCreate,
   findByEvent,
   findByEventAndPasscode,
+  findByEventAndId,
   recordRsvp,
 };

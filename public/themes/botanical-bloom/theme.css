@@ -307,7 +307,7 @@ body.bb-locked {
 .bb-admin-back { display: inline-block; margin-bottom: 1rem; }
 
 /* Per-event admin header (input_12 Part B) */
-.bb-admin-header { margin-bottom: 2rem; }
+.bb-admin-header { position: sticky; top: 0; z-index: 20; margin-bottom: 2rem; padding-top: 0.5rem; }
 .bb-admin-header-inner {
   max-width: 1200px;
   margin: 0 auto;

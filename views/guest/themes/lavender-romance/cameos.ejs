@@ -32,10 +32,10 @@
         <% photos.forEach(function (photo) { %>
           <div class="bb-gallery-cell">
             <a href="<%= photo.image_url %>" target="_blank">
-              <img src="<%= photo.image_url %>" alt="<%= photo.title %>">
+              <img src="<%= photo.image_url %>" alt="<%= photo.title || '' %>">
             </a>
             <a class="bb-gallery-download" href="<%= getDownloadUrl(photo.image_url) %>" download title="Download">&darr;</a>
-            <span class="bb-cameo-caption"><%= photo.title %></span>
+            <% if (photo.title) { %><span class="bb-cameo-caption"><%= photo.title %></span><% } %>
           </div>
         <% }) %>
       </div>

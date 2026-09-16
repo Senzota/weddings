@@ -14,6 +14,7 @@ router.get('/events/new', requireAdmin, adminController.newEventForm);
 router.post('/events', requireAdmin, asyncHandler(adminController.createEvent));
 
 router.get('/events/:id', requireAdmin, asyncHandler(adminController.showDashboard));
+router.get('/events/:id/edit', requireAdmin, asyncHandler(adminController.showEditForm));
 router.post('/events/:id', requireAdmin, upload.single('cardImage'), asyncHandler(adminController.updateEvent));
 router.post('/events/:id/status', requireAdmin, asyncHandler(adminController.toggleStatus));
 router.post('/events/:id/guests', requireAdmin, asyncHandler(adminController.bulkAddGuests));

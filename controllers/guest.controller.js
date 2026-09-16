@@ -6,6 +6,11 @@ const cameoModel = require('../models/cameo.model');
 const { generateQrDataUrl } = require('../utils/qrGenerator');
 
 const CHECKED_IN_QR_WINDOW_HOURS = 6;
+// A guest may reasonably revisit their invite over weeks, not hours — once
+// verified, extend the cookie well past express-session's default (and
+// past the admin session's 8h) so "no re-entry of the passcode" actually
+// holds for the life of the wedding, not just one browsing session.
+const GUEST_SESSION_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 
 // events.id is a plain serial integer — a non-numeric :eventId (an old
 // bookmarked link, or just a typo) would otherwise reach the DB as
@@ -31,12 +36,28 @@ async function resolveLiveEvent(req, res) {
   return event;
 }
 
+// input_13 Part C: identity persists via a durable server-side session
+// (express-session, already backed by Postgres for the admin login) keyed
+// per event — not front-end state, which is what was losing verification
+// on every navigation. Checked first on every gated guest route, before
+// ever asking for a passcode again.
+async function resolveSessionGuest(req, event) {
+  const guestId = req.session.verifiedGuests && req.session.verifiedGuests[event.id];
+  if (!guestId) return null;
+  return guestModel.findByEventAndId(event.id, guestId);
+}
+
+function markVerified(req, event, guest) {
+  req.session.verifiedGuests = req.session.verifiedGuests || {};
+  req.session.verifiedGuests[event.id] = guest.id;
+  req.session.cookie.maxAge = GUEST_SESSION_MAX_AGE;
+}
+
 // One template covers the whole continuous scroll (hero, QR/state area,
-// message, button row, itinerary, contacts). guest is null on a plain
-// GET (no passcode submitted yet in this request — there's no session,
-// so identity is only known within the request that verified it); the
-// hero/overlay/tile-row/itinerary/contacts sections render regardless,
-// and the guest-state area + message only appear once guest is resolved.
+// message, button row, itinerary, contacts). guest is null only when
+// neither the session nor a submitted passcode resolved anyone; the
+// hero/overlay render regardless, and the guest-state area + message +
+// tile row + itinerary + contacts only appear once guest is resolved.
 async function renderInvitation(res, event, guest, extra = {}) {
   const view = `guest/themes/${event.theme}/invitation`;
   if (!guest) {
@@ -69,6 +90,10 @@ async function renderInvitation(res, event, guest, extra = {}) {
 async function showInvitation(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
+
+  const sessionGuest = await resolveSessionGuest(req, event);
+  if (sessionGuest) return renderInvitation(res, event, sessionGuest);
+
   const error = req.query.error === 'invalid' ? 'That passcode was not recognized.' : null;
   return renderInvitation(res, event, null, { error });
 }
@@ -84,6 +109,7 @@ async function verifyPasscode(req, res) {
     // reload of the result page doesn't resubmit the passcode.
     return res.redirect(`/invite/${event.id}?error=invalid`);
   }
+  markVerified(req, event, guest);
   return renderInvitation(res, event, guest);
 }
 
@@ -91,10 +117,12 @@ async function submitRsvp(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
 
-  const guest = await guestModel.findByEventAndPasscode(event.id, req.body.passcode || '');
+  const guest = (await resolveSessionGuest(req, event))
+    || (await guestModel.findByEventAndPasscode(event.id, req.body.passcode || ''));
   if (!guest) {
     return res.redirect(`/invite/${event.id}?error=invalid`);
   }
+  markVerified(req, event, guest);
 
   // Accept is final and reachable from 'pending' or 'declined' (a guest
   // can change their mind). Decline is only reachable from 'pending' —
@@ -118,22 +146,21 @@ async function submitRsvp(req, res) {
   return renderInvitation(res, event, guest);
 }
 
-// Gallery has real content now (input_11) — actual uploaded photos, not
-// an empty placeholder — so it gets the same passcode gate as the main
-// invitation, per the gap input_9 deliberately left open for this exact
-// moment. Since there's no session, the passcode travels as a query
-// param on the link the invitation page hands out (guest.passcode is
-// already known there) rather than a POST body — same trust boundary as
-// everywhere else in this app, just carried differently for a plain GET.
+// Gallery has real content (input_11) worth the same gate as the main
+// invitation. The session (once established, from the main invitation or
+// from entering a passcode here directly) means a guest who's already
+// verified never sees the passcode form again on this page either.
 async function showGallery(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
 
-  const guest = await guestModel.findByEventAndPasscode(event.id, req.query.passcode || '');
+  let guest = await resolveSessionGuest(req, event);
+  if (!guest) guest = await guestModel.findByEventAndPasscode(event.id, req.query.passcode || '');
   if (!guest) {
     const error = req.query.passcode ? 'That passcode was not recognized.' : null;
     return res.render(`guest/themes/${event.theme}/gallery`, { event, guest: null, photos: null, error });
   }
+  markVerified(req, event, guest);
 
   const photos = await galleryModel.findByEvent(event.id);
   return res.render(`guest/themes/${event.theme}/gallery`, { event, guest, photos, error: null });
@@ -146,11 +173,13 @@ async function showCameos(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
 
-  const guest = await guestModel.findByEventAndPasscode(event.id, req.query.passcode || '');
+  let guest = await resolveSessionGuest(req, event);
+  if (!guest) guest = await guestModel.findByEventAndPasscode(event.id, req.query.passcode || '');
   if (!guest) {
     const error = req.query.passcode ? 'That passcode was not recognized.' : null;
     return res.render(`guest/themes/${event.theme}/cameos`, { event, guest: null, photos: null, error });
   }
+  markVerified(req, event, guest);
 
   const photos = await cameoModel.findByEvent(event.id);
   return res.render(`guest/themes/${event.theme}/cameos`, { event, guest, photos, error: null });
