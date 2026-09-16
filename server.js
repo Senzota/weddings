@@ -19,6 +19,12 @@ const { startEventLifecycleSweep } = require('./utils/eventLifecycle');
 
 const app = express();
 
+// Render terminates TLS at its edge and forwards to this app over plain
+// HTTP, so req.protocol would otherwise always read 'http' — which leaked
+// into the admin dashboard's shareable invite link as an http:// URL.
+// Trusting the proxy makes req.protocol read the real X-Forwarded-Proto.
+app.set('trust proxy', 1);
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
