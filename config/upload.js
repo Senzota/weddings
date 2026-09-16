@@ -1,13 +1,9 @@
 const multer = require('multer');
-const path = require('path');
 
-const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'public', 'uploads'),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `card-${req.params.id}-${Date.now()}${ext}`);
-  },
-});
+// Memory storage, not disk — files go straight to Cloudinary from the
+// buffer in the controller. Render's disk is ephemeral and wipes on every
+// deploy/restart, which is exactly the bug this replaces.
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,

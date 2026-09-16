@@ -1,13 +1,20 @@
 const pool = require('../config/db');
+const { deleteImage } = require('../utils/cloudinary');
 
-// Archives anonymous summary metrics, then deletes the event (guests and
-// gatepasses cascade via their FK constraints). Both steps run in one
-// transaction: if the archive write fails, nothing is deleted — no guest
-// data disappears without the metrics surviving it first.
+// Archives anonymous summary metrics, then deletes the event (guests,
+// gatepasses, and gallery_photos rows cascade via their FK constraints).
+// Both steps run in one transaction: if the archive write fails, nothing
+// is deleted — no guest data disappears without the metrics surviving it
+// first. Cloudinary cleanup (the card image + every gallery photo) runs
+// only after that transaction commits, and is best-effort: a failed
+// Cloudinary delete is logged, never lets a leftover remote image block
+// or roll back the database deletion that already succeeded.
 async function archiveAndDelete(eventId) {
   if (!/^\d+$/.test(String(eventId))) return null;
 
   const client = await pool.connect();
+  let archived;
+  let imagePublicIds = [];
   try {
     await client.query('BEGIN');
 
@@ -19,6 +26,12 @@ async function archiveAndDelete(eventId) {
       await client.query('ROLLBACK');
       return null;
     }
+    if (event.card_image_public_id) imagePublicIds.push(event.card_image_public_id);
+
+    const { rows: galleryRows } = await client.query(
+      'SELECT public_id FROM gallery_photos WHERE event_id = $1', [eventId]
+    );
+    imagePublicIds.push(...galleryRows.map((r) => r.public_id));
 
     const { rows: statRows } = await client.query(
       `SELECT
@@ -62,13 +75,23 @@ async function archiveAndDelete(eventId) {
     await client.query('DELETE FROM events WHERE id = $1', [eventId]);
 
     await client.query('COMMIT');
-    return archiveRows[0];
+    archived = archiveRows[0];
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();
   }
+
+  for (const publicId of imagePublicIds) {
+    try {
+      await deleteImage(publicId);
+    } catch (err) {
+      console.error(`Failed to delete Cloudinary image ${publicId} for deleted event ${eventId}:`, err);
+    }
+  }
+
+  return archived;
 }
 
 module.exports = { archiveAndDelete };

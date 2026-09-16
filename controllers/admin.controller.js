@@ -3,8 +3,10 @@ const ExcelJS = require('exceljs');
 const pool = require('../config/db');
 const eventModel = require('../models/event.model');
 const guestModel = require('../models/guest.model');
+const galleryModel = require('../models/gallery.model');
 const { archiveAndDelete } = require('../models/archive.model');
 const { AVAILABLE_THEMES } = require('../config/themes');
+const { uploadImage, deleteImage } = require('../utils/cloudinary');
 
 function showLogin(req, res) {
   res.render('admin/login', { error: null });
@@ -57,8 +59,9 @@ async function showDashboard(req, res) {
   if (!event) return res.status(404).send('Wedding not found.');
   const guests = await guestModel.findByEvent(event.id);
   const stats = await eventModel.getStats(event.id);
+  const photos = await galleryModel.findByEvent(event.id);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  res.render('admin/dashboard', { event, guests, stats, error: null, baseUrl, themes: AVAILABLE_THEMES });
+  res.render('admin/dashboard', { event, guests, stats, photos, error: null, baseUrl, themes: AVAILABLE_THEMES });
 }
 
 async function updateEvent(req, res) {
@@ -70,15 +73,34 @@ async function updateEvent(req, res) {
     const event = await eventModel.findById(req.params.id);
     const guests = await guestModel.findByEvent(req.params.id);
     const stats = await eventModel.getStats(req.params.id);
+    const photos = await galleryModel.findByEvent(req.params.id);
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     return res.status(400).render('admin/dashboard', {
-      event, guests, stats, baseUrl, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES,
+      event, guests, stats, photos, baseUrl, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES,
     });
   }
-  const cardImage = req.file ? `/uploads/${req.file.filename}` : null;
+
+  let cardImage;
+  let cardImagePublicId;
+  if (req.file) {
+    const result = await uploadImage(req.file.buffer, `weddings103/events/${req.params.id}`);
+    cardImage = result.secure_url;
+    cardImagePublicId = result.public_id;
+
+    // Best-effort cleanup of the image this one replaces — don't leave it
+    // orphaned on Cloudinary, but don't let a delete failure block the
+    // update that already succeeded.
+    const existing = await eventModel.findById(req.params.id);
+    if (existing && existing.card_image_public_id) {
+      deleteImage(existing.card_image_public_id).catch((err) => {
+        console.error(`Failed to delete replaced Cloudinary image ${existing.card_image_public_id}:`, err);
+      });
+    }
+  }
+
   await eventModel.update(req.params.id, {
     coupleNames, weddingDate, venue, themeColor,
-    acceptButtonText, declineButtonText, declineMessage, cardImage,
+    acceptButtonText, declineButtonText, declineMessage, cardImage, cardImagePublicId,
     itinerary, invitationMessage, contactDetails, theme,
   });
   res.redirect(`/admin/events/${req.params.id}`);
@@ -112,6 +134,28 @@ async function deleteEvent(req, res) {
   const archived = await archiveAndDelete(req.params.id);
   if (!archived) return res.status(404).send('Wedding not found.');
   res.redirect('/admin/events');
+}
+
+// One or more photos in a single request (upload.array).
+async function uploadGalleryPhotos(req, res) {
+  const files = req.files || [];
+  for (const file of files) {
+    const result = await uploadImage(file.buffer, `weddings103/events/${req.params.id}/gallery`);
+    await galleryModel.addPhoto(req.params.id, result.secure_url, result.public_id);
+  }
+  res.redirect(`/admin/events/${req.params.id}`);
+}
+
+async function deleteGalleryPhoto(req, res) {
+  const photo = await galleryModel.deletePhoto(req.params.id, req.params.photoId);
+  if (photo) {
+    try {
+      await deleteImage(photo.public_id);
+    } catch (err) {
+      console.error(`Failed to delete Cloudinary image ${photo.public_id}:`, err);
+    }
+  }
+  res.redirect(`/admin/events/${req.params.id}`);
 }
 
 async function exportGuestList(req, res) {
@@ -149,5 +193,5 @@ module.exports = {
   showLogin, login, logout,
   listEvents, newEventForm, createEvent,
   showDashboard, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
-  exportGuestList,
+  exportGuestList, uploadGalleryPhotos, deleteGalleryPhoto,
 };

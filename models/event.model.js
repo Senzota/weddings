@@ -33,7 +33,7 @@ async function findById(id) {
 async function update(id, fields) {
   const {
     coupleNames, weddingDate, venue, themeColor,
-    acceptButtonText, declineButtonText, declineMessage, cardImage,
+    acceptButtonText, declineButtonText, declineMessage, cardImage, cardImagePublicId,
     itinerary, invitationMessage, contactDetails, theme,
   } = fields;
   const { rows } = await pool.query(
@@ -44,12 +44,13 @@ async function update(id, fields) {
        decline_button_text = COALESCE($6, decline_button_text),
        decline_message = COALESCE($7, decline_message),
        card_image = COALESCE($8, card_image),
-       itinerary = $9,
-       invitation_message = $10,
-       contact_details = $11,
-       theme = COALESCE($12, theme)
-     WHERE id = $13 RETURNING *`,
-    [coupleNames, weddingDate, venue, themeColor || null, acceptButtonText || null, declineButtonText || null, declineMessage || null, cardImage, itinerary || null, invitationMessage || null, contactDetails || null, theme || null, id]
+       card_image_public_id = COALESCE($9, card_image_public_id),
+       itinerary = $10,
+       invitation_message = $11,
+       contact_details = $12,
+       theme = COALESCE($13, theme)
+     WHERE id = $14 RETURNING *`,
+    [coupleNames, weddingDate, venue, themeColor || null, acceptButtonText || null, declineButtonText || null, declineMessage || null, cardImage, cardImagePublicId, itinerary || null, invitationMessage || null, contactDetails || null, theme || null, id]
   );
   return rows[0];
 }

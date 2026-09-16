@@ -13,7 +13,29 @@
   <section class="bb-section">
     <img class="bb-section-motif" src="/themes/<%= event.theme %>/img/floral-illustration.png" alt="">
     <h2 class="bb-script">Gallery</h2>
-    <p>Photos from <%= event.couple_names %>'s wedding will appear here.</p>
+
+    <% if (!guest) { %>
+      <p>Enter your passcode to view the gallery.</p>
+      <% if (error) { %>
+        <p class="bb-error"><%= error %></p>
+      <% } %>
+      <form method="GET" action="/invite/<%= event.id %>/gallery">
+        <input type="text" name="passcode" placeholder="Passcode" required autocapitalize="characters" autocomplete="off">
+        <button type="submit" class="bb-btn">View Gallery</button>
+      </form>
+
+    <% } else if (photos.length === 0) { %>
+      <p>Photos from <%= event.couple_names %>'s wedding will appear here.</p>
+
+    <% } else { %>
+      <div class="bb-gallery-grid">
+        <% photos.forEach(function (photo) { %>
+          <a href="<%= photo.image_url %>" target="_blank">
+            <img src="<%= photo.image_url %>" alt="">
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
   </section>
   <p style="text-align:center;"><a class="bb-btn" href="/invite/<%= event.id %>">&larr; Back to the invitation</a></p>
 </body>

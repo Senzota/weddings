@@ -19,5 +19,7 @@ router.post('/events/:id/status', requireAdmin, asyncHandler(adminController.tog
 router.post('/events/:id/guests', requireAdmin, asyncHandler(adminController.bulkAddGuests));
 router.post('/events/:id/delete', requireAdmin, asyncHandler(adminController.deleteEvent));
 router.get('/events/:id/export', requireAdmin, asyncHandler(adminController.exportGuestList));
+router.post('/events/:id/gallery', requireAdmin, upload.array('photos', 20), asyncHandler(adminController.uploadGalleryPhotos));
+router.post('/events/:id/gallery/:photoId/delete', requireAdmin, asyncHandler(adminController.deleteGalleryPhoto));
 
 module.exports = router;

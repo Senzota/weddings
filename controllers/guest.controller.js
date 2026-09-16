@@ -1,6 +1,7 @@
 const guestModel = require('../models/guest.model');
 const eventModel = require('../models/event.model');
 const gatepassModel = require('../models/gatepass.model');
+const galleryModel = require('../models/gallery.model');
 const { generateQrDataUrl } = require('../utils/qrGenerator');
 
 const CHECKED_IN_QR_WINDOW_HOURS = 6;
@@ -116,10 +117,25 @@ async function submitRsvp(req, res) {
   return renderInvitation(res, event, guest);
 }
 
+// Gallery has real content now (input_11) — actual uploaded photos, not
+// an empty placeholder — so it gets the same passcode gate as the main
+// invitation, per the gap input_9 deliberately left open for this exact
+// moment. Since there's no session, the passcode travels as a query
+// param on the link the invitation page hands out (guest.passcode is
+// already known there) rather than a POST body — same trust boundary as
+// everywhere else in this app, just carried differently for a plain GET.
 async function showGallery(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
-  return res.render(`guest/themes/${event.theme}/gallery`, { event });
+
+  const guest = await guestModel.findByEventAndPasscode(event.id, req.query.passcode || '');
+  if (!guest) {
+    const error = req.query.passcode ? 'That passcode was not recognized.' : null;
+    return res.render(`guest/themes/${event.theme}/gallery`, { event, guest: null, photos: null, error });
+  }
+
+  const photos = await galleryModel.findByEvent(event.id);
+  return res.render(`guest/themes/${event.theme}/gallery`, { event, guest, photos, error: null });
 }
 
 async function showOtherDetails(req, res) {
