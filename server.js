@@ -1,3 +1,10 @@
+// Render's network has no outbound IPv6 route. Node 18+ resolves DNS
+// IPv6-first by default, so any outbound connection (SMTP to Gmail
+// included) tries the IPv6 address first, fails with ENETUNREACH, and
+// only then falls back to IPv4 — when it falls back at all. Forcing IPv4
+// first here, before anything else touches the network, avoids that.
+require('dns').setDefaultResultOrder('ipv4first');
+
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
