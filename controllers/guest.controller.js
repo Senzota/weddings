@@ -5,46 +5,13 @@ const { generateQrDataUrl } = require('../utils/qrGenerator');
 
 const CHECKED_IN_QR_WINDOW_HOURS = 6;
 
-// Shared by verifyPasscode and submitRsvp — both end up needing to show
-// "whatever this guest's current state is" after resolving who they are.
-// Themed per-event (event.theme), so a second design later is just another
-// views/guest/themes/<slug>/ folder — no branching needed here.
-async function renderGuestState(res, event, guest, extra = {}) {
-  const view = `guest/themes/${event.theme}/reveal`;
-
-  if (guest.rsvp_status === 'pending') {
-    return res.render(view, { state: 'card', event, guest, welcomeBack: false, ...extra });
-  }
-  if (guest.rsvp_status === 'declined') {
-    // Decline isn't final — this is the same card as 'pending', plus a
-    // welcome-back banner, and only the Accept action (no point offering
-    // "decline" again).
-    return res.render(view, { state: 'card', event, guest, welcomeBack: true, ...extra });
-  }
-
-  // accepted — final, and shown with the invitation card alongside the QR
-  // rather than replacing it (the guest should still feel like they're
-  // looking at "their invitation," with the gatepass as an addition).
-  let gatepass = await gatepassModel.findByGuestId(guest.id);
-  if (!gatepass) gatepass = await gatepassModel.create(guest.id);
-
-  if (gatepass.checked_in) {
-    const hoursSinceCheckIn = (Date.now() - new Date(gatepass.checked_in_at).getTime()) / 3600000;
-    if (hoursSinceCheckIn >= CHECKED_IN_QR_WINDOW_HOURS) {
-      return res.render(view, { state: 'expired', event, guest, ...extra });
-    }
-  }
-  const qrDataUrl = await generateQrDataUrl(gatepass.qr_token);
-  return res.render(view, { state: 'qr', event, guest, qrDataUrl, checkedIn: gatepass.checked_in, ...extra });
-}
-
 // events.id is a plain serial integer — a non-numeric :eventId (an old
 // bookmarked link, or just a typo) would otherwise reach the DB as
 // "invalid input syntax for type integer" and surface as a raw 500
 // instead of a clean 404. Also centralizes the draft/live check shared by
 // every guest route. Not-found/not-live are deliberately outside the
-// theme system (guest/error.ejs) — they're edge cases, not one of the
-// four designed pages.
+// theme system (guest/error.ejs) — they're edge cases, not part of the
+// designed invitation scroll.
 async function resolveLiveEvent(req, res) {
   if (!/^\d+$/.test(req.params.eventId)) {
     res.status(404).render('guest/error', { message: "We couldn't find this wedding." });
@@ -62,11 +29,46 @@ async function resolveLiveEvent(req, res) {
   return event;
 }
 
-async function showLanding(req, res) {
+// One template covers the whole continuous scroll (hero, QR/state area,
+// message, button row, itinerary, contacts). guest is null on a plain
+// GET (no passcode submitted yet in this request — there's no session,
+// so identity is only known within the request that verified it); the
+// hero/overlay/tile-row/itinerary/contacts sections render regardless,
+// and the guest-state area + message only appear once guest is resolved.
+async function renderInvitation(res, event, guest, extra = {}) {
+  const view = `guest/themes/${event.theme}/invitation`;
+  if (!guest) {
+    return res.render(view, { event, guest: null, state: null, ...extra });
+  }
+
+  if (guest.rsvp_status === 'pending') {
+    return res.render(view, { event, guest, state: 'card', welcomeBack: false, ...extra });
+  }
+  if (guest.rsvp_status === 'declined') {
+    // Decline isn't final — same actionable state as pending, plus a
+    // welcome-back banner, and only the Accept action.
+    return res.render(view, { event, guest, state: 'card', welcomeBack: true, ...extra });
+  }
+
+  // accepted — final. QR renders directly in the scroll, no card box.
+  let gatepass = await gatepassModel.findByGuestId(guest.id);
+  if (!gatepass) gatepass = await gatepassModel.create(guest.id);
+
+  if (gatepass.checked_in) {
+    const hoursSinceCheckIn = (Date.now() - new Date(gatepass.checked_in_at).getTime()) / 3600000;
+    if (hoursSinceCheckIn >= CHECKED_IN_QR_WINDOW_HOURS) {
+      return res.render(view, { event, guest, state: 'expired', ...extra });
+    }
+  }
+  const qrDataUrl = await generateQrDataUrl(gatepass.qr_token);
+  return res.render(view, { event, guest, state: 'qr', qrDataUrl, checkedIn: gatepass.checked_in, ...extra });
+}
+
+async function showInvitation(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
   const error = req.query.error === 'invalid' ? 'That passcode was not recognized.' : null;
-  return res.render(`guest/themes/${event.theme}/landing`, { event, error });
+  return renderInvitation(res, event, null, { error });
 }
 
 async function verifyPasscode(req, res) {
@@ -80,7 +82,7 @@ async function verifyPasscode(req, res) {
     // reload of the result page doesn't resubmit the passcode.
     return res.redirect(`/invite/${event.id}?error=invalid`);
   }
-  return renderGuestState(res, event, guest);
+  return renderInvitation(res, event, guest);
 }
 
 async function submitRsvp(req, res) {
@@ -102,8 +104,8 @@ async function submitRsvp(req, res) {
   const canDecline = response === 'declined' && guest.rsvp_status === 'pending';
   if (canAccept || canDecline) {
     // Written unconditionally, before the gatepass/QR step — a guest's
-    // response must never be lost, and there's no email delivery left in
-    // this path at all to fail on.
+    // response must never be lost, and there's no email delivery in this
+    // path at all to fail on.
     const updated = await guestModel.recordRsvp(guest.id, response);
     if (updated) guest.rsvp_status = updated.rsvp_status;
     if (guest.rsvp_status === 'accepted') {
@@ -111,13 +113,19 @@ async function submitRsvp(req, res) {
     }
   }
 
-  return renderGuestState(res, event, guest);
+  return renderInvitation(res, event, guest);
 }
 
-async function showItinerary(req, res) {
+async function showGallery(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
-  return res.render(`guest/themes/${event.theme}/itinerary`, { event });
+  return res.render(`guest/themes/${event.theme}/gallery`, { event });
 }
 
-module.exports = { showLanding, verifyPasscode, submitRsvp, showItinerary };
+async function showOtherDetails(req, res) {
+  const event = await resolveLiveEvent(req, res);
+  if (!event) return;
+  return res.render(`guest/themes/${event.theme}/other-details`, { event });
+}
+
+module.exports = { showInvitation, verifyPasscode, submitRsvp, showGallery, showOtherDetails };

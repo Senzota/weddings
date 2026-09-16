@@ -60,7 +60,10 @@ async function showDashboard(req, res) {
 }
 
 async function updateEvent(req, res) {
-  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage, itinerary } = req.body;
+  const {
+    coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText,
+    declineMessage, itinerary, invitationMessage, contactDetails,
+  } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
     const event = await eventModel.findById(req.params.id);
     const guests = await guestModel.findByEvent(req.params.id);
@@ -73,7 +76,8 @@ async function updateEvent(req, res) {
   const cardImage = req.file ? `/uploads/${req.file.filename}` : null;
   await eventModel.update(req.params.id, {
     coupleNames, weddingDate, venue, themeColor,
-    acceptButtonText, declineButtonText, declineMessage, cardImage, itinerary,
+    acceptButtonText, declineButtonText, declineMessage, cardImage,
+    itinerary, invitationMessage, contactDetails,
   });
   res.redirect(`/admin/events/${req.params.id}`);
 }

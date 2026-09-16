@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" class="bb-page">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gallery — <%= event.couple_names %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="bb-page">
+  <section class="bb-section">
+    <img class="bb-section-motif" src="/themes/<%= event.theme %>/img/floral-illustration.png" alt="">
+    <h2 class="bb-script">Gallery</h2>
+    <p>Photos from <%= event.couple_names %>'s wedding will appear here.</p>
+  </section>
+  <p style="text-align:center;"><a class="bb-btn" href="/invite/<%= event.id %>">&larr; Back to the invitation</a></p>
+</body>
+</html>

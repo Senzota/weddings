@@ -18,8 +18,10 @@ CREATE TABLE IF NOT EXISTS events (
   accept_button_text   TEXT NOT NULL DEFAULT 'Accept with pleasure',
   decline_button_text  TEXT NOT NULL DEFAULT 'Decline with regret',
   decline_message      TEXT NOT NULL DEFAULT 'Thank you for letting us know. You are always welcome — if your plans change, we''d love to have you with us.',
-  theme                TEXT NOT NULL DEFAULT 'design-1',
+  theme                TEXT NOT NULL DEFAULT 'botanical-bloom',
   itinerary            TEXT,
+  invitation_message   TEXT,
+  contact_details       TEXT,
   status               TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'live')),
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -28,8 +30,14 @@ CREATE TABLE IF NOT EXISTS events (
 -- existed (CREATE TABLE IF NOT EXISTS above won't add them retroactively).
 ALTER TABLE events ADD COLUMN IF NOT EXISTS decline_message TEXT NOT NULL
   DEFAULT 'Thank you for letting us know. You are always welcome — if your plans change, we''d love to have you with us.';
-ALTER TABLE events ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'design-1';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'botanical-bloom';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS itinerary TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS invitation_message TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS contact_details TEXT;
+
+-- Theme slug renamed from 'design-1' to 'botanical-bloom' (input_8) — fix
+-- up any events created under the old name.
+UPDATE events SET theme = 'botanical-bloom' WHERE theme = 'design-1';
 
 CREATE TABLE IF NOT EXISTS guests (
   id            SERIAL PRIMARY KEY,

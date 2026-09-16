@@ -1,0 +1,242 @@
+/* Botanical Bloom (formerly "Design 1") — colors and the
+   "Placeholder Names of weds" script sampled directly from
+   design-1-landing-reference.png, not guessed. */
+:root {
+  --bb-cream: #f6f2e7;
+  --bb-cream-deep: #efe9d9;
+  --bb-rose: #9f5b4c;
+  --bb-rose-soft: #c98f7c;
+  --bb-sage: #7f8f5f;
+  --bb-ink: #3a3128;
+}
+
+html.bb-page, body.bb-page {
+  background: var(--bb-cream);
+}
+body.bb-page {
+  margin: 0;
+  color: var(--bb-ink);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 19px;
+  line-height: 1.5;
+}
+body.bb-page * { box-sizing: border-box; }
+
+.bb-script {
+  font-family: 'Beau Rivage', cursive;
+  color: var(--bb-rose);
+}
+.bb-label {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bb-rose);
+  font-size: 0.85rem;
+}
+.bb-btn {
+  display: inline-block;
+  border: 1.5px solid var(--bb-rose);
+  color: var(--bb-rose);
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.85em 2.4em;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.bb-btn:hover { background: var(--bb-rose); color: var(--bb-cream); }
+
+/* ---------- Hero (top of the one continuous scroll) ---------- */
+.bb-hero {
+  position: relative;
+  height: 100vh;
+  min-height: 480px;
+  padding: 10vh 6vw;
+  display: flex;
+  align-items: flex-end;
+}
+.bb-hero-photo,
+.bb-hero-photo-placeholder {
+  position: absolute;
+  inset: 10vh 6vw;
+  width: calc(100% - 12vw);
+  height: calc(100% - 20vh);
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.bb-hero-photo-placeholder { background: var(--bb-cream-deep); }
+.bb-hero-panel {
+  position: relative;
+  z-index: 1;
+  background: rgba(246, 242, 231, 0.88);
+  backdrop-filter: blur(2px);
+  border-radius: 10px;
+  padding: 1.75rem 2rem;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.bb-hero-floral { width: 90px; height: auto; margin-bottom: 0.25rem; }
+.bb-hero-names { margin: 0; font-size: clamp(2.4rem, 5vw, 3.4rem); line-height: 1.05; font-weight: 400; }
+.bb-hero-meta { margin: 0; }
+.bb-hero-panel .bb-btn { align-self: flex-start; margin-top: 0.6rem; }
+
+@media (max-width: 760px) {
+  .bb-hero { align-items: flex-end; padding: 6vh 5vw; }
+  .bb-hero-photo, .bb-hero-photo-placeholder { inset: 6vh 5vw; width: calc(100% - 10vw); height: calc(100% - 12vh); }
+  .bb-hero-panel { max-width: none; width: 100%; }
+  .bb-hero-names { font-size: clamp(2rem, 9vw, 2.8rem); }
+}
+
+/* ---------- Passcode overlay ----------
+   Fix for the muddy #8f887e page-background bug: that color is exactly
+   this backdrop's rgba(58,49,40,0.55) composited over the cream page,
+   confirming the overlay was rendering at all times. The old approach
+   ([hidden] attribute + an unconditional `display:flex` on the same
+   selector) was fragile; this version defaults closed and only opens via
+   an explicit class, no specificity tricks. */
+.bb-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(58, 49, 40, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10;
+}
+.bb-overlay.is-open { display: flex; }
+.bb-overlay-card {
+  background: var(--bb-cream);
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+}
+.bb-overlay-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--bb-rose);
+  cursor: pointer;
+  line-height: 1;
+}
+.bb-overlay-label { margin: 0 0 1rem; }
+.bb-overlay-card input[type="text"] {
+  width: 100%;
+  padding: 0.7em 1em;
+  margin-bottom: 1rem;
+  border: 1px solid var(--bb-rose-soft);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  text-align: center;
+}
+.bb-error { color: #b3261e; margin: 0 0 1rem; }
+
+/* ---------- Guest-state area (QR / accept-decline / banners) ----------
+   Replaces the old boxed "invitation card" — no border/frame of its own,
+   sits directly in the scroll below the hero. */
+.bb-state-area { max-width: 480px; margin: 0 auto; padding: 3rem 6vw 1rem; text-align: center; }
+.bb-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1.25rem; }
+.bb-banner {
+  background: var(--bb-cream-deep);
+  border: 1px solid var(--bb-rose-soft);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.bb-qr { width: 240px; max-width: 100%; margin: 1.25rem auto 0; display: block; }
+
+/* ---------- Message placeholder ----------
+   Admin-authored free text, framed so it reads as a deliberate part of
+   the invitation rather than a dumped paragraph. */
+.bb-message-frame {
+  max-width: 480px;
+  margin: 2rem auto;
+  padding: 2rem 1.75rem;
+  text-align: center;
+  border: 1.5px solid var(--bb-rose-soft);
+  border-radius: 4px;
+  position: relative;
+}
+.bb-message-frame::before,
+.bb-message-frame::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--bb-rose);
+}
+.bb-message-frame::before { top: -6px; left: -6px; border-right: none; border-bottom: none; }
+.bb-message-frame::after { bottom: -6px; right: -6px; border-left: none; border-top: none; }
+.bb-message-frame p { margin: 0; font-size: 1.15rem; font-style: italic; }
+
+/* ---------- Square button tiles (Itinerary / Gallery / Other Details) --- */
+.bb-tile-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 480px;
+  margin: 1.5rem auto 3rem;
+  padding: 0 6vw;
+}
+.bb-tile {
+  width: 108px;
+  height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1.5px solid var(--bb-rose);
+  border-radius: 12px;
+  color: var(--bb-rose);
+  text-decoration: none;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  padding: 0.5rem;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.bb-tile:hover { background: var(--bb-rose); color: var(--bb-cream); }
+
+/* ---------- Itinerary / Contacts sections (further down the scroll) ----
+   Own decorative background rather than repeating the hero photo. */
+.bb-section {
+  position: relative;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 4rem 6vw;
+  text-align: center;
+  overflow: hidden;
+}
+.bb-section-motif {
+  position: absolute;
+  top: -20px;
+  right: -30px;
+  width: 160px;
+  height: auto;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.bb-section h2 { position: relative; }
+.bb-section ul { list-style: none; padding: 0; margin: 2rem 0 0; text-align: left; position: relative; }
+.bb-section li {
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--bb-cream-deep);
+  font-size: 1.15rem;
+}
+.bb-section li:last-child { border-bottom: none; }
+.bb-section.bb-contacts { background: var(--bb-cream-deep); }
