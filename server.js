@@ -15,6 +15,7 @@ const pool = require('./config/db');
 const guestRoutes = require('./routes/guest.routes');
 const adminRoutes = require('./routes/admin.routes');
 const scanRoutes = require('./routes/scan.routes');
+const { startEventLifecycleSweep } = require('./utils/eventLifecycle');
 
 const app = express();
 
@@ -64,4 +65,7 @@ process.on('uncaughtException', (err) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Weddings 103 listening on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Weddings 103 listening on port ${PORT}`);
+  startEventLifecycleSweep();
+});

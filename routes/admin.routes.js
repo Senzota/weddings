@@ -17,5 +17,6 @@ router.get('/events/:id', requireAdmin, asyncHandler(adminController.showDashboa
 router.post('/events/:id', requireAdmin, upload.single('cardImage'), asyncHandler(adminController.updateEvent));
 router.post('/events/:id/status', requireAdmin, asyncHandler(adminController.toggleStatus));
 router.post('/events/:id/guests', requireAdmin, asyncHandler(adminController.bulkAddGuests));
+router.post('/events/:id/delete', requireAdmin, asyncHandler(adminController.deleteEvent));
 
 module.exports = router;

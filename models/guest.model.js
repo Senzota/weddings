@@ -35,17 +35,10 @@ async function findByEvent(eventId) {
   return rows;
 }
 
-async function findByPasscodeOnly(passcode) {
+async function findByEventAndPasscode(eventId, passcode) {
   const { rows } = await pool.query(
-    'SELECT * FROM guests WHERE passcode = $1', [passcode]
-  );
-  return rows[0];
-}
-
-async function setEmail(id, email) {
-  const { rows } = await pool.query(
-    'UPDATE guests SET email = $1 WHERE id = $2 RETURNING *',
-    [email, id]
+    'SELECT * FROM guests WHERE event_id = $1 AND passcode = $2',
+    [eventId, passcode]
   );
   return rows[0];
 }
@@ -62,7 +55,6 @@ async function recordRsvp(id, status) {
 module.exports = {
   bulkCreate,
   findByEvent,
-  findByPasscodeOnly,
-  setEmail,
+  findByEventAndPasscode,
   recordRsvp,
 };

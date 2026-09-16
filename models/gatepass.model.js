@@ -10,6 +10,13 @@ async function create(guestId) {
   return rows[0];
 }
 
+async function findByGuestId(guestId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM gatepasses WHERE guest_id = $1', [guestId]
+  );
+  return rows[0];
+}
+
 async function findByToken(token) {
   const { rows } = await pool.query(
     `SELECT gp.*, g.name, g.event_id
@@ -39,4 +46,4 @@ async function checkIn(token) {
   return { result: 'duplicate', gatepass: dup[0] };
 }
 
-module.exports = { create, findByToken, checkIn };
+module.exports = { create, findByGuestId, findByToken, checkIn };

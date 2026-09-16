@@ -46,3 +46,23 @@ CREATE TABLE IF NOT EXISTS gatepasses (
 );
 
 CREATE INDEX IF NOT EXISTS idx_gatepasses_guest_id ON gatepasses(guest_id);
+
+-- Anonymous summary metrics preserved when an event is deleted (manually or
+-- by the 30-day auto-sweep). Never purged by anything.
+CREATE TABLE IF NOT EXISTS event_archive (
+  id                  SERIAL PRIMARY KEY,
+  couple_names        TEXT NOT NULL,
+  wedding_date        DATE NOT NULL,
+  venue               TEXT NOT NULL,
+  total_guests        INTEGER NOT NULL,
+  total_seats         INTEGER NOT NULL,
+  accepted_count      INTEGER NOT NULL,
+  declined_count      INTEGER NOT NULL,
+  pending_count       INTEGER NOT NULL,
+  seats_accepted      INTEGER NOT NULL,
+  checked_in_count    INTEGER NOT NULL,
+  response_rate       NUMERIC,
+  attendance_rate     NUMERIC,
+  event_created_at    TIMESTAMPTZ NOT NULL,
+  archived_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);

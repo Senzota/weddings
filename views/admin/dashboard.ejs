@@ -9,6 +9,13 @@
   <h1><%= event.couple_names %></h1>
 
   <section>
+    <h2>Shareable invite link</h2>
+    <p>Share this one link everywhere (WhatsApp status, a group, etc.) — every guest uses it with their own passcode.</p>
+    <input type="text" readonly value="<%= baseUrl %>/invite/<%= event.id %>" style="width: 320px;" onclick="this.select()">
+    <button type="button" class="copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Link</button>
+  </section>
+
+  <section>
     <h2>Status: <%= event.status %></h2>
     <form method="POST" action="/admin/events/<%= event.id %>/status">
       <button type="submit"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
@@ -59,7 +66,7 @@
     <h2>Guest list</h2>
     <table border="1" cellpadding="4">
       <thead>
-        <tr><th>Name</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th>Checked in</th></tr>
+        <tr><th>Name</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>
       </thead>
       <tbody>
         <% guests.forEach(function(guest) { %>
@@ -67,6 +74,7 @@
             <td><%= guest.name %></td>
             <td><%= guest.seat_count %></td>
             <td><%= guest.passcode %></td>
+            <td><button type="button" class="copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button></td>
             <td><%= guest.rsvp_status %></td>
             <td><%= guest.checked_in ? 'Yes' : 'No' %></td>
           </tr>
@@ -74,5 +82,24 @@
       </tbody>
     </table>
   </section>
+
+  <section>
+    <h2>Danger zone</h2>
+    <form method="POST" action="/admin/events/<%= event.id %>/delete" onsubmit="return confirm('Delete this wedding permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
+      <button type="submit">Delete Wedding</button>
+    </form>
+  </section>
+
+  <script>
+    document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+          var original = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(function () { btn.textContent = original; }, 1500);
+        });
+      });
+    });
+  </script>
 </body>
 </html>

@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const pool = require('../config/db');
 const eventModel = require('../models/event.model');
 const guestModel = require('../models/guest.model');
+const { archiveAndDelete } = require('../models/archive.model');
 
 function showLogin(req, res) {
   res.render('admin/login', { error: null });
@@ -51,7 +52,8 @@ async function showDashboard(req, res) {
   if (!event) return res.status(404).send('Wedding not found.');
   const guests = await guestModel.findByEvent(event.id);
   const stats = await eventModel.getStats(event.id);
-  res.render('admin/dashboard', { event, guests, stats, error: null });
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  res.render('admin/dashboard', { event, guests, stats, error: null, baseUrl });
 }
 
 async function updateEvent(req, res) {
@@ -60,8 +62,9 @@ async function updateEvent(req, res) {
     const event = await eventModel.findById(req.params.id);
     const guests = await guestModel.findByEvent(req.params.id);
     const stats = await eventModel.getStats(req.params.id);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     return res.status(400).render('admin/dashboard', {
-      event, guests, stats, error: 'Couple names, date, and venue are required.',
+      event, guests, stats, baseUrl, error: 'Couple names, date, and venue are required.',
     });
   }
   const cardImage = req.file ? `/uploads/${req.file.filename}` : null;
@@ -96,8 +99,14 @@ async function bulkAddGuests(req, res) {
   res.redirect(`/admin/events/${req.params.id}`);
 }
 
+async function deleteEvent(req, res) {
+  const archived = await archiveAndDelete(req.params.id);
+  if (!archived) return res.status(404).send('Wedding not found.');
+  res.redirect('/admin/events');
+}
+
 module.exports = {
   showLogin, login, logout,
   listEvents, newEventForm, createEvent,
-  showDashboard, updateEvent, toggleStatus, bulkAddGuests,
+  showDashboard, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
 };
