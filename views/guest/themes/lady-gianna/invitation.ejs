@@ -20,16 +20,6 @@
     <% } else { %>
       <div class="lg-hero-photo-placeholder"></div>
     <% } %>
-    <!-- input_16 §4: fixed floral corner artwork, supplied as a real
-         image (not hand-coded vector art) — one frame image whose art
-         lives in its own top-left/bottom-right corners, windowed via
-         object-fit/object-position rather than stretched or mirrored.
-         Rendered only once the asset actually exists, so this never
-         shows a broken-image icon in the meantime. -->
-    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
-      <img class="lg-corner lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
-      <img class="lg-corner lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
-    <% } %>
     <div class="lg-hero-panel">
       <p class="lg-eyebrow">You're invited to celebrate</p>
       <h1 class="lg-script lg-hero-name"><%= event.couple_names %></h1>
@@ -61,16 +51,12 @@
     <!-- Reached either because this is an 'open' event, or because this
          exact guest's passcode has already been verified server-side. -->
 
-    <!-- input_17/18/19: supersedes input_16 §4's corner-clip approach
-         (looked like a hard-edged box, confirmed bad next to "The
-         Itinerary") and the later top/bottom "band" approach (left the
-         long middle of this span — where Itinerary actually sits — with
-         no floral visible at all). The Hero above is untouched. Everything
-         from here down through the Footer now sits on ONE continuous CSS
-         background (set directly on .lg-post-hero in theme.css, via
-         background-size: cover), so the image fills this whole span, not
-         just its edges. No tint on top of it (input_18) — each card
-         (lg-glass/lg-framed) carries its own legible surface. -->
+    <!-- input_19: floral background/decoration removed from the whole
+         Lady Gianna theme (input_16 §4 through input_20's attempts never
+         landed cleanly — final call was to scrap it, not keep tuning it).
+         This wrapper is kept only for structure/spacing; it carries no
+         background of its own, so the page shows the theme's plain blush
+         background here, same as before any floral asset existed. -->
     <div class="lg-post-hero">
 
     <!-- 2. Gate panel: QR frame (only ever for state='qr', i.e. a

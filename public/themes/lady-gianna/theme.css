@@ -60,45 +60,17 @@ body.lg-page * { box-sizing: border-box; }
 }
 .lg-btn:hover { background: var(--lg-gold); color: #fff; transform: translateY(-1px); }
 
-/* Floral corners — input_16 §4, Hero only. The supplied image is a full
-   rose/gold frame with floral clusters baked into its own top-left and
-   bottom-right corners, so each placement shows just one corner "window"
-   onto that source via object-fit: cover + object-position, rather than
-   stretching the whole frame over the panel or mirroring it (which would
-   double the baked-in border and misplace the blooms). input_17
-   explicitly leaves the Hero untouched — everything past it uses the
-   continuous-background treatment below instead (the corner-clip look
-   was confirmed bad everywhere else, e.g. next to "The Itinerary"). */
-.lg-corner { position: absolute; width: 150px; height: 150px; object-fit: cover; pointer-events: none; opacity: 0.9; z-index: 1; }
-.lg-corner-tl { top: 0; left: 0; object-position: top left; }
-.lg-corner-br { bottom: 0; right: 0; object-position: bottom right; }
-
 .lg-divider { display: block; width: 120px; height: 24px; margin: 2rem auto; }
 
-/* input_17/18/19: the Gate panel through the Footer share ONE floral
-   background spanning that whole (variable-length, often very tall) span.
-   Two earlier attempts fell short: (1) small clipped corner assets looked
-   like hard-edged boxes; (2) anchoring the image as two fixed-height
-   "bands" at just the very top and very bottom of the span left the long
-   middle (exactly where the Itinerary sits) with no floral visible at
-   all, since the bands never reached that far — confirmed live: Itinerary/
-   Gallery showed plain blush with no texture, and the bottom band read as
-   a disconnected white-edged block instead of blending in.
-   Fixed here by making the image a genuine CSS background on the
-   container itself (background-size: cover), so it scales to fill the
-   ENTIRE height of the span — Gate, tile row, Itinerary, Gallery, Footer
-   all sit on top of the same continuous image, not just its two edges.
-   input_20: a light blush wash (35% — far below input_16's original 82%)
-   sits back on top, as a second background layer rather than a separate
-   tinted element, so the floral stays clearly visible while easing its
-   intensity behind long text-heavy sections like the Itinerary timeline. */
-.lg-post-hero {
-  position: relative;
-  background:
-    linear-gradient(rgba(249, 236, 230, 0.35), rgba(249, 236, 230, 0.35)),
-    url('/assets/img/themes/lady-gianna/corner-floral.png') center center / cover no-repeat,
-    var(--lg-blush);
-}
+/* input_19: floral decoration (corner squares, then a continuous
+   background, in several attempted forms across input_16 §4-input_18)
+   never landed cleanly and has been removed from the whole Lady Gianna
+   theme — guest page and admin dashboard alike. This wrapper is kept
+   only so the Gate/Itinerary/Gallery/Footer stack has the same structural
+   parent it always did; it carries no background of its own, so the
+   theme's plain blush page background (see body.lg-page above) shows
+   through, exactly as it did before any floral asset was introduced. */
+.lg-post-hero { position: relative; }
 
 /* Gold inset border/frame around key panels. */
 .lg-framed {
