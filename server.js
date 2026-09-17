@@ -18,10 +18,12 @@ const scanRoutes = require('./routes/scan.routes');
 const { startEventLifecycleSweep } = require('./utils/eventLifecycle');
 const { formatEventDate } = require('./utils/formatDate');
 const { getDownloadUrl } = require('./utils/cloudinary');
+const { assetExists } = require('./utils/assetExists');
 
 const app = express();
 app.locals.formatEventDate = formatEventDate;
 app.locals.getDownloadUrl = getDownloadUrl;
+app.locals.assetExists = assetExists;
 
 // Render terminates TLS at its edge and forwards to this app over plain
 // HTTP, so req.protocol would otherwise always read 'http' — which leaked

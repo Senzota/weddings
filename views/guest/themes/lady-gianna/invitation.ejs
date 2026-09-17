@@ -20,8 +20,13 @@
     <% } else { %>
       <div class="lg-hero-photo-placeholder"></div>
     <% } %>
-    <img class="lg-corner lg-corner-tl" src="/themes/<%= event.theme %>/img/corner-floral.svg" alt="">
-    <img class="lg-corner lg-corner-br" src="/themes/<%= event.theme %>/img/corner-floral.svg" alt="">
+    <!-- input_16 §4: fixed floral corner artwork, supplied as PNGs (not
+         hand-coded vector art) — rendered only once the asset actually
+         exists, so this never shows a broken-image icon in the meantime. -->
+    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
+      <img class="lg-corner lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <img class="lg-corner lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+    <% } %>
     <div class="lg-hero-panel">
       <p class="lg-eyebrow">You're invited to celebrate</p>
       <h1 class="lg-script lg-hero-name"><%= event.couple_names %></h1>
@@ -126,6 +131,9 @@
 
     <!-- 3. Itinerary: event-card (date / time note / venue) + timeline -->
     <section class="lg-section" id="itinerary">
+      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
+        <img class="lg-corner lg-corner--subtle lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <% } %>
       <h2>The Itinerary</h2>
       <div class="lg-event-card lg-framed lg-glass">
         <div>
@@ -170,6 +178,9 @@
 
     <!-- 5. Footer -->
     <footer class="lg-footer">
+      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
+        <img class="lg-corner lg-corner--subtle lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <% } %>
       <p class="lg-script lg-footer-signature">With love</p>
       <% if (event.footer_note) { %>
         <p class="lg-footer-note"><%= event.footer_note %></p>

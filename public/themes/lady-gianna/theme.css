@@ -67,6 +67,10 @@ body.lg-page * { box-sizing: border-box; }
 .lg-corner-tr { top: 10px; right: 10px; transform: scaleX(-1); }
 .lg-corner-bl { bottom: 10px; left: 10px; transform: scaleY(-1); }
 .lg-corner-br { bottom: 10px; right: 10px; transform: scale(-1, -1); }
+/* input_16 §4: "at reduced opacity where it sits behind cards" — used on
+   section backgrounds (Itinerary, Footer) rather than the full-strength
+   Hero placement. */
+.lg-corner--subtle { width: 72px; height: 72px; opacity: 0.28; z-index: 0; }
 
 .lg-divider { display: block; width: 120px; height: 24px; margin: 2rem auto; }
 
@@ -280,7 +284,7 @@ body.lg-locked { overflow: hidden; height: 100vh; }
 .lg-cameo-caption { display: block; margin-top: 0.35rem; font-size: 0.8rem; color: var(--lg-rose-deep); text-align: center; font-weight: 700; }
 
 /* ---------- 5. Footer ---------- */
-.lg-footer { text-align: center; padding: 3rem 6vw 4rem; }
+.lg-footer { position: relative; text-align: center; padding: 3rem 6vw 4rem; overflow: hidden; }
 .lg-footer-signature { font-size: 1.6rem; margin-bottom: 0.75rem; }
 .lg-footer-note { max-width: 480px; margin: 0 auto; color: var(--lg-muted); font-style: italic; white-space: pre-line; }
 
@@ -393,22 +397,44 @@ body.lg-locked { overflow: hidden; height: 100vh; }
   min-width: 0;
 }
 
-/* Profile card */
-.lg-admin-profile { grid-column: span 2; display: flex; align-items: center; gap: 22px; min-height: 220px; }
+/* input_16 §1: profile info + decorative photo merged into ONE card —
+   info sits on a solid background on the left, the photo bleeds in from
+   the right and dissolves into that background via a mask-image fade on
+   its inner (left) edge, rather than meeting it at a hard border. */
+.lg-admin-profile-merged { grid-column: span 4; position: relative; display: flex; align-items: stretch; min-height: 240px; padding: 0; overflow: hidden; }
+.lg-profile-info {
+  flex: 0 0 auto;
+  min-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 28px;
+  background: var(--lg-paper);
+  position: relative;
+  z-index: 1;
+}
 .lg-admin-portrait-wrap { position: relative; flex: 0 0 120px; }
 .lg-admin-portrait, .lg-admin-portrait-placeholder { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; display: block; border: 4px solid #fff; box-shadow: 0 10px 24px rgba(74, 58, 58, 0.18); }
 .lg-admin-portrait-placeholder { background: var(--lg-gold-pale); }
 .lg-admin-monogram { position: absolute; right: -4px; bottom: -2px; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; border: 2px solid #fff; background: var(--lg-rose-deep); color: #fff; font: 600 18px 'Libre Baskerville', serif; }
-.lg-admin-profile h2 { margin: 0 0 4px; font: 400 2rem 'Great Vibes', cursive; color: var(--lg-rose-deep); }
-.lg-admin-profile p { margin: 0 0 14px; color: var(--lg-muted); font-size: 0.85rem; }
+.lg-profile-info h2 { margin: 0 0 4px; font: 400 2rem 'Great Vibes', cursive; color: var(--lg-rose-deep); }
+.lg-profile-info p { margin: 0 0 14px; color: var(--lg-muted); font-size: 0.85rem; }
 .lg-admin-btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
 
-/* Decorative photo panel */
-.lg-admin-photo { grid-column: span 2; position: relative; min-height: 220px; padding: 0; overflow: hidden; }
-.lg-admin-photo img { width: 100%; height: 100%; object-fit: cover; display: block; position: absolute; inset: 0; }
-.lg-admin-photo-placeholder { width: 100%; height: 100%; min-height: 220px; background: linear-gradient(160deg, var(--lg-gold-pale), var(--lg-blush)); }
-.lg-admin-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(74, 58, 58, 0.45), transparent 55%); }
-.lg-admin-photo-caption { position: absolute; left: 22px; right: 22px; bottom: 18px; color: #fff; font-family: 'Libre Baskerville', serif; font-size: 1.1rem; z-index: 1; }
+.lg-profile-photo-bleed {
+  flex: 1 1 auto;
+  position: relative;
+  min-width: 160px;
+  background-size: cover;
+  background-position: center;
+  /* Fades to fully transparent at the inner (left) edge, revealing the
+     card's own background underneath instead of the photo meeting the
+     info panel at a hard line. */
+  -webkit-mask-image: linear-gradient(to right, transparent, black 30%);
+  mask-image: linear-gradient(to right, transparent, black 30%);
+}
+.lg-profile-photo-bleed::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(74, 58, 58, 0.4), transparent 55%); }
+.lg-profile-photo-caption { position: absolute; left: 22px; right: 22px; bottom: 18px; color: #fff; font-family: 'Libre Baskerville', serif; font-size: 1.1rem; z-index: 1; margin: 0; }
 
 /* Stat bubbles */
 .lg-admin-stats { grid-column: span 4; }
@@ -438,6 +464,13 @@ body.lg-locked { overflow: hidden; height: 100vh; }
   width: 100%; padding: 0.55em 0.75em; border: 1px solid rgba(198, 161, 91, 0.5);
   border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; background: #fff; color: var(--lg-brown);
 }
+/* input_16 §2: the Time field ("Starting 10:00am till Late" etc.) is
+   longer than the other fields in this row and was getting visually cut
+   off in a same-width column — give it double the width instead. */
+.lg-admin-details-grid .lg-field-wide { grid-column: span 2; }
+@media (max-width: 640px) {
+  .lg-admin-details-grid .lg-field-wide { grid-column: 1 / -1; }
+}
 
 /* Guest list table */
 .lg-admin-guests { grid-column: span 4; }
@@ -455,11 +488,17 @@ body.lg-locked { overflow: hidden; height: 100vh; }
 .lg-admin-danger { grid-column: span 4; border-color: var(--lg-rose); }
 
 @media (max-width: 1000px) {
-  .lg-admin-profile, .lg-admin-photo, .lg-admin-itinerary, .lg-admin-assets { grid-column: span 4; }
+  .lg-admin-itinerary, .lg-admin-assets { grid-column: span 4; }
   .lg-bubble-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
-  .lg-admin-profile { flex-direction: column; text-align: center; }
+  .lg-admin-profile-merged { flex-direction: column; }
+  .lg-profile-info { min-width: 0; text-align: center; justify-content: center; }
+  .lg-profile-photo-bleed {
+    min-height: 160px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 30%);
+    mask-image: linear-gradient(to bottom, transparent, black 30%);
+  }
   .lg-bubble-grid { grid-template-columns: 1fr; }
   .lg-admin-details-grid { grid-template-columns: 1fr; }
 }

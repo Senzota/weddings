@@ -26,34 +26,37 @@
   <div class="lg-admin-wrap">
     <div class="lg-admin-grid">
 
-      <!-- Profile card -->
-      <article class="lg-admin-card lg-admin-profile">
-        <div class="lg-admin-portrait-wrap">
-          <% if (event.card_image) { %>
-            <img class="lg-admin-portrait" src="<%= event.card_image %>" alt="<%= event.couple_names %>">
-          <% } else { %>
-            <div class="lg-admin-portrait lg-admin-portrait-placeholder"></div>
-          <% } %>
-          <span class="lg-admin-monogram"><%= event.couple_names.charAt(0) %></span>
-        </div>
-        <div>
-          <h2><%= event.couple_names %></h2>
-          <p><%= event.subtitle || event.venue %></p>
-          <div class="lg-admin-btn-row">
-            <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Invite Link</button>
-            <a class="bb-btn" href="/admin/events/<%= event.id %>/edit">Edit details</a>
+      <!-- input_16 §1: profile info and the decorative photo now share ONE
+           card — the photo bleeds in from the right with a mask-image
+           fade on its inner edge, so it dissolves into the card rather
+           than meeting the profile side at a hard edge. -->
+      <article class="lg-admin-card lg-admin-profile-merged">
+        <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
+          <img class="lg-corner lg-corner--subtle lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+        <% } %>
+        <div class="lg-profile-info">
+          <div class="lg-admin-portrait-wrap">
+            <% if (event.card_image) { %>
+              <img class="lg-admin-portrait" src="<%= event.card_image %>" alt="<%= event.couple_names %>">
+            <% } else { %>
+              <div class="lg-admin-portrait lg-admin-portrait-placeholder"></div>
+            <% } %>
+            <span class="lg-admin-monogram"><%= event.couple_names.charAt(0) %></span>
+          </div>
+          <div>
+            <h2><%= event.couple_names %></h2>
+            <p><%= event.subtitle || event.venue %></p>
+            <div class="lg-admin-btn-row">
+              <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Invite Link</button>
+              <a class="bb-btn" href="/admin/events/<%= event.id %>/edit">Edit details</a>
+            </div>
           </div>
         </div>
-      </article>
-
-      <!-- Decorative photo panel -->
-      <article class="lg-admin-card lg-admin-photo">
         <% if (event.card_image) { %>
-          <img src="<%= event.card_image %>" alt="">
-        <% } else { %>
-          <div class="lg-admin-photo-placeholder"></div>
+          <div class="lg-profile-photo-bleed" style="background-image:url('<%= event.card_image %>')">
+            <p class="lg-profile-photo-caption">&#10024; <%= event.subtitle || 'Celebrating together' %></p>
+          </div>
         <% } %>
-        <p class="lg-admin-photo-caption">&#10024; <%= event.subtitle || 'Celebrating together' %></p>
       </article>
 
       <!-- Live stats -->
@@ -124,11 +127,11 @@
               <label>Date</label>
               <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required>
             </div>
-            <div>
+            <div class="lg-field-wide">
               <label>Time</label>
               <input type="text" name="eventTimeNote" value="<%= event.event_time_note || '' %>" placeholder="e.g. Starting 10:00am till Late">
             </div>
-            <div>
+            <div class="lg-field-wide">
               <label>Venue</label>
               <input type="text" name="venue" value="<%= event.venue %>" required>
             </div>
@@ -163,7 +166,7 @@
           </div>
           <form method="POST" action="/admin/events/<%= event.id %>/guests" style="margin-top:1rem;">
             <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
-            <textarea name="guestList" rows="4" placeholder="Amara, 4, Family celebration&#10;Kito, 3, Kids &amp; family"></textarea>
+            <textarea name="guestList" rows="4" placeholder="Sarah, 2&#10;James, 4, VIP"></textarea>
             <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
           </form>
         </article>
