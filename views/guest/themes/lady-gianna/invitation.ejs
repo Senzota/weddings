@@ -61,21 +61,23 @@
     <!-- Reached either because this is an 'open' event, or because this
          exact guest's passcode has already been verified server-side. -->
 
-    <!-- input_17: supersedes input_16 §4's corner-clip approach, which
+    <!-- input_17/18: supersedes input_16 §4's corner-clip approach, which
          looked like a hard-edged box floating on content (confirmed bad
          next to "The Itinerary"). The Hero above is untouched; everything
          from here down through the Footer instead shares ONE continuous
          floral background — the same tall frame image anchored once at
          the top of this whole span and again at the bottom (so its own
          rose/eucalyptus clusters read cleanly at each edge, with the
-         theme's blush filling whatever's between), under a semi-transparent
-         blush tint so every card/button/text on top stays legible. -->
+         theme's blush filling whatever's between). input_18: the blush
+         tint over this background was hiding the floral image almost
+         entirely and has been removed outright (not just dimmed) — each
+         card on top (lg-glass/lg-framed) already carries its own legible
+         surface, so the shared background stays fully visible now. -->
     <div class="lg-post-hero">
       <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
         <img class="lg-post-hero-band lg-post-hero-band--top" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
         <img class="lg-post-hero-band lg-post-hero-band--bottom" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
       <% } %>
-      <div class="lg-post-hero-tint"></div>
 
     <!-- 2. Gate panel: QR frame (only ever for state='qr', i.e. a
          'closed' event) beside the personalized "Dear [Guest]" card.

@@ -82,13 +82,15 @@ body.lg-page * { box-sizing: border-box; }
    a full-width band, object-fit: cover + object-position so only that
    edge of the source shows, no stretching/distortion) — its own
    clusters read cleanly at both edges, with the theme's blush filling
-   whatever's between. A semi-transparent blush tint sits above the
-   bands (and below all real content, since both are earlier in source
-   order with z-index: auto — normal stacking then paints later DOM
-   siblings on top with no z-index juggling needed) so every card/
-   button/text on top stays fully legible. */
+   whatever's between.
+   input_18: the blush tint that used to sit above the bands has been
+   removed outright (it was 82% opaque and hid the floral image almost
+   completely — confirmed live: it read as a plain cream panel, not a
+   photo background). Legibility for content on top is carried entirely
+   by each card's own surface (.lg-glass / .lg-framed), not by a shared
+   overlay, so the floral background now shows through at full clarity. */
 /* z-index: 0 (not just position: relative) makes this its own stacking
-   context — combined with z-index: -1 on the bands/tint below, that
+   context — combined with z-index: -1 on the bands below, that
    guarantees every other child (whether or not it happens to set its
    own position/z-index) paints above them, with no per-element z-index
    bookkeeping needed elsewhere on the page. */
@@ -104,7 +106,6 @@ body.lg-page * { box-sizing: border-box; }
 }
 .lg-post-hero-band--top { top: 0; object-position: top center; }
 .lg-post-hero-band--bottom { bottom: 0; object-position: bottom center; }
-.lg-post-hero-tint { position: absolute; inset: 0; background: rgba(249, 236, 230, 0.82); pointer-events: none; z-index: -1; }
 
 /* Gold inset border/frame around key panels. */
 .lg-framed {
