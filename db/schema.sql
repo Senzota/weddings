@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS events (
   invitation_message   TEXT,
   contact_details       TEXT,
   access_mode          TEXT NOT NULL DEFAULT 'closed' CHECK (access_mode IN ('open', 'recognized', 'closed')),
+  event_type           TEXT NOT NULL DEFAULT 'wedding' CHECK (event_type IN ('wedding', 'birthday')),
+  subtitle             TEXT,
+  footer_note          TEXT,
+  event_time_note      TEXT,
   status               TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'live')),
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -41,6 +45,16 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS card_image_public_id TEXT;
 -- as it did before this field existed (full code + RSVP + QR + scanner).
 ALTER TABLE events ADD COLUMN IF NOT EXISTS access_mode TEXT NOT NULL DEFAULT 'closed'
   CHECK (access_mode IN ('open', 'recognized', 'closed'));
+-- input_15: generalizes events beyond weddings. Default 'wedding' keeps
+-- every existing event (and every caller unaware of this field) behaving
+-- exactly as before. couple_names/wedding_date are reused as-is (holding
+-- the celebrant's name / event date for a birthday); subtitle, footer_note
+-- and event_time_note are new free-text fields usable by any event type.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_type TEXT NOT NULL DEFAULT 'wedding'
+  CHECK (event_type IN ('wedding', 'birthday'));
+ALTER TABLE events ADD COLUMN IF NOT EXISTS subtitle TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS footer_note TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time_note TEXT;
 
 -- Theme slug renamed from 'design-1' to 'botanical-bloom' (input_8) — fix
 -- up any events created under the old name.
@@ -59,12 +73,16 @@ CREATE TABLE IF NOT EXISTS guests (
   seat_count    INTEGER NOT NULL DEFAULT 1,
   passcode      TEXT UNIQUE NOT NULL,
   email         TEXT,
+  invite_group  TEXT,
   rsvp_status   TEXT NOT NULL DEFAULT 'pending' CHECK (rsvp_status IN ('pending', 'accepted', 'declined')),
   responded_at  TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_guests_event_id ON guests(event_id);
+-- input_15 §A7: purely descriptive free text (e.g. "Family celebration ·
+-- 4 guests"), admin-typed, not tied to any logic.
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS invite_group TEXT;
 
 CREATE TABLE IF NOT EXISTS gatepasses (
   id                  SERIAL PRIMARY KEY,

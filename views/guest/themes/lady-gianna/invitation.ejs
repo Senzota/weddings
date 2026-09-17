@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" class="lg-page">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= event.couple_names %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Libre+Baskerville:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="lg-page<%= state === null ? ' lg-locked' : '' %>">
+
+  <!-- 1. Hero — public event metadata only, no guest identity, so it's
+       always shown (with the overlay on top for gated events) before a
+       correct passcode is verified. -->
+  <section class="lg-hero">
+    <% if (event.card_image) { %>
+      <img class="lg-hero-photo" src="<%= event.card_image %>" alt="<%= event.couple_names %>">
+    <% } else { %>
+      <div class="lg-hero-photo-placeholder"></div>
+    <% } %>
+    <img class="lg-corner lg-corner-tl" src="/themes/<%= event.theme %>/img/corner-floral.svg" alt="">
+    <img class="lg-corner lg-corner-br" src="/themes/<%= event.theme %>/img/corner-floral.svg" alt="">
+    <div class="lg-hero-panel">
+      <p class="lg-eyebrow">You're invited to celebrate</p>
+      <h1 class="lg-script lg-hero-name"><%= event.couple_names %></h1>
+      <% if (event.subtitle) { %>
+        <p class="lg-hero-subtitle"><%= event.subtitle %></p>
+      <% } %>
+      <p class="lg-hero-intro">Join us as we celebrate this joyous occasion, surrounded by the people who mean the most.</p>
+      <a class="lg-hero-enter" href="#gate">Come on in &darr;</a>
+    </div>
+  </section>
+
+  <% if (state === null) { %>
+    <!-- 2. Code-entry overlay — full server-side gating (input_9), never
+         reached at all for 'open' events. -->
+    <div class="lg-overlay" id="gate">
+      <div class="lg-overlay-card lg-framed">
+        <p class="lg-eyebrow lg-overlay-label">Enter your passcode</p>
+        <% if (typeof error !== 'undefined' && error) { %>
+          <p class="lg-error"><%= error %></p>
+        <% } %>
+        <form method="POST" action="/invite/<%= event.id %>/verify">
+          <input type="text" name="passcode" placeholder="Passcode" required autocapitalize="characters" autocomplete="off" autofocus>
+          <button type="submit" class="lg-btn">View Invitation</button>
+        </form>
+      </div>
+    </div>
+
+  <% } else { %>
+    <!-- Reached either because this is an 'open' event, or because this
+         exact guest's passcode has already been verified server-side. -->
+
+    <!-- 2. Gate panel: QR frame (only ever for state='qr', i.e. a
+         'closed' event) beside the personalized "Dear [Guest]" card.
+         Absent entirely for 'open' events — no RSVP/QR mechanism at all. -->
+    <% if (state !== 'open') { %>
+      <div id="gate" class="lg-gate lg-framed lg-glass<%= state === 'qr' ? ' lg-gate--with-qr' : '' %>">
+        <% if (state === 'qr') { %>
+          <div class="lg-gate-qr-frame">
+            <img src="<%= qrDataUrl %>" alt="Your gatepass QR code">
+          </div>
+        <% } %>
+        <div class="lg-gate-card">
+          <h2>Dear <%= guest.name %>,</h2>
+
+          <% if (state === 'card' && welcomeBack) { %>
+            <div class="lg-banner">
+              <p><%= event.decline_message %></p>
+              <p><strong>We will be delighted if your schedule has now allowed you to participate.</strong></p>
+            </div>
+          <% } %>
+
+          <% if (state === 'card') { %>
+            <p>Seats reserved: <%= guest.seat_count %></p>
+            <div class="lg-actions">
+              <form method="POST" action="/invite/<%= event.id %>/rsvp">
+                <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+                <input type="hidden" name="response" value="accepted">
+                <button type="submit" class="lg-btn"><%= event.accept_button_text %></button>
+              </form>
+              <% if (!welcomeBack) { %>
+                <form method="POST" action="/invite/<%= event.id %>/rsvp">
+                  <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+                  <input type="hidden" name="response" value="declined">
+                  <button type="submit" class="lg-btn"><%= event.decline_button_text %></button>
+                </form>
+              <% } %>
+            </div>
+
+          <% } else if (state === 'confirmed') { %>
+            <p>Seats reserved: <%= guest.seat_count %>. <strong>You're confirmed!</strong> We can't wait to celebrate with you.</p>
+
+          <% } else if (state === 'qr') { %>
+            <p>Seats reserved: <%= guest.seat_count %>. Show this QR code at the door.</p>
+            <% if (checkedIn) { %>
+              <p><strong>You're already checked in.</strong> This still works if you need to show it again.</p>
+            <% } %>
+
+          <% } else if (state === 'expired') { %>
+            <p>This invite is no longer active. Thanks for celebrating with us!</p>
+          <% } %>
+
+          <% if (event.invitation_message) { %>
+            <div class="lg-message-frame">
+              <p><%= event.invitation_message %></p>
+            </div>
+          <% } %>
+
+          <span class="lg-gate-code-chip"><%= guest.passcode %></span>
+        </div>
+      </div>
+    <% } %>
+
+    <img class="lg-divider" src="/themes/<%= event.theme %>/img/divider-heart.svg" alt="">
+
+    <!-- Cameos / Gallery / Other Details — same button-row pattern as
+         every other theme (input_12/13), no ?passcode= for 'open' events. -->
+    <div class="lg-tile-row">
+      <a class="lg-tile" href="/invite/<%= event.id %>/cameos<%= guest ? '?passcode=' + guest.passcode : '' %>">Cameos</a>
+      <a class="lg-tile" href="/invite/<%= event.id %>/gallery<%= guest ? '?passcode=' + guest.passcode : '' %>">Gallery</a>
+      <a class="lg-tile" href="/invite/<%= event.id %>/other-details">Other Details</a>
+    </div>
+
+    <!-- 3. Itinerary: event-card (date / time note / venue) + timeline -->
+    <section class="lg-section" id="itinerary">
+      <h2>The Itinerary</h2>
+      <div class="lg-event-card lg-framed lg-glass">
+        <div>
+          <p>Date</p>
+          <p><%= formatEventDate(event.wedding_date) %></p>
+        </div>
+        <div>
+          <p>Time</p>
+          <p><%= event.event_time_note || 'To be announced' %></p>
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <p>Venue</p>
+          <p><%= event.venue %></p>
+        </div>
+      </div>
+      <% const itineraryItems = (event.itinerary || '').split('\n').map(function (line) { return line.trim(); }).filter(Boolean); %>
+      <% if (itineraryItems.length > 0) { %>
+        <div class="lg-timeline">
+          <% itineraryItems.forEach(function (item) { %>
+            <div class="lg-timeline-item"><p><%= item %></p></div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p style="text-align:center;">The schedule for the day will be shared here soon.</p>
+      <% } %>
+    </section>
+
+    <!-- 4. Gallery preview -->
+    <section class="lg-section">
+      <h2>Gallery</h2>
+      <% if (galleryPreview && galleryPreview.length > 0) { %>
+        <div class="lg-gallery-preview">
+          <% galleryPreview.forEach(function (photo) { %>
+            <a href="/invite/<%= event.id %>/gallery<%= guest ? '?passcode=' + guest.passcode : '' %>"><img src="<%= photo.image_url %>" alt=""></a>
+          <% }) %>
+        </div>
+        <a class="lg-see-more" href="/invite/<%= event.id %>/gallery<%= guest ? '?passcode=' + guest.passcode : '' %>">See more &rarr;</a>
+      <% } else { %>
+        <p style="text-align:center;">Photos will appear here soon.</p>
+      <% } %>
+    </section>
+
+    <!-- 5. Footer -->
+    <footer class="lg-footer">
+      <p class="lg-script lg-footer-signature">With love</p>
+      <% if (event.footer_note) { %>
+        <p class="lg-footer-note"><%= event.footer_note %></p>
+      <% } %>
+    </footer>
+  <% } %>
+</body>
+</html>

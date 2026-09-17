@@ -6,9 +6,21 @@ const guestModel = require('../models/guest.model');
 const galleryModel = require('../models/gallery.model');
 const cameoModel = require('../models/cameo.model');
 const { archiveAndDelete } = require('../models/archive.model');
-const { AVAILABLE_THEMES } = require('../config/themes');
+const { AVAILABLE_THEMES, DEFAULT_THEME_BY_EVENT_TYPE, themesForEventType } = require('../config/themes');
 const { ACCESS_MODES } = require('../config/accessModes');
+const { EVENT_TYPES, DEFAULT_EVENT_TYPE } = require('../config/eventTypes');
 const { uploadImage, deleteImage } = require('../utils/cloudinary');
+
+// The theme dropdown is filtered client-side (JS) by the selected event
+// type, but a request can still arrive with a mismatched pair (stale
+// form state, a direct POST). Falling back to that type's default theme
+// here is cheap insurance against ending up with e.g. a 'birthday' event
+// rendered through a wedding theme's guest templates.
+function resolveTheme(theme, eventType) {
+  const type = eventType || DEFAULT_EVENT_TYPE;
+  if (theme && themesForEventType(type).some((t) => t.slug === theme)) return theme;
+  return DEFAULT_THEME_BY_EVENT_TYPE[type];
+}
 
 function showLogin(req, res) {
   res.render('admin/login', { error: null });
@@ -37,13 +49,16 @@ async function listEvents(req, res) {
 }
 
 function newEventForm(req, res) {
-  res.render('admin/event-form', { event: null, error: null, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES });
+  res.render('admin/event-form', { event: null, error: null, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: EVENT_TYPES });
 }
 
 async function createEvent(req, res) {
-  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage, theme, accessMode } = req.body;
+  const {
+    coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage,
+    theme, accessMode, eventType, subtitle, footerNote, eventTimeNote,
+  } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
-    return res.render('admin/event-form', { event: null, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES });
+    return res.render('admin/event-form', { event: null, error: 'Couple names/Celebrant, date, and venue are required.', themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: EVENT_TYPES });
   }
   const event = await eventModel.create({
     coupleNames, weddingDate, venue,
@@ -51,7 +66,7 @@ async function createEvent(req, res) {
     acceptButtonText: acceptButtonText || 'Accept with pleasure',
     declineButtonText: declineButtonText || 'Decline with regret',
     declineMessage: declineMessage || undefined,
-    theme, accessMode,
+    theme: resolveTheme(theme, eventType), accessMode, eventType, subtitle, footerNote, eventTimeNote,
   });
   res.redirect(`/admin/events/${event.id}`);
 }
@@ -82,8 +97,8 @@ async function showDashboard(req, res) {
 async function showEditForm(req, res) {
   const event = await eventModel.findById(req.params.id);
   if (!event) return res.status(404).send('Wedding not found.');
-  const error = req.query.error ? 'Couple names, date, and venue are required.' : null;
-  res.render('admin/edit-event', { event, error, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES });
+  const error = req.query.error ? 'Couple names/Celebrant, date, and venue are required.' : null;
+  res.render('admin/edit-event', { event, error, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: EVENT_TYPES });
 }
 
 async function showAssets(req, res) {
@@ -98,15 +113,23 @@ async function updateEvent(req, res) {
   const {
     coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText,
     declineMessage, itinerary, invitationMessage, contactDetails, theme, accessMode,
+    eventType, subtitle, footerNote, eventTimeNote,
   } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
-    // Both the dedicated edit page and Botanical Bloom's inline dashboard
-    // form post here — redirecting to the edit page on failure (rather
-    // than re-rendering whichever page submitted) keeps this one handler
-    // simple; browsers already block empty required fields client-side,
-    // so this path is rare.
+    // The dedicated edit page, Botanical Bloom's inline dashboard form, and
+    // Lady Gianna's smaller "Event details" card all post here — redirecting
+    // to the edit page on failure (rather than re-rendering whichever page
+    // submitted) keeps this one handler simple; browsers already block
+    // empty required fields client-side, so this path is rare.
     return res.redirect(`/admin/events/${req.params.id}/edit?error=1`);
   }
+
+  // Needed both for Cloudinary cleanup (image-replace path) and to resolve
+  // the submitted theme against the event's *current* type when a partial
+  // form (e.g. Lady Gianna's "Event details" card) doesn't submit an
+  // eventType of its own — falls back to the type already on record rather
+  // than assuming 'wedding'.
+  const existing = await eventModel.findById(req.params.id);
 
   let cardImage;
   let cardImagePublicId;
@@ -118,7 +141,6 @@ async function updateEvent(req, res) {
     // Best-effort cleanup of the image this one replaces — don't leave it
     // orphaned on Cloudinary, but don't let a delete failure block the
     // update that already succeeded.
-    const existing = await eventModel.findById(req.params.id);
     if (existing && existing.card_image_public_id) {
       deleteImage(existing.card_image_public_id).catch((err) => {
         console.error(`Failed to delete replaced Cloudinary image ${existing.card_image_public_id}:`, err);
@@ -126,10 +148,19 @@ async function updateEvent(req, res) {
     }
   }
 
+  // Only resolve/clamp the theme when one was actually submitted — a
+  // partial form omitting `theme` entirely must leave it untouched
+  // (eventModel.update's COALESCE), not silently reset it to that type's
+  // default.
+  const resolvedTheme = theme !== undefined
+    ? resolveTheme(theme, eventType || (existing && existing.event_type))
+    : undefined;
+
   await eventModel.update(req.params.id, {
     coupleNames, weddingDate, venue, themeColor,
     acceptButtonText, declineButtonText, declineMessage, cardImage, cardImagePublicId,
-    itinerary, invitationMessage, contactDetails, theme, accessMode,
+    itinerary, invitationMessage, contactDetails, theme: resolvedTheme, accessMode,
+    eventType, subtitle, footerNote, eventTimeNote,
   });
   res.redirect(`/admin/events/${req.params.id}`);
 }
@@ -142,14 +173,21 @@ async function toggleStatus(req, res) {
   res.redirect(`/admin/events/${req.params.id}`);
 }
 
-// Bulk-add guests from pasted "Name, seat count" lines, one guest per line.
+// Bulk-add guests from pasted "Name, seat count[, invite group]" lines,
+// one guest per line — invite group (input_15 §A7) is optional and purely
+// descriptive, so a line with just "Name, seat count" still works exactly
+// as it did before this field existed.
 async function bulkAddGuests(req, res) {
   const { guestList } = req.body;
   const lines = (guestList || '').split('\n').map((l) => l.trim()).filter(Boolean);
   const entries = lines.map((line) => {
-    const [name, seatCountRaw] = line.split(',').map((part) => part.trim());
+    const [name, seatCountRaw, inviteGroupRaw] = line.split(',').map((part) => part.trim());
     const seatCount = parseInt(seatCountRaw, 10);
-    return { name, seatCount: Number.isFinite(seatCount) && seatCount > 0 ? seatCount : 1 };
+    return {
+      name,
+      seatCount: Number.isFinite(seatCount) && seatCount > 0 ? seatCount : 1,
+      inviteGroup: inviteGroupRaw || null,
+    };
   }).filter((entry) => entry.name);
 
   if (entries.length > 0) {
@@ -218,6 +256,7 @@ async function exportGuestList(req, res) {
   const sheet = workbook.addWorksheet('Guests');
   sheet.columns = [
     { header: 'Name', key: 'name', width: 30 },
+    { header: 'Invitation Type', key: 'inviteGroup', width: 25 },
     { header: 'Seats', key: 'seats', width: 10 },
     { header: 'Passcode', key: 'passcode', width: 15 },
     { header: 'RSVP Status', key: 'rsvp', width: 15 },
@@ -226,6 +265,7 @@ async function exportGuestList(req, res) {
   for (const guest of guests) {
     sheet.addRow({
       name: guest.name,
+      inviteGroup: guest.invite_group || '',
       seats: guest.seat_count,
       passcode: guest.passcode,
       rsvp: guest.rsvp_status,

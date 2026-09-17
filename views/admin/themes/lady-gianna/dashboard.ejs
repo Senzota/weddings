@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= event.couple_names %> — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Libre+Baskerville:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="lg-admin">
+  <header class="bb-admin-header">
+    <div class="bb-admin-header-inner">
+      <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>">&#127881; <%= event.couple_names %></a>
+      <nav class="bb-admin-nav">
+        <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
+        <a href="#event-details">Event Details</a>
+        <a href="/admin/events/<%= event.id %>/assets">Assets</a>
+        <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+        <a href="/admin/events">All events</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="lg-admin-wrap">
+    <div class="lg-admin-grid">
+
+      <!-- Profile card -->
+      <article class="lg-admin-card lg-admin-profile">
+        <div class="lg-admin-portrait-wrap">
+          <% if (event.card_image) { %>
+            <img class="lg-admin-portrait" src="<%= event.card_image %>" alt="<%= event.couple_names %>">
+          <% } else { %>
+            <div class="lg-admin-portrait lg-admin-portrait-placeholder"></div>
+          <% } %>
+          <span class="lg-admin-monogram"><%= event.couple_names.charAt(0) %></span>
+        </div>
+        <div>
+          <h2><%= event.couple_names %></h2>
+          <p><%= event.subtitle || event.venue %></p>
+          <div class="lg-admin-btn-row">
+            <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Invite Link</button>
+            <a class="bb-btn" href="/admin/events/<%= event.id %>/edit">Edit details</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Decorative photo panel -->
+      <article class="lg-admin-card lg-admin-photo">
+        <% if (event.card_image) { %>
+          <img src="<%= event.card_image %>" alt="">
+        <% } else { %>
+          <div class="lg-admin-photo-placeholder"></div>
+        <% } %>
+        <p class="lg-admin-photo-caption">&#10024; <%= event.subtitle || 'Celebrating together' %></p>
+      </article>
+
+      <!-- Live stats -->
+      <article class="lg-admin-card lg-admin-stats">
+        <div class="lg-admin-section-head"><h2>At a glance</h2></div>
+        <div class="lg-bubble-grid">
+          <div class="lg-bubble-stat">
+            <div class="lg-bubble"><%= stats.total_guests %></div>
+            <div><p>Invited guests</p><span><% if (event.access_mode === 'closed') { %>Door Scanner: <a href="/scan" target="_blank">open</a><% } else { %>&nbsp;<% } %></span></div>
+          </div>
+          <div class="lg-bubble-stat">
+            <div class="lg-bubble"><%= stats.responded %></div>
+            <div><p>RSVPs received</p><span><%= stats.total_guests > 0 ? Math.round(stats.responded / stats.total_guests * 100) : 0 %>% response rate</span></div>
+          </div>
+          <div class="lg-bubble-stat">
+            <div class="lg-bubble"><%= daysToGo %></div>
+            <div><p>Days to go</p><span>The big day is near</span></div>
+          </div>
+          <div class="lg-bubble-stat">
+            <div class="lg-bubble"><%= galleryPhotos.length + cameoPhotos.length %></div>
+            <div><p>Photos uploaded</p><span>Gallery &amp; Cameos combined</span></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Itinerary card -->
+      <article class="lg-admin-card lg-admin-itinerary">
+        <h2>Itinerary</h2>
+        <form method="POST" action="/admin/events/<%= event.id %>">
+          <input type="hidden" name="coupleNames" value="<%= event.couple_names %>">
+          <input type="hidden" name="weddingDate" value="<%= event.wedding_date %>">
+          <input type="hidden" name="venue" value="<%= event.venue %>">
+          <textarea name="itinerary" placeholder="One item per line, e.g.&#10;10:00am - Arrival&#10;11:00am - Cake cutting&#10;1:00pm - Lunch"><%= event.itinerary || '' %></textarea>
+          <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Save Itinerary</button>
+        </form>
+      </article>
+
+      <!-- Assets card -->
+      <article class="lg-admin-card lg-admin-assets">
+        <div class="lg-admin-section-head"><h2>Photos</h2><a href="/admin/events/<%= event.id %>/assets">Open Assets &rarr;</a></div>
+        <div class="lg-admin-assets-preview">
+          <% galleryPhotos.slice(0, 4).forEach(function (photo) { %>
+            <div style="background-image:url('<%= photo.image_url %>')"></div>
+          <% }) %>
+          <% if (galleryPhotos.length === 0) { %>
+            <p style="grid-column:1/-1;">No photos yet — add some from Assets.</p>
+          <% } %>
+        </div>
+      </article>
+
+      <!-- Event details form -->
+      <article class="lg-admin-card lg-admin-details" id="event-details">
+        <h2>Event details</h2>
+        <% if (typeof error !== 'undefined' && error) { %>
+          <p class="lg-error"><%= error %></p>
+        <% } %>
+        <form method="POST" action="/admin/events/<%= event.id %>">
+          <div class="lg-admin-details-grid">
+            <div>
+              <label>Celebrant</label>
+              <input type="text" name="coupleNames" value="<%= event.couple_names %>" required>
+            </div>
+            <div>
+              <label>Milestone</label>
+              <input type="text" name="subtitle" value="<%= event.subtitle || '' %>" placeholder="e.g. is turning TWO!">
+            </div>
+            <div>
+              <label>Date</label>
+              <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required>
+            </div>
+            <div>
+              <label>Time</label>
+              <input type="text" name="eventTimeNote" value="<%= event.event_time_note || '' %>" placeholder="e.g. Starting 10:00am till Late">
+            </div>
+            <div>
+              <label>Venue</label>
+              <input type="text" name="venue" value="<%= event.venue %>" required>
+            </div>
+          </div>
+          <button type="submit" class="bb-btn" style="margin-top:1rem;">Save Event Details</button>
+        </form>
+      </article>
+
+      <!-- Guest list — input_14: omitted entirely for 'open' events. -->
+      <% if (event.access_mode !== 'open') { %>
+        <article class="lg-admin-card lg-admin-guests" id="guest-list">
+          <div class="lg-admin-section-head">
+            <h2>Guest list</h2>
+            <a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Excel</a>
+          </div>
+          <div class="lg-table-wrap">
+            <table>
+              <thead><tr><th>Guest</th><th>Invitation type</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th></th></tr></thead>
+              <tbody>
+                <% guests.forEach(function (guest) { %>
+                  <tr>
+                    <td><div class="lg-guest-name"><span class="lg-avatar"><%= guest.name.charAt(0) %></span><%= guest.name %></div></td>
+                    <td><%= guest.invite_group || '' %></td>
+                    <td><%= guest.seat_count %></td>
+                    <td><span class="lg-code"><%= guest.passcode %></span></td>
+                    <td><span class="lg-status"><%= guest.rsvp_status %></span></td>
+                    <td><button type="button" class="lg-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <form method="POST" action="/admin/events/<%= event.id %>/guests" style="margin-top:1rem;">
+            <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
+            <textarea name="guestList" rows="4" placeholder="Amara, 4, Family celebration&#10;Kito, 3, Kids &amp; family"></textarea>
+            <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
+          </form>
+        </article>
+      <% } %>
+
+      <!-- Danger zone -->
+      <article class="lg-admin-card lg-admin-danger">
+        <h2>Danger zone</h2>
+        <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
+          <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
+        </form>
+        <form method="POST" action="/admin/events/<%= event.id %>/delete" style="display:inline-block;" onsubmit="return confirm('Delete this event permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
+          <button type="submit" class="bb-btn">Delete Event</button>
+        </form>
+        <p style="margin-top:0.75rem;">Status: <%= event.status %></p>
+      </article>
+
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+          var original = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(function () { btn.textContent = original; }, 1500);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

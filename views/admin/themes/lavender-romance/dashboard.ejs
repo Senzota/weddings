@@ -116,11 +116,12 @@
           </div>
           <div class="lr-table-wrap">
             <table>
-              <thead><tr><th>Guest</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th></th></tr></thead>
+              <thead><tr><th>Guest</th><th>Invitation type</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th></th></tr></thead>
               <tbody>
                 <% guests.forEach(function (guest) { %>
                   <tr>
                     <td><div class="lr-guest"><span class="lr-avatar"><%= guest.name.charAt(0) %></span><%= guest.name %></div></td>
+                    <td><%= guest.invite_group || '' %></td>
                     <td><%= guest.seat_count %></td>
                     <td><span class="lr-code"><%= guest.passcode %></span></td>
                     <td><span class="lr-status"><%= guest.rsvp_status %></span></td>
@@ -131,8 +132,8 @@
             </table>
           </div>
           <form method="POST" action="/admin/events/<%= event.id %>/guests" style="margin-top:1rem;">
-            <p>One guest per line: <code>Name, seat count</code></p>
-            <textarea name="guestList" rows="4" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea>
+            <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
+            <textarea name="guestList" rows="4" placeholder="Jane Doe, 2, Family celebration&#10;John Smith, 1"></textarea>
             <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
           </form>
         </article>

@@ -2,9 +2,9 @@ const pool = require('../config/db');
 const { generatePasscode } = require('../utils/passcode');
 
 async function bulkCreate(eventId, entries) {
-  // entries: [{ name, seatCount }]
+  // entries: [{ name, seatCount, inviteGroup }]
   const created = [];
-  for (const { name, seatCount } of entries) {
+  for (const { name, seatCount, inviteGroup } of entries) {
     let passcode = generatePasscode();
     // Passcodes are globally unique; retry on the rare collision.
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -15,9 +15,9 @@ async function bulkCreate(eventId, entries) {
       passcode = generatePasscode();
     }
     const { rows } = await pool.query(
-      `INSERT INTO guests (event_id, name, seat_count, passcode)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [eventId, name, seatCount || 1, passcode]
+      `INSERT INTO guests (event_id, name, seat_count, passcode, invite_group)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [eventId, name, seatCount || 1, passcode, inviteGroup || null]
     );
     created.push(rows[0]);
   }

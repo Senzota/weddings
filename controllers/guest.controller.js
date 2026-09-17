@@ -54,6 +54,17 @@ function markVerified(req, event, guest) {
   req.session.cookie.maxAge = GUEST_SESSION_MAX_AGE;
 }
 
+// input_15: Lady Gianna's invitation scroll embeds a small gallery
+// preview (grid + "see more" link) directly in the page, unlike the other
+// themes which only link out to the dedicated /gallery route. Fetched
+// only for that theme, and only once we're actually about to render
+// content (never for state=null — nothing past the Hero leaks pre-gate).
+async function galleryPreviewFor(event) {
+  if (event.theme !== 'lady-gianna') return {};
+  const photos = await galleryModel.findByEvent(event.id);
+  return { galleryPreview: photos.slice(0, 6) };
+}
+
 // One template covers the whole continuous scroll (hero, QR/state area,
 // message, button row, itinerary, contacts). Three broad states reach it:
 //  - 'open' events: always full content, no guest identity at all, no
@@ -66,7 +77,7 @@ async function renderInvitation(res, event, guest, extra = {}) {
   const view = `guest/themes/${event.theme}/invitation`;
 
   if (event.access_mode === 'open') {
-    return res.render(view, { event, guest: null, state: 'open', ...extra });
+    return res.render(view, { event, guest: null, state: 'open', ...await galleryPreviewFor(event), ...extra });
   }
 
   if (!guest) {
@@ -74,19 +85,19 @@ async function renderInvitation(res, event, guest, extra = {}) {
   }
 
   if (guest.rsvp_status === 'pending') {
-    return res.render(view, { event, guest, state: 'card', welcomeBack: false, ...extra });
+    return res.render(view, { event, guest, state: 'card', welcomeBack: false, ...await galleryPreviewFor(event), ...extra });
   }
   if (guest.rsvp_status === 'declined') {
     // Decline isn't final — same actionable state as pending, plus a
     // welcome-back banner, and only the Accept action.
-    return res.render(view, { event, guest, state: 'card', welcomeBack: true, ...extra });
+    return res.render(view, { event, guest, state: 'card', welcomeBack: true, ...await galleryPreviewFor(event), ...extra });
   }
 
   // accepted
   if (event.access_mode === 'recognized') {
     // Tracked, but no gatepass — there's no door check-in step for this
     // mode, so nothing for a QR to be checked against.
-    return res.render(view, { event, guest, state: 'confirmed', ...extra });
+    return res.render(view, { event, guest, state: 'confirmed', ...await galleryPreviewFor(event), ...extra });
   }
 
   // 'closed' — final, and shown with the invitation alongside the QR
@@ -97,11 +108,11 @@ async function renderInvitation(res, event, guest, extra = {}) {
   if (gatepass.checked_in) {
     const hoursSinceCheckIn = (Date.now() - new Date(gatepass.checked_in_at).getTime()) / 3600000;
     if (hoursSinceCheckIn >= CHECKED_IN_QR_WINDOW_HOURS) {
-      return res.render(view, { event, guest, state: 'expired', ...extra });
+      return res.render(view, { event, guest, state: 'expired', ...await galleryPreviewFor(event), ...extra });
     }
   }
   const qrDataUrl = await generateQrDataUrl(gatepass.qr_token);
-  return res.render(view, { event, guest, state: 'qr', qrDataUrl, checkedIn: gatepass.checked_in, ...extra });
+  return res.render(view, { event, guest, state: 'qr', qrDataUrl, checkedIn: gatepass.checked_in, ...await galleryPreviewFor(event), ...extra });
 }
 
 async function showInvitation(req, res) {

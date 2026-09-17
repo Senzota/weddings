@@ -6,25 +6,41 @@
   <title>Edit — <%= event.couple_names %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
 <body class="bb-admin">
   <div class="bb-admin-wrap">
     <p class="bb-admin-back"><a href="/admin/events/<%= event.id %>">&larr; Back to <%= event.couple_names %></a></p>
-    <h1>Edit Wedding</h1>
+    <h1>Edit Event</h1>
     <% if (typeof error !== 'undefined' && error) { %>
       <p class="bb-error"><%= error %></p>
     <% } %>
     <form method="POST" action="/admin/events/<%= event.id %>" enctype="multipart/form-data">
       <div class="bb-details-grid">
         <div class="bb-admin-tile">
-          <label>Couple names</label>
+          <label>Event type</label>
+          <select name="eventType" id="eventType">
+            <% eventTypes.forEach(function (t) { %>
+              <option value="<%= t.slug %>" <%= event.event_type === t.slug ? 'selected' : '' %>><%= t.label %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="bb-admin-tile">
+          <label id="coupleNamesLabel"><%= event.event_type === 'birthday' ? 'Celebrant' : 'Couple names' %></label>
           <input type="text" name="coupleNames" value="<%= event.couple_names %>" required>
+        </div>
+        <div class="bb-admin-tile">
+          <label>Subtitle</label>
+          <input type="text" name="subtitle" value="<%= event.subtitle || '' %>" placeholder="e.g. is turning TWO!">
         </div>
         <div class="bb-admin-tile">
           <label>Wedding date</label>
           <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required>
+        </div>
+        <div class="bb-admin-tile">
+          <label>Time note</label>
+          <input type="text" name="eventTimeNote" value="<%= event.event_time_note || '' %>" placeholder="e.g. Starting 10:00am till Late">
         </div>
         <div class="bb-admin-tile">
           <label>Venue</label>
@@ -32,9 +48,9 @@
         </div>
         <div class="bb-admin-tile">
           <label>Theme</label>
-          <select name="theme">
+          <select name="theme" id="theme">
             <% themes.forEach(function (t) { %>
-              <option value="<%= t.slug %>" <%= event.theme === t.slug ? 'selected' : '' %>><%= t.label %></option>
+              <option value="<%= t.slug %>" data-event-type="<%= t.eventType %>" <%= event.theme === t.slug ? 'selected' : '' %>><%= t.label %></option>
             <% }) %>
           </select>
         </div>
@@ -85,9 +101,43 @@
           <label>Contact details</label>
           <textarea name="contactDetails" placeholder="How guests can reach the couple, e.g. phone/email."><%= event.contact_details || '' %></textarea>
         </div>
+        <div class="bb-admin-tile bb-tile-wide">
+          <label>Footer note</label>
+          <textarea name="footerNote" placeholder="A short quote and/or closing note."><%= event.footer_note || '' %></textarea>
+        </div>
       </div>
       <button type="submit" class="bb-btn" style="margin-top:1.25rem;">Save Changes</button>
     </form>
   </div>
+
+  <script>
+    // Same event-type-scoped theme filtering as the create form (input_15
+    // §A6) — changing event type here re-filters the theme options rather
+    // than leaving a mismatched theme selected.
+    (function () {
+      var eventTypeSelect = document.getElementById('eventType');
+      var themeSelect = document.getElementById('theme');
+      var coupleNamesLabel = document.getElementById('coupleNamesLabel');
+      var themeOptions = Array.prototype.slice.call(themeSelect.options);
+
+      function applyFilter() {
+        var type = eventTypeSelect.value;
+        var firstVisible = null;
+        var currentStillVisible = false;
+        themeOptions.forEach(function (opt) {
+          var matches = opt.dataset.eventType === type;
+          opt.hidden = !matches;
+          opt.disabled = !matches;
+          if (matches && !firstVisible) firstVisible = opt;
+          if (matches && opt.value === themeSelect.value) currentStillVisible = true;
+        });
+        if (!currentStillVisible && firstVisible) themeSelect.value = firstVisible.value;
+        coupleNamesLabel.textContent = type === 'birthday' ? 'Celebrant' : 'Couple names';
+      }
+
+      eventTypeSelect.addEventListener('change', applyFilter);
+      applyFilter();
+    })();
+  </script>
 </body>
 </html>

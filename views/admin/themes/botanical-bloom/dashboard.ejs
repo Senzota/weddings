@@ -92,8 +92,12 @@
           </div>
           <div class="bb-admin-tile">
             <label>Theme</label>
+            <!-- input_15: this dashboard only ever renders for a 'wedding'
+                 event (Botanical Bloom is wedding-only), so the theme list
+                 here is filtered to wedding themes — no event-type
+                 selector on this inline form to react to. -->
             <select name="theme">
-              <% themes.forEach(function (t) { %>
+              <% themes.filter(function (t) { return t.eventType === event.event_type; }).forEach(function (t) { %>
                 <option value="<%= t.slug %>" <%= event.theme === t.slug ? 'selected' : '' %>><%= t.label %></option>
               <% }) %>
             </select>
@@ -151,8 +155,8 @@
           <div class="bb-admin-card" style="margin-bottom:1.5rem;">
             <h2>Add guests</h2>
             <form method="POST" action="/admin/events/<%= event.id %>/guests">
-              <p>One guest per line: <code>Name, seat count</code></p>
-              <textarea name="guestList" rows="5" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea>
+              <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
+              <textarea name="guestList" rows="5" placeholder="Jane Doe, 2, Family celebration&#10;John Smith, 1"></textarea>
               <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Add Guests</button>
             </form>
           </div>
@@ -162,12 +166,13 @@
             <p><a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Guest List (Excel)</a></p>
             <table>
               <thead>
-                <tr><th>Name</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>
+                <tr><th>Name</th><th>Invitation type</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>
               </thead>
               <tbody>
                 <% guests.forEach(function(guest) { %>
                   <tr>
                     <td><%= guest.name %></td>
+                    <td><%= guest.invite_group || '' %></td>
                     <td><%= guest.seat_count %></td>
                     <td><%= guest.passcode %></td>
                     <td><button type="button" class="bb-btn copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button></td>

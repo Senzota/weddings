@@ -2,25 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Add Wedding — Weddings 103</title>
+  <title>Add Event — Weddings 103</title>
 </head>
 <body>
-  <h1>Add Wedding</h1>
+  <h1>Add Event</h1>
   <% if (error) { %>
     <p style="color: red;"><%= error %></p>
   <% } %>
   <form method="POST" action="/admin/events">
-    <label>Couple names <input type="text" name="coupleNames" required></label><br>
+    <label>Event type
+      <select name="eventType" id="eventType">
+        <% eventTypes.forEach(function (t) { %>
+          <option value="<%= t.slug %>" <%= t.slug === 'wedding' ? 'selected' : '' %>><%= t.label %></option>
+        <% }) %>
+      </select>
+    </label><br>
+    <label id="coupleNamesLabel">Couple names <input type="text" name="coupleNames" required></label><br>
+    <label>Subtitle <input type="text" name="subtitle" placeholder="e.g. is turning TWO!"></label><br>
     <label>Wedding date <input type="date" name="weddingDate" required></label><br>
+    <label>Time note <input type="text" name="eventTimeNote" placeholder="e.g. Starting 10:00am till Late"></label><br>
     <label>Venue <input type="text" name="venue" required></label><br>
     <label>Theme color <input type="color" name="themeColor" value="#8a6d3b"></label><br>
     <label>Accept button text <input type="text" name="acceptButtonText" placeholder="Accept with pleasure"></label><br>
     <label>Decline button text <input type="text" name="declineButtonText" placeholder="Decline with regret"></label><br>
     <label>Decline message <textarea name="declineMessage" rows="3" cols="50" placeholder="Thank you for letting us know. You are always welcome — if your plans change, we'd love to have you with us."></textarea></label><br>
+    <label>Footer note <textarea name="footerNote" rows="2" cols="50" placeholder="A short quote and/or closing note."></textarea></label><br>
     <label>Theme
-      <select name="theme">
+      <select name="theme" id="theme">
         <% themes.forEach(function (t) { %>
-          <option value="<%= t.slug %>"><%= t.label %></option>
+          <option value="<%= t.slug %>" data-event-type="<%= t.eventType %>"><%= t.label %></option>
         <% }) %>
       </select>
     </label><br>
@@ -31,8 +41,39 @@
         <% }) %>
       </select>
     </label><br>
-    <button type="submit">Create Wedding</button>
+    <button type="submit">Create Event</button>
   </form>
-  <p><a href="/admin/events">&larr; Back to weddings</a></p>
+  <p><a href="/admin/events">&larr; Back to events</a></p>
+
+  <script>
+    // Theme choices are scoped to the selected event type (input_15 §A6):
+    // registering a wedding only offers wedding themes, a birthday only
+    // offers birthday themes. Plain client-side filtering over the same
+    // options the server already rendered, no separate endpoint needed.
+    (function () {
+      var eventTypeSelect = document.getElementById('eventType');
+      var themeSelect = document.getElementById('theme');
+      var coupleNamesLabel = document.getElementById('coupleNamesLabel');
+      var themeOptions = Array.prototype.slice.call(themeSelect.options);
+
+      function applyFilter() {
+        var type = eventTypeSelect.value;
+        var firstVisible = null;
+        var currentStillVisible = false;
+        themeOptions.forEach(function (opt) {
+          var matches = opt.dataset.eventType === type;
+          opt.hidden = !matches;
+          opt.disabled = !matches;
+          if (matches && !firstVisible) firstVisible = opt;
+          if (matches && opt.value === themeSelect.value) currentStillVisible = true;
+        });
+        if (!currentStillVisible && firstVisible) themeSelect.value = firstVisible.value;
+        coupleNamesLabel.firstChild.textContent = type === 'birthday' ? 'Celebrant ' : 'Couple names ';
+      }
+
+      eventTypeSelect.addEventListener('change', applyFilter);
+      applyFilter();
+    })();
+  </script>
 </body>
 </html>

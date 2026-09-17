@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" class="lg-page">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cameos — <%= event.couple_names %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Libre+Baskerville:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="lg-page">
+  <section class="lg-section">
+    <h2>Cameos</h2>
+
+    <% if (photos === null) { %>
+      <!-- Only reached for 'recognized'/'closed' events with no verified
+           guest — 'open' events always pass a (possibly empty) array. -->
+      <p style="text-align:center;">Enter your passcode to view the cameos.</p>
+      <% if (error) { %>
+        <p class="lg-error" style="text-align:center;"><%= error %></p>
+      <% } %>
+      <form method="GET" action="/invite/<%= event.id %>/cameos" style="max-width:320px; margin:0 auto; text-align:center;">
+        <input type="text" name="passcode" placeholder="Passcode" required autocapitalize="characters" autocomplete="off">
+        <button type="submit" class="lg-btn" style="margin-top:0.75rem;">View Cameos</button>
+      </form>
+
+    <% } else if (photos.length === 0) { %>
+      <p style="text-align:center;">Cameos will appear here soon.</p>
+
+    <% } else { %>
+      <div class="lg-gallery-grid">
+        <% photos.forEach(function (photo) { %>
+          <div class="lg-gallery-cell">
+            <a href="<%= photo.image_url %>" target="_blank">
+              <img src="<%= photo.image_url %>" alt="<%= photo.title || '' %>">
+            </a>
+            <a class="lg-gallery-download" href="<%= getDownloadUrl(photo.image_url) %>" download title="Download">&darr;</a>
+            <% if (photo.title) { %><span class="lg-cameo-caption"><%= photo.title %></span><% } %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+  <p style="text-align:center;"><a class="lg-btn" href="/invite/<%= event.id %>">&larr; Back to the invitation</a></p>
+</body>
+</html>
