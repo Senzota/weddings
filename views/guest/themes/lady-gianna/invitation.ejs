@@ -20,11 +20,16 @@
     <% } else { %>
       <div class="lg-hero-photo-placeholder"></div>
     <% } %>
-    <!-- input_18: the input_16 §4 floral corner squares that used to sit
-         here are removed outright — same hard-edged, cropped-square look
-         already removed everywhere else on the page, just not in scope
-         for input_17. No replacement decoration; the Hero is just the
-         photo, its existing dark gradient overlay, and the text panel. -->
+    <!-- input_16 §4: fixed floral corner artwork, supplied as a real
+         image (not hand-coded vector art) — one frame image whose art
+         lives in its own top-left/bottom-right corners, windowed via
+         object-fit/object-position rather than stretched or mirrored.
+         Rendered only once the asset actually exists, so this never
+         shows a broken-image icon in the meantime. -->
+    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
+      <img class="lg-corner lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <img class="lg-corner lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+    <% } %>
     <div class="lg-hero-panel">
       <p class="lg-eyebrow">You're invited to celebrate</p>
       <h1 class="lg-script lg-hero-name"><%= event.couple_names %></h1>
@@ -139,8 +144,12 @@
       <a class="lg-tile" href="/invite/<%= event.id %>/other-details">Other Details</a>
     </div>
 
-    <!-- 3. Itinerary: event-card (date / time note / venue) + timeline -->
-    <section class="lg-section" id="itinerary">
+    <!-- 3. Itinerary: event-card (date / time note / venue) + timeline.
+         input_21: the whole section is now its own card (lg-framed
+         lg-glass) so it reads clearly against the continuous floral
+         background, instead of the heading/timeline floating directly
+         on it. -->
+    <section class="lg-section lg-framed lg-glass" id="itinerary">
       <h2>The Itinerary</h2>
       <div class="lg-event-card lg-framed lg-glass">
         <div>
@@ -183,8 +192,9 @@
       <% } %>
     </section>
 
-    <!-- 5. Footer -->
-    <footer class="lg-footer">
+    <!-- 5. Footer. input_21: also its own card now, same reasoning as
+         the Itinerary section above. -->
+    <footer class="lg-footer lg-framed lg-glass">
       <p class="lg-script lg-footer-signature">With love</p>
       <% if (event.footer_note) { %>
         <p class="lg-footer-note"><%= event.footer_note %></p>

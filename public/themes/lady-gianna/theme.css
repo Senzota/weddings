@@ -60,11 +60,18 @@ body.lg-page * { box-sizing: border-box; }
 }
 .lg-btn:hover { background: var(--lg-gold); color: #fff; transform: translateY(-1px); }
 
-/* input_18: the input_16 §4 corner-clip rules (.lg-corner etc.) that
-   used to decorate the Hero are removed outright — same hard-edged,
-   cropped-square look already removed everywhere else on the page
-   (input_17), just not in scope until now. No replacement; the Hero
-   goes back to just its photo, dark gradient overlay, and text panel. */
+/* Floral corners — input_16 §4, Hero only. The supplied image is a full
+   rose/gold frame with floral clusters baked into its own top-left and
+   bottom-right corners, so each placement shows just one corner "window"
+   onto that source via object-fit: cover + object-position, rather than
+   stretching the whole frame over the panel or mirroring it (which would
+   double the baked-in border and misplace the blooms). input_17
+   explicitly leaves the Hero untouched — everything past it uses the
+   continuous-background treatment below instead (the corner-clip look
+   was confirmed bad everywhere else, e.g. next to "The Itinerary"). */
+.lg-corner { position: absolute; width: 150px; height: 150px; object-fit: cover; pointer-events: none; opacity: 0.9; z-index: 1; }
+.lg-corner-tl { top: 0; left: 0; object-position: top left; }
+.lg-corner-br { bottom: 0; right: 0; object-position: bottom right; }
 
 .lg-divider { display: block; width: 120px; height: 24px; margin: 2rem auto; }
 
@@ -196,10 +203,12 @@ body.lg-locked { overflow: hidden; height: 100vh; }
 .lg-error { color: #b3261e; margin: 0 0 1rem; }
 
 /* ---------- 2. Gate panel: QR frame beside "Dear [Guest]" card ---------- */
+/* input_22: more breathing room above this card — it was sitting too
+   close to where the Hero ends / the floral background begins. */
 .lg-gate {
   position: relative;
   max-width: 760px;
-  margin: 4rem auto 1rem;
+  margin: clamp(4rem, 12vw, 7rem) auto 1rem;
   padding: clamp(1.75rem, 5vw, 3rem);
   display: grid;
   grid-template-columns: 1fr;
@@ -303,7 +312,17 @@ body.lg-locked { overflow: hidden; height: 100vh; }
 .lg-cameo-caption { display: block; margin-top: 0.35rem; font-size: 0.8rem; color: var(--lg-rose-deep); text-align: center; font-weight: 700; }
 
 /* ---------- 5. Footer ---------- */
-.lg-footer { position: relative; text-align: center; padding: 3rem 6vw 4rem; overflow: hidden; }
+/* input_21: now its own card (lg-framed lg-glass, added on the tag in
+   invitation.ejs) instead of floating text directly on the background —
+   same reasoning as the Itinerary section above: legible against the
+   continuous floral background without needing a page-wide tint. */
+.lg-footer {
+  position: relative;
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 3rem;
+  padding: 2.75rem 6vw;
+}
 .lg-footer-signature { font-size: 1.6rem; margin-bottom: 0.75rem; }
 .lg-footer-note { max-width: 480px; margin: 0 auto; color: var(--lg-muted); font-style: italic; white-space: pre-line; }
 
