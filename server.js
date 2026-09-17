@@ -36,12 +36,6 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-// express.static's bundled mime table predates AVIF (mime@1.6.0), so it
-// would otherwise serve .avif files as application/octet-stream — most
-// browsers still render an <img> via content-sniffing anyway, but that's
-// fragile to rely on, so register the type explicitly (input_16 §4:
-// Lady Gianna's supplied floral corner asset is AVIF).
-express.static.mime.define({ 'image/avif': ['avif'] });
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Served straight from node_modules so it always matches the installed

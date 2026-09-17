@@ -60,23 +60,51 @@ body.lg-page * { box-sizing: border-box; }
 }
 .lg-btn:hover { background: var(--lg-gold); color: #fff; transform: translateY(-1px); }
 
-/* Floral corners — input_16 §4: one supplied image (a full rose/gold
-   frame with floral clusters baked into its own top-left and
-   bottom-right corners only, not a tileable single-corner motif), so
-   each placement shows just one corner "window" onto that source via
-   object-fit: cover + object-position, rather than stretching the whole
-   frame over the panel or mirroring it (which would double the baked-in
-   border and misplace the blooms). No tr/bl variants — the source only
-   has art in two opposite corners. */
+/* Floral corners — input_16 §4, Hero only. The supplied image is a full
+   rose/gold frame with floral clusters baked into its own top-left and
+   bottom-right corners, so each placement shows just one corner "window"
+   onto that source via object-fit: cover + object-position, rather than
+   stretching the whole frame over the panel or mirroring it (which would
+   double the baked-in border and misplace the blooms). input_17
+   explicitly leaves the Hero untouched — everything past it uses the
+   continuous-background treatment below instead (the corner-clip look
+   was confirmed bad everywhere else, e.g. next to "The Itinerary"). */
 .lg-corner { position: absolute; width: 150px; height: 150px; object-fit: cover; pointer-events: none; opacity: 0.9; z-index: 1; }
 .lg-corner-tl { top: 0; left: 0; object-position: top left; }
 .lg-corner-br { bottom: 0; right: 0; object-position: bottom right; }
-/* "at reduced opacity where it sits behind cards" — used on section
-   backgrounds (Itinerary, Footer, admin profile card) rather than the
-   full-strength Hero placement. */
-.lg-corner--subtle { width: 110px; height: 110px; opacity: 0.25; z-index: 0; }
 
 .lg-divider { display: block; width: 120px; height: 24px; margin: 2rem auto; }
+
+/* input_17: the Gate panel through the Footer share ONE floral
+   background spanning that whole (variable-length) span, rather than
+   small clipped corner assets. The same tall frame image is anchored
+   once at the very top of the span and again at the very bottom (each
+   a full-width band, object-fit: cover + object-position so only that
+   edge of the source shows, no stretching/distortion) — its own
+   clusters read cleanly at both edges, with the theme's blush filling
+   whatever's between. A semi-transparent blush tint sits above the
+   bands (and below all real content, since both are earlier in source
+   order with z-index: auto — normal stacking then paints later DOM
+   siblings on top with no z-index juggling needed) so every card/
+   button/text on top stays fully legible. */
+/* z-index: 0 (not just position: relative) makes this its own stacking
+   context — combined with z-index: -1 on the bands/tint below, that
+   guarantees every other child (whether or not it happens to set its
+   own position/z-index) paints above them, with no per-element z-index
+   bookkeeping needed elsewhere on the page. */
+.lg-post-hero { position: relative; z-index: 0; background: var(--lg-blush); overflow: hidden; }
+.lg-post-hero-band {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: clamp(200px, 28vw, 360px);
+  object-fit: cover;
+  pointer-events: none;
+  z-index: -1;
+}
+.lg-post-hero-band--top { top: 0; object-position: top center; }
+.lg-post-hero-band--bottom { bottom: 0; object-position: bottom center; }
+.lg-post-hero-tint { position: absolute; inset: 0; background: rgba(249, 236, 230, 0.82); pointer-events: none; z-index: -1; }
 
 /* Gold inset border/frame around key panels. */
 .lg-framed {

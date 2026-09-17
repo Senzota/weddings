@@ -26,9 +26,9 @@
          object-fit/object-position rather than stretched or mirrored.
          Rendered only once the asset actually exists, so this never
          shows a broken-image icon in the meantime. -->
-    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.avif')) { %>
-      <img class="lg-corner lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
-      <img class="lg-corner lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
+    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
+      <img class="lg-corner lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <img class="lg-corner lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
     <% } %>
     <div class="lg-hero-panel">
       <p class="lg-eyebrow">You're invited to celebrate</p>
@@ -60,6 +60,22 @@
   <% } else { %>
     <!-- Reached either because this is an 'open' event, or because this
          exact guest's passcode has already been verified server-side. -->
+
+    <!-- input_17: supersedes input_16 §4's corner-clip approach, which
+         looked like a hard-edged box floating on content (confirmed bad
+         next to "The Itinerary"). The Hero above is untouched; everything
+         from here down through the Footer instead shares ONE continuous
+         floral background — the same tall frame image anchored once at
+         the top of this whole span and again at the bottom (so its own
+         rose/eucalyptus clusters read cleanly at each edge, with the
+         theme's blush filling whatever's between), under a semi-transparent
+         blush tint so every card/button/text on top stays legible. -->
+    <div class="lg-post-hero">
+      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
+        <img class="lg-post-hero-band lg-post-hero-band--top" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+        <img class="lg-post-hero-band lg-post-hero-band--bottom" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <% } %>
+      <div class="lg-post-hero-tint"></div>
 
     <!-- 2. Gate panel: QR frame (only ever for state='qr', i.e. a
          'closed' event) beside the personalized "Dear [Guest]" card.
@@ -134,9 +150,6 @@
 
     <!-- 3. Itinerary: event-card (date / time note / venue) + timeline -->
     <section class="lg-section" id="itinerary">
-      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.avif')) { %>
-        <img class="lg-corner lg-corner--subtle lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
-      <% } %>
       <h2>The Itinerary</h2>
       <div class="lg-event-card lg-framed lg-glass">
         <div>
@@ -181,14 +194,12 @@
 
     <!-- 5. Footer -->
     <footer class="lg-footer">
-      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.avif')) { %>
-        <img class="lg-corner lg-corner--subtle lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
-      <% } %>
       <p class="lg-script lg-footer-signature">With love</p>
       <% if (event.footer_note) { %>
         <p class="lg-footer-note"><%= event.footer_note %></p>
       <% } %>
     </footer>
+    </div>
   <% } %>
 </body>
 </html>

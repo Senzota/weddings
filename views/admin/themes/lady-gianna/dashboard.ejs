@@ -23,7 +23,18 @@
     </div>
   </header>
 
-  <div class="lg-admin-wrap">
+  <!-- input_17 §2: supersedes input_16 §4's small corner-clip on the
+       profile card — the same continuous top/bottom floral-band
+       treatment used on the guest page (Gate panel through Footer),
+       applied here to the whole dashboard wrap instead of one card, with
+       the same strong blush tint so stats/tables/form fields stay fully
+       readable on top. -->
+  <div class="lg-admin-wrap lg-post-hero">
+    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
+      <img class="lg-post-hero-band lg-post-hero-band--top" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <img class="lg-post-hero-band lg-post-hero-band--bottom" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+    <% } %>
+    <div class="lg-post-hero-tint"></div>
     <div class="lg-admin-grid">
 
       <!-- input_16 §1: profile info and the decorative photo now share ONE
@@ -31,9 +42,6 @@
            fade on its inner edge, so it dissolves into the card rather
            than meeting the profile side at a hard edge. -->
       <article class="lg-admin-card lg-admin-profile-merged">
-        <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.avif')) { %>
-          <img class="lg-corner lg-corner--subtle lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
-        <% } %>
         <div class="lg-profile-info">
           <div class="lg-admin-portrait-wrap">
             <% if (event.card_image) { %>
