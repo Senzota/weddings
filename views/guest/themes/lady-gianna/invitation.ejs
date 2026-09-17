@@ -20,12 +20,15 @@
     <% } else { %>
       <div class="lg-hero-photo-placeholder"></div>
     <% } %>
-    <!-- input_16 §4: fixed floral corner artwork, supplied as PNGs (not
-         hand-coded vector art) — rendered only once the asset actually
-         exists, so this never shows a broken-image icon in the meantime. -->
-    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
-      <img class="lg-corner lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
-      <img class="lg-corner lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+    <!-- input_16 §4: fixed floral corner artwork, supplied as a real
+         image (not hand-coded vector art) — one frame image whose art
+         lives in its own top-left/bottom-right corners, windowed via
+         object-fit/object-position rather than stretched or mirrored.
+         Rendered only once the asset actually exists, so this never
+         shows a broken-image icon in the meantime. -->
+    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.avif')) { %>
+      <img class="lg-corner lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
+      <img class="lg-corner lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
     <% } %>
     <div class="lg-hero-panel">
       <p class="lg-eyebrow">You're invited to celebrate</p>
@@ -131,8 +134,8 @@
 
     <!-- 3. Itinerary: event-card (date / time note / venue) + timeline -->
     <section class="lg-section" id="itinerary">
-      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
-        <img class="lg-corner lg-corner--subtle lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.avif')) { %>
+        <img class="lg-corner lg-corner--subtle lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
       <% } %>
       <h2>The Itinerary</h2>
       <div class="lg-event-card lg-framed lg-glass">
@@ -178,8 +181,8 @@
 
     <!-- 5. Footer -->
     <footer class="lg-footer">
-      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
-        <img class="lg-corner lg-corner--subtle lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
+      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.avif')) { %>
+        <img class="lg-corner lg-corner--subtle lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.avif" alt="">
       <% } %>
       <p class="lg-script lg-footer-signature">With love</p>
       <% if (event.footer_note) { %>

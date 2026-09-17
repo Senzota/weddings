@@ -63,9 +63,8 @@ fixed decorative assets.
 
 ## Issues found
 
-Items 1-3 implemented and verified locally. Item 4 (floral images) is prepared but
-not finishable yet — no image files were attached to this input, only the text
-spec. Notes below.
+All four items implemented and verified locally, including §4 once the user
+supplied the actual floral artwork as a follow-up. Notes below.
 
 - **§1 Merge profile + photo panel**: replaced the two separate `<article>` cards
   with one `.lg-admin-profile-merged` container — profile info sits on a solid
@@ -91,29 +90,49 @@ spec. Notes below.
   shared source, so a copy/paste across files or view-level cross-contamination
   seems unlikely from reading the code; flagging this in case it recurs after this
   fix, which would point to something more structural (e.g. Express's view cache).
-- **§4 Floral images**: no image files were attached to this input — only this
-  text file — so I could not add real artwork this round. What I did instead:
+- **§4 Floral images**: no image was attached to the input file itself, so I first
   removed the hand-coded SVG corner attempt from input_15 entirely (confirmed via
   local testing that its `<img>` tags *were* present and correctly pathed in the
   rendered HTML, so "no floral decoration at all" was likely the art itself
   reading as an unnoticeable smudge at that size/opacity against the Hero photo,
   not a broken reference — either way, per this input's explicit instruction, I
   stopped attempting vector art rather than continuing to tune it) and replaced it
-  with a guarded reference to the real path this spec names
-  (`public/assets/img/themes/lady-gianna/corner-floral.png`), wired into a new
-  `utils/assetExists.js` helper (`app.locals.assetExists`, backed by
-  `fs.existsSync`). Every corner `<img>` — Hero (full strength) and the Itinerary
-  section, Footer, and admin profile card (all at a new reduced-opacity
-  `.lg-corner--subtle` variant, "behind cards") — is wrapped in an
-  `assetExists(...)` check, so nothing renders (no broken-image icon) until the
-  file actually lands. Once `corner-floral.png` is dropped into that exact path and
-  deployed, every one of those placements lights up automatically with no further
-  code change. Verified locally: with the file absent, zero `lg-corner` markup
-  renders anywhere (guest or admin) and nothing else regressed; the unrelated
-  heart/bow section divider (`divider-heart.svg`, not part of this bug report)
-  was left untouched and still renders normally.
-- No database schema changes in this input — nothing to migrate.
+  with a guarded reference wired through a new `utils/assetExists.js` helper
+  (`app.locals.assetExists`, backed by `fs.existsSync`), so nothing renders (no
+  broken-image icon) until a real file lands at the expected path.
 
-**Still needed from the user to fully close out item 4**: the actual
-`corner-floral.png` (or equivalent transparent-background PNG) file, saved at
-`public/assets/img/themes/lady-gianna/corner-floral.png`.
+  The user then supplied the actual artwork as a follow-up (pasted in chat, saved
+  to the project root as `Lady Gianna.avif` since I have no way to pull image
+  bytes out of a chat attachment directly — I asked them to save it as a file
+  instead). It's a single AVIF frame image, not a small tileable corner icon: one
+  rose/gold rectangular border with floral clusters baked into its own top-left
+  and bottom-right corners only (not all four), with mostly-clear space between.
+  Copied it via `cp` (not the Read/Write tools, which would have corrupted the
+  binary by treating it as text) to
+  `public/assets/img/themes/lady-gianna/corner-floral.avif`.
+
+  Because the art is baked into one full-frame image rather than a single
+  mirrorable corner motif, I redesigned `.lg-corner` from "one small icon,
+  mirrored via CSS `transform` into all four corners" (the original SVG plan) to
+  "one small window (`object-fit: cover` + `object-position: top left` /
+  `bottom right`) onto the two corners the source image actually has art in" —
+  mirroring the full frame would have doubled its own baked-in border and put
+  blooms in the wrong corners. Applied at full strength on the Hero and at a
+  reduced-opacity `.lg-corner--subtle` variant on the Itinerary section, Footer,
+  and the admin dashboard's merged profile card, matching input_15's "top-left /
+  bottom-right... behind cards" placement.
+
+  Also found and fixed a real bug while wiring this in: `express.static`'s
+  bundled `mime` package (v1.6.0, hoisted from `send`) predates AVIF and was
+  serving the file as `application/octet-stream` instead of `image/avif` — most
+  browsers still render an `<img>` via content-sniffing regardless, but that's
+  fragile to depend on. Registered the correct type explicitly via
+  `express.static.mime.define({ 'image/avif': ['avif'] })` in `server.js`, and
+  confirmed the `Content-Type` header locally afterward.
+
+  Verified locally end-to-end: with the file present, exactly the expected corner
+  `<img>` tags render in each of the four placements (Hero ×2, Itinerary,
+  Footer, admin dashboard); the asset itself now serves as `image/avif`. The
+  unrelated heart/bow section divider (`divider-heart.svg`, never part of this
+  bug report) was left untouched throughout and still renders normally.
+- No database schema changes in this input — nothing to migrate.

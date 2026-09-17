@@ -60,17 +60,21 @@ body.lg-page * { box-sizing: border-box; }
 }
 .lg-btn:hover { background: var(--lg-gold); color: #fff; transform: translateY(-1px); }
 
-/* Floral corners — original SVG artwork, richer/greener than a thin
-   accent per the input_15 discussion note. */
-.lg-corner { position: absolute; width: 96px; height: 96px; pointer-events: none; opacity: 0.9; z-index: 1; }
-.lg-corner-tl { top: 10px; left: 10px; }
-.lg-corner-tr { top: 10px; right: 10px; transform: scaleX(-1); }
-.lg-corner-bl { bottom: 10px; left: 10px; transform: scaleY(-1); }
-.lg-corner-br { bottom: 10px; right: 10px; transform: scale(-1, -1); }
-/* input_16 §4: "at reduced opacity where it sits behind cards" — used on
-   section backgrounds (Itinerary, Footer) rather than the full-strength
-   Hero placement. */
-.lg-corner--subtle { width: 72px; height: 72px; opacity: 0.28; z-index: 0; }
+/* Floral corners — input_16 §4: one supplied image (a full rose/gold
+   frame with floral clusters baked into its own top-left and
+   bottom-right corners only, not a tileable single-corner motif), so
+   each placement shows just one corner "window" onto that source via
+   object-fit: cover + object-position, rather than stretching the whole
+   frame over the panel or mirroring it (which would double the baked-in
+   border and misplace the blooms). No tr/bl variants — the source only
+   has art in two opposite corners. */
+.lg-corner { position: absolute; width: 150px; height: 150px; object-fit: cover; pointer-events: none; opacity: 0.9; z-index: 1; }
+.lg-corner-tl { top: 0; left: 0; object-position: top left; }
+.lg-corner-br { bottom: 0; right: 0; object-position: bottom right; }
+/* "at reduced opacity where it sits behind cards" — used on section
+   backgrounds (Itinerary, Footer, admin profile card) rather than the
+   full-strength Hero placement. */
+.lg-corner--subtle { width: 110px; height: 110px; opacity: 0.25; z-index: 0; }
 
 .lg-divider { display: block; width: 120px; height: 24px; margin: 2rem auto; }
 
