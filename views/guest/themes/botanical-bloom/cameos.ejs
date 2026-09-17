@@ -14,7 +14,9 @@
     <img class="bb-section-motif" src="/themes/<%= event.theme %>/img/floral-illustration.png" alt="">
     <h2 class="bb-script">Cameos</h2>
 
-    <% if (!guest) { %>
+    <% if (photos === null) { %>
+      <!-- Only reached for 'recognized'/'closed' events with no verified
+           guest — 'open' events always pass a (possibly empty) array. -->
       <p>Enter your passcode to view the cameos.</p>
       <% if (error) { %>
         <p class="bb-error"><%= error %></p>

@@ -14,7 +14,9 @@
     <span class="bb-motif-mark" style="top:-40px; right:-40px; transform:rotate(15deg);">✽</span>
     <h2>Gallery</h2>
 
-    <% if (!guest) { %>
+    <% if (photos === null) { %>
+      <!-- Only reached for 'recognized'/'closed' events with no verified
+           guest — 'open' events always pass a (possibly empty) array. -->
       <p>Enter your passcode to view the gallery.</p>
       <% if (error) { %>
         <p class="bb-error"><%= error %></p>

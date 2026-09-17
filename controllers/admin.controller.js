@@ -7,6 +7,7 @@ const galleryModel = require('../models/gallery.model');
 const cameoModel = require('../models/cameo.model');
 const { archiveAndDelete } = require('../models/archive.model');
 const { AVAILABLE_THEMES } = require('../config/themes');
+const { ACCESS_MODES } = require('../config/accessModes');
 const { uploadImage, deleteImage } = require('../utils/cloudinary');
 
 function showLogin(req, res) {
@@ -36,13 +37,13 @@ async function listEvents(req, res) {
 }
 
 function newEventForm(req, res) {
-  res.render('admin/event-form', { event: null, error: null, themes: AVAILABLE_THEMES });
+  res.render('admin/event-form', { event: null, error: null, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES });
 }
 
 async function createEvent(req, res) {
-  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage, theme } = req.body;
+  const { coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText, declineMessage, theme, accessMode } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
-    return res.render('admin/event-form', { event: null, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES });
+    return res.render('admin/event-form', { event: null, error: 'Couple names, date, and venue are required.', themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES });
   }
   const event = await eventModel.create({
     coupleNames, weddingDate, venue,
@@ -50,7 +51,7 @@ async function createEvent(req, res) {
     acceptButtonText: acceptButtonText || 'Accept with pleasure',
     declineButtonText: declineButtonText || 'Decline with regret',
     declineMessage: declineMessage || undefined,
-    theme,
+    theme, accessMode,
   });
   res.redirect(`/admin/events/${event.id}`);
 }
@@ -82,7 +83,7 @@ async function showEditForm(req, res) {
   const event = await eventModel.findById(req.params.id);
   if (!event) return res.status(404).send('Wedding not found.');
   const error = req.query.error ? 'Couple names, date, and venue are required.' : null;
-  res.render('admin/edit-event', { event, error, themes: AVAILABLE_THEMES });
+  res.render('admin/edit-event', { event, error, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES });
 }
 
 async function showAssets(req, res) {
@@ -96,7 +97,7 @@ async function showAssets(req, res) {
 async function updateEvent(req, res) {
   const {
     coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText,
-    declineMessage, itinerary, invitationMessage, contactDetails, theme,
+    declineMessage, itinerary, invitationMessage, contactDetails, theme, accessMode,
   } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
     // Both the dedicated edit page and Botanical Bloom's inline dashboard
@@ -128,7 +129,7 @@ async function updateEvent(req, res) {
   await eventModel.update(req.params.id, {
     coupleNames, weddingDate, venue, themeColor,
     acceptButtonText, declineButtonText, declineMessage, cardImage, cardImagePublicId,
-    itinerary, invitationMessage, contactDetails, theme,
+    itinerary, invitationMessage, contactDetails, theme, accessMode,
   });
   res.redirect(`/admin/events/${req.params.id}`);
 }

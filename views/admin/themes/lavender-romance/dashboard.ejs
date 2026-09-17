@@ -14,7 +14,7 @@
     <div class="bb-admin-header-inner">
       <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>"><%= event.couple_names %></a>
       <nav class="bb-admin-nav">
-        <a href="#guest-list">Guest List</a>
+        <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
         <a href="/admin/events/<%= event.id %>/edit">Wedding Details</a>
         <a href="/admin/events/<%= event.id %>/assets">Assets</a>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
@@ -68,7 +68,7 @@
       <article class="lr-card lr-stats">
         <div class="lr-section-head"><h2>At a glance</h2></div>
         <div class="lr-bubble-grid">
-          <div class="lr-stat"><div class="lr-bubble"><%= stats.total_guests %></div><div><p>Invited guests</p><span>Door Scanner: <a href="/scan" target="_blank">open</a></span></div></div>
+          <div class="lr-stat"><div class="lr-bubble"><%= stats.total_guests %></div><div><p>Invited guests</p><span><% if (event.access_mode === 'closed') { %>Door Scanner: <a href="/scan" target="_blank">open</a><% } else { %>&nbsp;<% } %></span></div></div>
           <div class="lr-stat"><div class="lr-bubble"><%= stats.responded %></div><div><p>RSVPs received</p><span><%= stats.total_guests > 0 ? Math.round(stats.responded / stats.total_guests * 100) : 0 %>% response rate</span></div></div>
           <div class="lr-stat"><div class="lr-bubble"><%= daysToGo %></div><div><p>Days to go</p><span>Your moment is near</span></div></div>
           <div class="lr-stat"><div class="lr-bubble"><%= stats.checked_in %></div><div><p>Checked in</p><span><%= stats.seats_accepted %> seats accepted</span></div></div>
@@ -106,34 +106,37 @@
         </div>
       </article>
 
-      <!-- Guests -->
-      <article class="lr-card lr-guests" id="guest-list">
-        <div class="lr-section-head">
-          <div><p class="bb-label">Your inner circle</p><h2>Guest list</h2></div>
-          <a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Excel</a>
-        </div>
-        <div class="lr-table-wrap">
-          <table>
-            <thead><tr><th>Guest</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th></th></tr></thead>
-            <tbody>
-              <% guests.forEach(function (guest) { %>
-                <tr>
-                  <td><div class="lr-guest"><span class="lr-avatar"><%= guest.name.charAt(0) %></span><%= guest.name %></div></td>
-                  <td><%= guest.seat_count %></td>
-                  <td><span class="lr-code"><%= guest.passcode %></span></td>
-                  <td><span class="lr-status"><%= guest.rsvp_status %></span></td>
-                  <td><button type="button" class="lr-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-        <form method="POST" action="/admin/events/<%= event.id %>/guests" style="margin-top:1rem;">
-          <p>One guest per line: <code>Name, seat count</code></p>
-          <textarea name="guestList" rows="4" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea>
-          <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
-        </form>
-      </article>
+      <!-- Guests — input_14: omitted entirely for 'open' events, which
+           have no guest list, passcodes, or RSVP of any kind. -->
+      <% if (event.access_mode !== 'open') { %>
+        <article class="lr-card lr-guests" id="guest-list">
+          <div class="lr-section-head">
+            <div><p class="bb-label">Your inner circle</p><h2>Guest list</h2></div>
+            <a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Excel</a>
+          </div>
+          <div class="lr-table-wrap">
+            <table>
+              <thead><tr><th>Guest</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th></th></tr></thead>
+              <tbody>
+                <% guests.forEach(function (guest) { %>
+                  <tr>
+                    <td><div class="lr-guest"><span class="lr-avatar"><%= guest.name.charAt(0) %></span><%= guest.name %></div></td>
+                    <td><%= guest.seat_count %></td>
+                    <td><span class="lr-code"><%= guest.passcode %></span></td>
+                    <td><span class="lr-status"><%= guest.rsvp_status %></span></td>
+                    <td><button type="button" class="lr-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <form method="POST" action="/admin/events/<%= event.id %>/guests" style="margin-top:1rem;">
+            <p>One guest per line: <code>Name, seat count</code></p>
+            <textarea name="guestList" rows="4" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea>
+            <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
+          </form>
+        </article>
+      <% } %>
     </div>
 
     <div class="bb-admin-section" style="margin-top:2rem;">

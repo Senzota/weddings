@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
-<body class="bb-page<%= guest ? '' : ' bb-locked' %>">
+<body class="bb-page<%= state === null ? ' bb-locked' : '' %>">
 
   <!-- 1. Hero -->
   <section class="bb-hero">
@@ -24,10 +24,11 @@
     </div>
   </section>
 
-  <% if (!guest) { %>
+  <% if (state === null) { %>
     <!-- 2. Code-entry overlay — always shown until a correct passcode is
          submitted, no way to dismiss it. Everything past the Hero is
-         omitted from the response entirely (see below), not just hidden. -->
+         omitted from the response entirely (see below), not just hidden.
+         Never reached at all for 'open' events. -->
     <div class="bb-overlay">
       <div class="bb-overlay-card">
         <p class="bb-label bb-overlay-label">Enter your passcode</p>
@@ -43,58 +44,72 @@
 
   <% } else { %>
     <!-- 3+4. QR/accept-decline/banner AND the invitation message together
-         in one glass card (Lavender Romance's distinguishing treatment). -->
-    <div class="bb-state-area">
-      <span class="bb-motif-mark" style="top:-60px; right:-40px; transform:rotate(12deg);">✽</span>
+         in one glass card (Lavender Romance's distinguishing treatment).
+         Skipped entirely for 'open' events — no RSVP/QR mechanism at all —
+         and stops at 'confirmed' (no QR) for 'recognized' events. -->
+    <% if (state !== 'open') { %>
+      <div class="bb-state-area">
+        <span class="bb-motif-mark" style="top:-60px; right:-40px; transform:rotate(12deg);">✽</span>
 
-      <% if (state === 'card' && welcomeBack) { %>
-        <div class="bb-banner">
-          <p><%= event.decline_message %></p>
-          <p><strong>We will be delighted if your schedule has now allowed you to participate.</strong></p>
-        </div>
-      <% } %>
-
-      <% if (state === 'card') { %>
-        <p class="bb-label">An invitation for you</p>
-        <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %></p>
-        <div class="bb-actions">
-          <form method="POST" action="/invite/<%= event.id %>/rsvp">
-            <input type="hidden" name="passcode" value="<%= guest.passcode %>">
-            <input type="hidden" name="response" value="accepted">
-            <button type="submit" class="bb-btn"><%= event.accept_button_text %></button>
-          </form>
-          <% if (!welcomeBack) { %>
-            <form method="POST" action="/invite/<%= event.id %>/rsvp">
-              <input type="hidden" name="passcode" value="<%= guest.passcode %>">
-              <input type="hidden" name="response" value="declined">
-              <button type="submit" class="bb-btn"><%= event.decline_button_text %></button>
-            </form>
-          <% } %>
-        </div>
-
-      <% } else if (state === 'qr') { %>
-        <p class="bb-label">Personal gatepass</p>
-        <img class="bb-qr" src="<%= qrDataUrl %>" alt="Your gatepass QR code">
-        <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %>. Show this QR code at the door.</p>
-        <% if (checkedIn) { %>
-          <p><strong>You're already checked in.</strong> This still works if you need to show it again.</p>
+        <% if (state === 'card' && welcomeBack) { %>
+          <div class="bb-banner">
+            <p><%= event.decline_message %></p>
+            <p><strong>We will be delighted if your schedule has now allowed you to participate.</strong></p>
+          </div>
         <% } %>
 
-      <% } else if (state === 'expired') { %>
-        <p>This invite is no longer active. Thanks for celebrating with us!</p>
-      <% } %>
+        <% if (state === 'card') { %>
+          <p class="bb-label">An invitation for you</p>
+          <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %></p>
+          <div class="bb-actions">
+            <form method="POST" action="/invite/<%= event.id %>/rsvp">
+              <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+              <input type="hidden" name="response" value="accepted">
+              <button type="submit" class="bb-btn"><%= event.accept_button_text %></button>
+            </form>
+            <% if (!welcomeBack) { %>
+              <form method="POST" action="/invite/<%= event.id %>/rsvp">
+                <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+                <input type="hidden" name="response" value="declined">
+                <button type="submit" class="bb-btn"><%= event.decline_button_text %></button>
+              </form>
+            <% } %>
+          </div>
 
-      <% if (event.invitation_message) { %>
-        <div class="bb-message-frame">
-          <p><%= event.invitation_message %></p>
-        </div>
-      <% } %>
-    </div>
+        <% } else if (state === 'confirmed') { %>
+          <p class="bb-label">You're confirmed</p>
+          <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %>. We can't wait to celebrate with you.</p>
 
-    <!-- 5. Button row -->
+        <% } else if (state === 'qr') { %>
+          <p class="bb-label">Personal gatepass</p>
+          <img class="bb-qr" src="<%= qrDataUrl %>" alt="Your gatepass QR code">
+          <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %>. Show this QR code at the door.</p>
+          <% if (checkedIn) { %>
+            <p><strong>You're already checked in.</strong> This still works if you need to show it again.</p>
+          <% } %>
+
+        <% } else if (state === 'expired') { %>
+          <p>This invite is no longer active. Thanks for celebrating with us!</p>
+        <% } %>
+
+        <% if (event.invitation_message) { %>
+          <div class="bb-message-frame">
+            <p><%= event.invitation_message %></p>
+          </div>
+        <% } %>
+      </div>
+    <% } else if (event.invitation_message) { %>
+      <!-- 'open' events still show the couple's message, just without the
+           glass state-card wrapper (there's no state to put in it). -->
+      <div class="bb-message-frame">
+        <p><%= event.invitation_message %></p>
+      </div>
+    <% } %>
+
+    <!-- 5. Button row — no ?passcode= param for 'open' events. -->
     <div class="bb-tile-row">
-      <a class="bb-tile" href="/invite/<%= event.id %>/cameos?passcode=<%= guest.passcode %>">Cameos</a>
-      <a class="bb-tile" href="/invite/<%= event.id %>/gallery?passcode=<%= guest.passcode %>">Gallery</a>
+      <a class="bb-tile" href="/invite/<%= event.id %>/cameos<%= guest ? '?passcode=' + guest.passcode : '' %>">Cameos</a>
+      <a class="bb-tile" href="/invite/<%= event.id %>/gallery<%= guest ? '?passcode=' + guest.passcode : '' %>">Gallery</a>
       <a class="bb-tile" href="/invite/<%= event.id %>/other-details">Other Details</a>
     </div>
 

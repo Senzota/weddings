@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS events (
   itinerary            TEXT,
   invitation_message   TEXT,
   contact_details       TEXT,
+  access_mode          TEXT NOT NULL DEFAULT 'closed' CHECK (access_mode IN ('open', 'recognized', 'closed')),
   status               TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'live')),
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -36,6 +37,10 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS itinerary TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS invitation_message TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS contact_details TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS card_image_public_id TEXT;
+-- Default 'closed' keeps every event that already existed behaving exactly
+-- as it did before this field existed (full code + RSVP + QR + scanner).
+ALTER TABLE events ADD COLUMN IF NOT EXISTS access_mode TEXT NOT NULL DEFAULT 'closed'
+  CHECK (access_mode IN ('open', 'recognized', 'closed'));
 
 -- Theme slug renamed from 'design-1' to 'botanical-bloom' (input_8) — fix
 -- up any events created under the old name.

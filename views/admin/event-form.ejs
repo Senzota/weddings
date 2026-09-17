@@ -24,6 +24,13 @@
         <% }) %>
       </select>
     </label><br>
+    <label>Access mode
+      <select name="accessMode">
+        <% accessModes.forEach(function (m) { %>
+          <option value="<%= m.slug %>" <%= m.slug === 'closed' ? 'selected' : '' %>><%= m.label %></option>
+        <% }) %>
+      </select>
+    </label><br>
     <button type="submit">Create Wedding</button>
   </form>
   <p><a href="/admin/events">&larr; Back to weddings</a></p>

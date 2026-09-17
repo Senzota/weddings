@@ -14,7 +14,7 @@
     <div class="bb-admin-header-inner">
       <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>"><%= event.couple_names %></a>
       <nav class="bb-admin-nav">
-        <a href="#guest-list">Guest List</a>
+        <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
         <a href="#wedding-details">Wedding Details</a>
         <a href="/admin/events/<%= event.id %>/assets">Assets</a>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
@@ -39,12 +39,16 @@
           <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>" style="margin-top:0.6rem;">Copy Link</button>
         </div>
 
-        <div class="bb-admin-tile">
-          <h2>Door scanner</h2>
-          <p>No login needed for door staff.</p>
-          <a class="bb-btn" href="/scan">Open Scanner</a>
-          <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/scan" style="margin-top:0.6rem;">Copy Link</button>
-        </div>
+        <% if (event.access_mode === 'closed') { %>
+          <!-- input_14: only 'closed' events ever generate a QR gatepass,
+               so this tile is meaningless (and hidden) for 'open'/'recognized'. -->
+          <div class="bb-admin-tile">
+            <h2>Door scanner</h2>
+            <p>No login needed for door staff.</p>
+            <a class="bb-btn" href="/scan">Open Scanner</a>
+            <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/scan" style="margin-top:0.6rem;">Copy Link</button>
+          </div>
+        <% } %>
 
         <div class="bb-admin-tile">
           <h2>Status: <%= event.status %></h2>
@@ -138,49 +142,53 @@
       </form>
     </div>
 
-    <!-- 5. Guest management: form+table (left) / instructions (right) -->
-    <div class="bb-admin-section bb-guest-mgmt" id="guest-list">
-      <div>
-        <div class="bb-admin-card" style="margin-bottom:1.5rem;">
-          <h2>Add guests</h2>
-          <form method="POST" action="/admin/events/<%= event.id %>/guests">
-            <p>One guest per line: <code>Name, seat count</code></p>
-            <textarea name="guestList" rows="5" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea>
-            <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Add Guests</button>
-          </form>
+    <!-- 5. Guest management: form+table (left) / instructions (right).
+         input_14: 'open' events have no guest list at all — fully public,
+         no passcodes, no RSVP — so this whole section is omitted. -->
+    <% if (event.access_mode !== 'open') { %>
+      <div class="bb-admin-section bb-guest-mgmt" id="guest-list">
+        <div>
+          <div class="bb-admin-card" style="margin-bottom:1.5rem;">
+            <h2>Add guests</h2>
+            <form method="POST" action="/admin/events/<%= event.id %>/guests">
+              <p>One guest per line: <code>Name, seat count</code></p>
+              <textarea name="guestList" rows="5" placeholder="Jane Doe, 2&#10;John Smith, 1"></textarea>
+              <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Add Guests</button>
+            </form>
+          </div>
+
+          <div class="bb-admin-card">
+            <h2>Guest list</h2>
+            <p><a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Guest List (Excel)</a></p>
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>
+              </thead>
+              <tbody>
+                <% guests.forEach(function(guest) { %>
+                  <tr>
+                    <td><%= guest.name %></td>
+                    <td><%= guest.seat_count %></td>
+                    <td><%= guest.passcode %></td>
+                    <td><button type="button" class="bb-btn copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button></td>
+                    <td><%= guest.rsvp_status %></td>
+                    <td><%= guest.checked_in ? 'Yes' : 'No' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="bb-admin-card">
-          <h2>Guest list</h2>
-          <p><a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Guest List (Excel)</a></p>
-          <table>
-            <thead>
-              <tr><th>Name</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>
-            </thead>
-            <tbody>
-              <% guests.forEach(function(guest) { %>
-                <tr>
-                  <td><%= guest.name %></td>
-                  <td><%= guest.seat_count %></td>
-                  <td><%= guest.passcode %></td>
-                  <td><button type="button" class="bb-btn copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button></td>
-                  <td><%= guest.rsvp_status %></td>
-                  <td><%= guest.checked_in ? 'Yes' : 'No' %></td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
+          <h2>Using this section</h2>
+          <p>Paste one guest per line as <code>Name, seat count</code> and click Add Guests — a unique passcode is generated for each one automatically.</p>
+          <p>Share the invite link above with everyone; each guest enters their own passcode from the Guest List to see their invitation.</p>
+          <p>Use Copy Code next to a name to grab just that guest's passcode, for sending individually.</p>
+          <p>Questions about this dashboard? Contact Weddings 103 support.</p>
         </div>
       </div>
-
-      <div class="bb-admin-card">
-        <h2>Using this section</h2>
-        <p>Paste one guest per line as <code>Name, seat count</code> and click Add Guests — a unique passcode is generated for each one automatically.</p>
-        <p>Share the invite link above with everyone; each guest enters their own passcode from the Guest List to see their invitation.</p>
-        <p>Use Copy Code next to a name to grab just that guest's passcode, for sending individually.</p>
-        <p>Questions about this dashboard? Contact Weddings 103 support.</p>
-      </div>
-    </div>
+    <% } %>
 
     <!-- Danger zone -->
     <div class="bb-admin-section">

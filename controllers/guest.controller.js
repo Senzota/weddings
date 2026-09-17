@@ -40,7 +40,8 @@ async function resolveLiveEvent(req, res) {
 // (express-session, already backed by Postgres for the admin login) keyed
 // per event — not front-end state, which is what was losing verification
 // on every navigation. Checked first on every gated guest route, before
-// ever asking for a passcode again.
+// ever asking for a passcode again. Irrelevant for 'open' events, which
+// never gate on identity at all.
 async function resolveSessionGuest(req, event) {
   const guestId = req.session.verifiedGuests && req.session.verifiedGuests[event.id];
   if (!guestId) return null;
@@ -54,12 +55,20 @@ function markVerified(req, event, guest) {
 }
 
 // One template covers the whole continuous scroll (hero, QR/state area,
-// message, button row, itinerary, contacts). guest is null only when
-// neither the session nor a submitted passcode resolved anyone; the
-// hero/overlay render regardless, and the guest-state area + message +
-// tile row + itinerary + contacts only appear once guest is resolved.
+// message, button row, itinerary, contacts). Three broad states reach it:
+//  - 'open' events: always full content, no guest identity at all, no
+//    RSVP/QR of any kind (input_14 §2).
+//  - 'recognized'/'closed', guest unresolved: overlay only (state=null).
+//  - 'recognized'/'closed', guest resolved: state-area reflects their
+//    RSVP status — 'qr' only ever happens for 'closed' events (input_14
+//    §3: recognized tracks RSVP but never generates a gatepass).
 async function renderInvitation(res, event, guest, extra = {}) {
   const view = `guest/themes/${event.theme}/invitation`;
+
+  if (event.access_mode === 'open') {
+    return res.render(view, { event, guest: null, state: 'open', ...extra });
+  }
+
   if (!guest) {
     return res.render(view, { event, guest: null, state: null, ...extra });
   }
@@ -73,7 +82,15 @@ async function renderInvitation(res, event, guest, extra = {}) {
     return res.render(view, { event, guest, state: 'card', welcomeBack: true, ...extra });
   }
 
-  // accepted — final. QR renders directly in the scroll, no card box.
+  // accepted
+  if (event.access_mode === 'recognized') {
+    // Tracked, but no gatepass — there's no door check-in step for this
+    // mode, so nothing for a QR to be checked against.
+    return res.render(view, { event, guest, state: 'confirmed', ...extra });
+  }
+
+  // 'closed' — final, and shown with the invitation alongside the QR
+  // rather than replacing it.
   let gatepass = await gatepassModel.findByGuestId(guest.id);
   if (!gatepass) gatepass = await gatepassModel.create(guest.id);
 
@@ -91,6 +108,10 @@ async function showInvitation(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
 
+  if (event.access_mode === 'open') {
+    return renderInvitation(res, event, null);
+  }
+
   const sessionGuest = await resolveSessionGuest(req, event);
   if (sessionGuest) return renderInvitation(res, event, sessionGuest);
 
@@ -101,6 +122,12 @@ async function showInvitation(req, res) {
 async function verifyPasscode(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
+
+  // Nothing to verify for an open event — there's no overlay offering
+  // this form in the first place, but guard the route directly too.
+  if (event.access_mode === 'open') {
+    return res.redirect(`/invite/${event.id}`);
+  }
 
   const guest = await guestModel.findByEventAndPasscode(event.id, req.body.passcode || '');
   if (!guest) {
@@ -116,6 +143,11 @@ async function verifyPasscode(req, res) {
 async function submitRsvp(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
+
+  // No RSVP mechanism at all for open events (input_14 §2).
+  if (event.access_mode === 'open') {
+    return res.redirect(`/invite/${event.id}`);
+  }
 
   const guest = (await resolveSessionGuest(req, event))
     || (await guestModel.findByEventAndPasscode(event.id, req.body.passcode || ''));
@@ -133,12 +165,13 @@ async function submitRsvp(req, res) {
   const canAccept = response === 'accepted' && (guest.rsvp_status === 'pending' || guest.rsvp_status === 'declined');
   const canDecline = response === 'declined' && guest.rsvp_status === 'pending';
   if (canAccept || canDecline) {
-    // Written unconditionally, before the gatepass/QR step — a guest's
-    // response must never be lost, and there's no email delivery in this
-    // path at all to fail on.
+    // Written unconditionally — a guest's response must never be lost,
+    // and there's no email delivery in this path at all to fail on.
+    // 'recognized' events stop right here: recorded and tracked, but
+    // nothing downstream (no gatepass) reacts to acceptance.
     const updated = await guestModel.recordRsvp(guest.id, response);
     if (updated) guest.rsvp_status = updated.rsvp_status;
-    if (guest.rsvp_status === 'accepted') {
+    if (guest.rsvp_status === 'accepted' && event.access_mode === 'closed') {
       await gatepassModel.create(guest.id);
     }
   }
@@ -146,13 +179,17 @@ async function submitRsvp(req, res) {
   return renderInvitation(res, event, guest);
 }
 
-// Gallery has real content (input_11) worth the same gate as the main
-// invitation. The session (once established, from the main invitation or
-// from entering a passcode here directly) means a guest who's already
-// verified never sees the passcode form again on this page either.
+// Gallery has real content (input_11) worth gating for 'recognized'/
+// 'closed' events, same as the main invitation — but an 'open' event has
+// no guest identity to gate on at all, so it's just shown directly.
 async function showGallery(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
+
+  if (event.access_mode === 'open') {
+    const photos = await galleryModel.findByEvent(event.id);
+    return res.render(`guest/themes/${event.theme}/gallery`, { event, guest: null, photos, error: null });
+  }
 
   let guest = await resolveSessionGuest(req, event);
   if (!guest) guest = await guestModel.findByEventAndPasscode(event.id, req.query.passcode || '');
@@ -166,12 +203,15 @@ async function showGallery(req, res) {
   return res.render(`guest/themes/${event.theme}/gallery`, { event, guest, photos, error: null });
 }
 
-// Same passcode-gate pattern as Gallery — Cameos has real, event-specific
-// photos (and the family/friend circle's own names/captions) worth the
-// same protection.
+// Same pattern as Gallery — open events skip the gate entirely.
 async function showCameos(req, res) {
   const event = await resolveLiveEvent(req, res);
   if (!event) return;
+
+  if (event.access_mode === 'open') {
+    const photos = await cameoModel.findByEvent(event.id);
+    return res.render(`guest/themes/${event.theme}/cameos`, { event, guest: null, photos, error: null });
+  }
 
   let guest = await resolveSessionGuest(req, event);
   if (!guest) guest = await guestModel.findByEventAndPasscode(event.id, req.query.passcode || '');

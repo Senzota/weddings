@@ -38,6 +38,14 @@
             <% }) %>
           </select>
         </div>
+        <div class="bb-admin-tile bb-tile-wide">
+          <label>Access mode</label>
+          <select name="accessMode">
+            <% accessModes.forEach(function (m) { %>
+              <option value="<%= m.slug %>" <%= event.access_mode === m.slug ? 'selected' : '' %>><%= m.label %></option>
+            <% }) %>
+          </select>
+        </div>
         <div class="bb-admin-tile">
           <label>Theme color</label>
           <input type="color" name="themeColor" value="<%= event.theme_color %>">

@@ -9,10 +9,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
-<body class="bb-page<%= guest ? '' : ' bb-locked' %>">
+<body class="bb-page<%= state === null ? ' bb-locked' : '' %>">
 
   <!-- 1. Hero — the only thing shown (with the overlay) before a correct
-       passcode is verified. -->
+       passcode is verified. For 'open' events there is no overlay at all
+       and everything below renders immediately. -->
   <section class="bb-hero">
     <% if (event.card_image) { %>
       <img class="bb-hero-photo" src="<%= event.card_image %>" alt="<%= event.couple_names %>">
@@ -26,13 +27,13 @@
     </div>
   </section>
 
-  <% if (!guest) { %>
+  <% if (state === null) { %>
     <!-- 2. Code-entry overlay — always shown until a correct passcode is
          submitted. No close button, no way to dismiss it: this is a
          security boundary, not a dismissible UI affordance. Everything
          past the Hero is omitted from the response entirely below (not
          just hidden by CSS), so there's nothing behind it to bypass to
-         even if a guest tried. -->
+         even if a guest tried. Never reached at all for 'open' events. -->
     <div class="bb-overlay">
       <div class="bb-overlay-card">
         <p class="bb-label bb-overlay-label">Enter your passcode</p>
@@ -47,50 +48,59 @@
     </div>
 
   <% } else { %>
-    <!-- Everything below only ever renders in a response where the
-         passcode for this exact guest has already been verified
-         server-side (POST /verify or /rsvp) — never on a plain GET. -->
+    <!-- Everything below renders either because this is an 'open' event
+         (no identity involved at all) or because the passcode for this
+         exact guest has already been verified server-side. -->
 
-    <!-- 3. QR / accept-decline / banners -->
-    <div class="bb-state-area">
-      <% if (state === 'card' && welcomeBack) { %>
-        <div class="bb-banner">
-          <p><%= event.decline_message %></p>
-          <p><strong>We will be delighted if your schedule has now allowed you to participate.</strong></p>
-        </div>
-      <% } %>
+    <!-- 3. QR / accept-decline / banners — absent entirely for 'open'
+         events (no RSVP mechanism of any kind) and for 'recognized'
+         events once accepted (state='confirmed', no QR ever generated). -->
+    <% if (state !== 'open') { %>
+      <div class="bb-state-area">
+        <% if (state === 'card' && welcomeBack) { %>
+          <div class="bb-banner">
+            <p><%= event.decline_message %></p>
+            <p><strong>We will be delighted if your schedule has now allowed you to participate.</strong></p>
+          </div>
+        <% } %>
 
-      <% if (state === 'card') { %>
-        <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %></p>
-        <div class="bb-actions">
-          <form method="POST" action="/invite/<%= event.id %>/rsvp">
-            <input type="hidden" name="passcode" value="<%= guest.passcode %>">
-            <input type="hidden" name="response" value="accepted">
-            <button type="submit" class="bb-btn"><%= event.accept_button_text %></button>
-          </form>
-          <% if (!welcomeBack) { %>
+        <% if (state === 'card') { %>
+          <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %></p>
+          <div class="bb-actions">
             <form method="POST" action="/invite/<%= event.id %>/rsvp">
               <input type="hidden" name="passcode" value="<%= guest.passcode %>">
-              <input type="hidden" name="response" value="declined">
-              <button type="submit" class="bb-btn"><%= event.decline_button_text %></button>
+              <input type="hidden" name="response" value="accepted">
+              <button type="submit" class="bb-btn"><%= event.accept_button_text %></button>
             </form>
+            <% if (!welcomeBack) { %>
+              <form method="POST" action="/invite/<%= event.id %>/rsvp">
+                <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+                <input type="hidden" name="response" value="declined">
+                <button type="submit" class="bb-btn"><%= event.decline_button_text %></button>
+              </form>
+            <% } %>
+          </div>
+
+        <% } else if (state === 'confirmed') { %>
+          <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %>.</p>
+          <p><strong>You're confirmed!</strong> We can't wait to celebrate with you.</p>
+
+        <% } else if (state === 'qr') { %>
+          <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %></p>
+          <p>You're on the list! Show this QR code at the door.</p>
+          <% if (checkedIn) { %>
+            <p><strong>You're already checked in.</strong> This still works if you need to show it again.</p>
           <% } %>
-        </div>
+          <img class="bb-qr" src="<%= qrDataUrl %>" alt="Your gatepass QR code">
 
-      <% } else if (state === 'qr') { %>
-        <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %></p>
-        <p>You're on the list! Show this QR code at the door.</p>
-        <% if (checkedIn) { %>
-          <p><strong>You're already checked in.</strong> This still works if you need to show it again.</p>
+        <% } else if (state === 'expired') { %>
+          <p>This invite is no longer active. Thanks for celebrating with us!</p>
         <% } %>
-        <img class="bb-qr" src="<%= qrDataUrl %>" alt="Your gatepass QR code">
+      </div>
+    <% } %>
 
-      <% } else if (state === 'expired') { %>
-        <p>This invite is no longer active. Thanks for celebrating with us!</p>
-      <% } %>
-    </div>
-
-    <!-- 4. Message placeholder -->
+    <!-- 4. Message placeholder — generic (no guest name) for 'open'
+         events, since there's no identity to personalize with. -->
     <% if (event.invitation_message) { %>
       <div class="bb-message-frame">
         <p><%= event.invitation_message %></p>
@@ -98,10 +108,11 @@
     <% } %>
 
     <!-- 5. Button row (input_12: Cameos / Gallery / Other Details —
-         Itinerary has no button of its own, reachable only by scrolling) -->
+         Itinerary has no button of its own, reachable only by scrolling).
+         No ?passcode= param for 'open' events — there's no guest to carry. -->
     <div class="bb-tile-row">
-      <a class="bb-tile" href="/invite/<%= event.id %>/cameos?passcode=<%= guest.passcode %>">Cameos</a>
-      <a class="bb-tile" href="/invite/<%= event.id %>/gallery?passcode=<%= guest.passcode %>">Gallery</a>
+      <a class="bb-tile" href="/invite/<%= event.id %>/cameos<%= guest ? '?passcode=' + guest.passcode : '' %>">Cameos</a>
+      <a class="bb-tile" href="/invite/<%= event.id %>/gallery<%= guest ? '?passcode=' + guest.passcode : '' %>">Gallery</a>
       <a class="bb-tile" href="/invite/<%= event.id %>/other-details">Other Details</a>
     </div>
 
