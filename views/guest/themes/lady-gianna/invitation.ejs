@@ -20,16 +20,11 @@
     <% } else { %>
       <div class="lg-hero-photo-placeholder"></div>
     <% } %>
-    <!-- input_16 §4: fixed floral corner artwork, supplied as a real
-         image (not hand-coded vector art) — one frame image whose art
-         lives in its own top-left/bottom-right corners, windowed via
-         object-fit/object-position rather than stretched or mirrored.
-         Rendered only once the asset actually exists, so this never
-         shows a broken-image icon in the meantime. -->
-    <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
-      <img class="lg-corner lg-corner-tl" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
-      <img class="lg-corner lg-corner-br" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
-    <% } %>
+    <!-- input_18: the input_16 §4 floral corner squares that used to sit
+         here are removed outright — same hard-edged, cropped-square look
+         already removed everywhere else on the page, just not in scope
+         for input_17. No replacement decoration; the Hero is just the
+         photo, its existing dark gradient overlay, and the text panel. -->
     <div class="lg-hero-panel">
       <p class="lg-eyebrow">You're invited to celebrate</p>
       <h1 class="lg-script lg-hero-name"><%= event.couple_names %></h1>
@@ -61,23 +56,17 @@
     <!-- Reached either because this is an 'open' event, or because this
          exact guest's passcode has already been verified server-side. -->
 
-    <!-- input_17/18: supersedes input_16 §4's corner-clip approach, which
-         looked like a hard-edged box floating on content (confirmed bad
-         next to "The Itinerary"). The Hero above is untouched; everything
-         from here down through the Footer instead shares ONE continuous
-         floral background — the same tall frame image anchored once at
-         the top of this whole span and again at the bottom (so its own
-         rose/eucalyptus clusters read cleanly at each edge, with the
-         theme's blush filling whatever's between). input_18: the blush
-         tint over this background was hiding the floral image almost
-         entirely and has been removed outright (not just dimmed) — each
-         card on top (lg-glass/lg-framed) already carries its own legible
-         surface, so the shared background stays fully visible now. -->
+    <!-- input_17/18/19: supersedes input_16 §4's corner-clip approach
+         (looked like a hard-edged box, confirmed bad next to "The
+         Itinerary") and the later top/bottom "band" approach (left the
+         long middle of this span — where Itinerary actually sits — with
+         no floral visible at all). The Hero above is untouched. Everything
+         from here down through the Footer now sits on ONE continuous CSS
+         background (set directly on .lg-post-hero in theme.css, via
+         background-size: cover), so the image fills this whole span, not
+         just its edges. No tint on top of it (input_18) — each card
+         (lg-glass/lg-framed) carries its own legible surface. -->
     <div class="lg-post-hero">
-      <% if (assetExists('/assets/img/themes/lady-gianna/corner-floral.png')) { %>
-        <img class="lg-post-hero-band lg-post-hero-band--top" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
-        <img class="lg-post-hero-band lg-post-hero-band--bottom" src="/assets/img/themes/lady-gianna/corner-floral.png" alt="">
-      <% } %>
 
     <!-- 2. Gate panel: QR frame (only ever for state='qr', i.e. a
          'closed' event) beside the personalized "Dear [Guest]" card.
