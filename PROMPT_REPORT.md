@@ -24,9 +24,8 @@ production" gap for Phase 3 itself.
   revision of this report)
 - `8811d46` — "Add theme gallery swatch metadata" (Phase 3, the three
   implementation and documentation files)
-- `[pending]` — "Add Phase 3 deployment handover report" (this report; hash
-  recorded in a follow-up small update once this commit is made — a file
-  cannot know its own future commit hash while being written).
+- `6da18d9` — "Add Phase 3 deployment handover report" (this report, in its
+  previous revision)
 
 ## Files changed (Phase 3, committed in `8811d46`)
 - `config/themes.js` — the only code file touched. Each of the three existing
