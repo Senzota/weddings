@@ -11,6 +11,13 @@ async function create(fields) {
     acceptButtonText, declineButtonText, declineMessage, theme, accessMode,
     eventType, subtitle, footerNote, eventTimeNote,
   } = fields;
+  // input_20 Phase 2: wedding_date needs no special handling here — this is
+  // always a fresh row, so there's no existing value to accidentally erase.
+  // The admin's own "add new event" form still requires a date before this
+  // is ever called (createEvent's controller-level check, unchanged); a
+  // caller that legitimately wants a dateless draft can pass `null`/
+  // `undefined` directly and it inserts as SQL NULL, same as `pg` already
+  // does for every other optional field in this function.
   const { rows } = await pool.query(
     `INSERT INTO events (couple_names, wedding_date, venue, theme_color, accept_button_text, decline_button_text, decline_message, theme, access_mode, event_type, subtitle, footer_note, event_time_note)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
@@ -49,9 +56,28 @@ async function update(id, fields) {
     itinerary, invitationMessage, contactDetails, theme, accessMode,
     eventType, subtitle, footerNote, eventTimeNote,
   } = fields;
+  // input_20 Phase 2: wedding_date deliberately does NOT use absentToNull()'s
+  // rule (explicit '' = clear it) — a date has no meaningful "cleared but not
+  // null" state the way a text field does, and there's no path in this app
+  // that should ever take an already-dated event back to dateless through an
+  // ordinary save. NULLIF($2, '') turns both "field absent" (pg already turns
+  // `undefined` into SQL NULL) and "field present but empty" (e.g. a
+  // dateless draft's own hidden/hidden-equivalent date input, or a form that
+  // simply hasn't collected one yet) into NULL, and COALESCE then always
+  // falls back to preserving whatever's already on the row — so neither case
+  // can ever attempt an invalid empty-string-to-date cast, and neither case
+  // can ever silently erase a real date that's already set. A genuine new
+  // date value passes through unchanged and updates the row normally.
+  // The explicit ::date cast is required — without it Postgres resolves
+  // NULLIF($2, '') as text (both operands are otherwise untyped) and then
+  // fails with "COALESCE types text and date cannot be matched" against
+  // the date column, even though $2 itself always holds a valid date
+  // string or ''. Found via local testing (a real bug, not theoretical).
   const { rows } = await pool.query(
     `UPDATE events SET
-       couple_names = $1, wedding_date = $2, venue = $3,
+       couple_names = $1,
+       wedding_date = COALESCE(NULLIF($2, '')::date, wedding_date),
+       venue = $3,
        theme_color = COALESCE($4, theme_color),
        accept_button_text = COALESCE($5, accept_button_text),
        decline_button_text = COALESCE($6, decline_button_text),

@@ -72,8 +72,8 @@
             <div><p>RSVPs received</p><span><%= stats.total_guests > 0 ? Math.round(stats.responded / stats.total_guests * 100) : 0 %>% response rate</span></div>
           </div>
           <div class="lg-bubble-stat">
-            <div class="lg-bubble"><%= daysToGo %></div>
-            <div><p>Days to go</p><span>The big day is near</span></div>
+            <div class="lg-bubble"><%= daysToGo === null ? 'TBD' : daysToGo %></div>
+            <div><p>Days to go</p><span><%= daysToGo === null ? 'Set a date to see this' : 'The big day is near' %></span></div>
           </div>
           <div class="lg-bubble-stat">
             <div class="lg-bubble"><%= galleryPhotos.length + cameoPhotos.length %></div>
@@ -87,7 +87,7 @@
         <h2>Itinerary</h2>
         <form method="POST" action="/admin/events/<%= event.id %>">
           <input type="hidden" name="coupleNames" value="<%= event.couple_names %>">
-          <input type="hidden" name="weddingDate" value="<%= event.wedding_date %>">
+          <input type="hidden" name="weddingDate" value="<%= event.wedding_date || '' %>">
           <input type="hidden" name="venue" value="<%= event.venue %>">
           <textarea name="itinerary" placeholder="One item per line, e.g.&#10;10:00am - Arrival&#10;11:00am - Cake cutting&#10;1:00pm - Lunch"><%= event.itinerary || '' %></textarea>
           <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Save Itinerary</button>
@@ -124,8 +124,8 @@
               <input type="text" name="subtitle" value="<%= event.subtitle || '' %>" placeholder="e.g. is turning TWO!">
             </div>
             <div>
-              <label>Date</label>
-              <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required>
+              <label>Date<% if (!event.wedding_date) { %> <span style="font-weight:normal;">(not set — required before going live)</span><% } %></label>
+              <input type="date" name="weddingDate" value="<%= event.wedding_date || '' %>">
             </div>
             <div class="lg-field-wide">
               <label>Time</label>
@@ -175,6 +175,9 @@
       <!-- Danger zone -->
       <article class="lg-admin-card lg-admin-danger">
         <h2>Danger zone</h2>
+        <% if (typeof error !== 'undefined' && error) { %>
+          <p class="lg-error"><%= error %></p>
+        <% } %>
         <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
           <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
         </form>

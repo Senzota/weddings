@@ -990,3 +990,172 @@ Zawadi")'s `venue` field was overwritten to `"Test Venue Updated"` as part of
 test 8's save-path verification (its original value was not captured
 beforehand). Local dev data only — this event does not exist in, and this in no
 way touches, production.
+
+## Phase 2 implementation record
+
+Status: implemented and fully tested locally. **Not committed, not pushed, not
+migrated in production** — awaiting explicit approval, per this phase's
+instructions.
+
+### Files changed
+
+1. `db/schema.sql` — `wedding_date` made nullable on both the inline
+   `CREATE TABLE events` and `CREATE TABLE event_archive` blocks (for a fresh
+   database), plus three new idempotent statements for an existing database:
+   `ALTER TABLE events ALTER COLUMN wedding_date DROP NOT NULL`, a
+   `DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT events_live_requires_date
+   CHECK (status <> 'live' OR wedding_date IS NOT NULL)` pair, and
+   `ALTER TABLE event_archive ALTER COLUMN wedding_date DROP NOT NULL`.
+2. `models/event.model.js` — `update()`'s SQL changed from
+   `wedding_date = $2` to
+   `wedding_date = COALESCE(NULLIF($2, '')::date, wedding_date)` (see "Issue
+   found" below for why the `::date` cast is required, not optional).
+   `create()` unchanged functionally; comment added confirming it was already
+   null-safe.
+3. `controllers/admin.controller.js` — `daysUntil()` now returns `null` for a
+   falsy `dateStr` instead of computing `NaN`. `showDashboard` now derives an
+   `error` from `?error=needs_date` and passes it to every dashboard template.
+   `updateEvent`'s required-field check dropped `weddingDate` (still required
+   in `createEvent`, unchanged). `toggleStatus` gained a guard that redirects
+   back with `?error=needs_date` instead of flipping status when a draft with
+   no `wedding_date` attempts to go live.
+4. `views/admin/edit-event.ejs` — date `<input>` lost `required`, value
+   guarded with `|| ''`, label shows a "(not set yet...)" hint when null.
+5. `views/admin/themes/botanical-bloom/dashboard.ejs` — same `<input>` fix as
+   above on its inline Wedding-details form; added an `error` block next to
+   the "Go Live" button (this theme has no "Days to go" stat, confirmed by
+   direct inspection — no TBD handling needed here).
+6. `views/admin/themes/lavender-romance/dashboard.ejs` — "Days to go" bubble
+   shows `TBD` (with a "Set a date to see this" sub-label) when `daysToGo` is
+   `null`; the date pill at the top of the page shows "Date TBD" instead of an
+   empty string for the same case; added an `error` block next to the
+   Danger-zone status-toggle button (this theme has no error display of any
+   kind before this change — edits go through a separate `/edit` page).
+7. `views/admin/themes/lady-gianna/dashboard.ejs` — "Days to go" bubble gets
+   the same TBD treatment as Lavender Romance; the Itinerary card's *hidden*
+   `weddingDate` input gets the `|| ''` guard (this was the highest-risk spot
+   — see "Issue found" below); the visible "Event details" date `<input>`
+   loses `required` and gets the `|| ''` guard, same as the other two themes;
+   added an `error` block next to the Danger-zone status-toggle button.
+8. `input_20.md` (this file) — Phase 2 implementation record.
+9. `PROMPT_REPORT.md` — Phase 2 status section (local-only; see that file).
+
+`utils/eventLifecycle.js` and `models/archive.model.js` — confirmed by actual
+test, not changed. `views/admin/event-form.ejs` — confirmed unchanged by
+re-inspection (still requires a date, as intended for manual creation).
+
+### Issue found (fixed during this phase, in scope)
+
+Testing surfaced a real bug the plan hadn't anticipated:
+`COALESCE(NULLIF($2, ''), wedding_date)` fails in Postgres with `COALESCE
+types text and date cannot be matched`. Both `$2` and `''` are untyped
+literals, so Postgres resolves `NULLIF($2, '')` as `text`, and `COALESCE`
+then refuses to reconcile `text` against the `date`-typed `wedding_date`
+column — even though every value `$2` actually holds is either a valid date
+string or `''`. This was caught immediately by test 5/6 (a partial-form save
+on a dateless draft), which returned HTTP 500 on first attempt. Fixed by
+casting explicitly: `COALESCE(NULLIF($2, '')::date, wedding_date)`. Retested
+and confirmed working — this is the version now in the diff.
+
+This also means the Lady Gianna Itinerary form's hidden `weddingDate` input
+(item 7 above) was a correctness bug, not just cosmetic: without the `|| ''`
+guard, a dateless draft's hidden input would have submitted the literal
+4-character string `"null"`, which (post-cast-fix) Postgres would have tried
+to cast directly to `date` and rejected outright — a 500 on every Itinerary
+save for a dateless Lady Gianna draft. Fixed as described above; retested
+with an empty value and confirmed no crash and no corruption.
+
+### Migration applied (local)
+
+`npm run db:migrate` run against the local Postgres instance
+(`localhost:5433`). Output: `Schema applied.` Verified directly via
+`information_schema.columns` and `pg_constraint`:
+`events.wedding_date` and `event_archive.wedding_date` both `is_nullable =
+YES`; `events_live_requires_date` present with definition
+`CHECK (((status <> 'live'::text) OR (wedding_date IS NOT NULL)))`.
+
+### Tests run (all 14 items, using only disposable test events)
+
+1. **Local migration run and verified** — see above.
+2. **Dateless draft created via a safe test path** — `createEvent`'s form
+   still hard-requires a date (confirmed first, see test 11), so a dateless
+   draft was created by calling `eventModel.create()` directly with
+   `weddingDate: null` (a one-off Node script, not a new route or feature —
+   this simulates exactly what the not-yet-built booking-approval flow will
+   eventually do). Three created, one per theme: id 39 (Botanical Bloom,
+   wedding), id 40 (Lavender Romance, wedding), id 41 (Lady Gianna, birthday).
+3. **NULL persists** — confirmed via `findById` immediately after creation:
+   `wedding_date: null` on all three.
+4. **Every relevant dashboard opened, confirmed TBD/no NaN** — all three
+   theme dashboards (`/admin/events/39`, `/40`, `/41`) returned 200 with no
+   `NaN` and no literal `null`-string rendering anywhere on the page (date
+   inputs, hidden inputs, Days-to-go bubbles, or the Lavender Romance date
+   pill). Lavender Romance and Lady Gianna both showed `TBD` for Days-to-go;
+   Botanical Bloom has no such stat (confirmed absent, not a gap).
+5. **Partial-form save on a dateless draft, no corruption** — first attempt
+   hit the `COALESCE` type-mismatch bug above (500 on both a
+   Botanical-Bloom-style save omitting `weddingDate` entirely, and a Lady
+   Gianna itinerary-only save submitting `weddingDate=`). After the `::date`
+   cast fix and a full server restart, both saves succeeded (302) and
+   `wedding_date` remained `null` afterward — confirmed by direct query. Other
+   fields (`venue`, `itinerary`) saved correctly.
+6. **Attempt to publish a dateless draft is blocked** — `POST
+   /admin/events/39/status` on the still-dateless draft redirected to
+   `/admin/events/39?error=needs_date`; `status` confirmed still `draft`
+   afterward by direct query.
+7. **Direct SQL bypass rejected by the CHECK constraint** — `UPDATE events
+   SET status = 'live' WHERE id = 39` (run directly against the DB,
+   bypassing the app entirely) was rejected with `new row for relation
+   "events" violates check constraint "events_live_requires_date"`.
+8. **Add a real date, then publish succeeds** — saved `weddingDate=2027-06-15`
+   on event 39 via the normal update path (confirmed persisted), then `POST
+   /admin/events/39/status` redirected cleanly to `/admin/events/39` (no
+   error) with `status` now `live`, confirmed by direct query.
+9. **Delete a dateless draft via the normal flow succeeds** — `POST
+   /admin/events/40/delete` (event 40, still dateless at the time) redirected
+   to `/admin/events`; confirmed the row is gone from `events` and a matching
+   row now exists in `event_archive` with `wedding_date: null` — proving the
+   `event_archive` nullable-column fix works, not just the `events` one.
+10. **Lifecycle sweep does not select/purge a dateless draft** — ran
+    `sweepExpiredEvents()` directly against the dev DB with event 41 still a
+    dateless draft present; the event still existed afterward, unchanged.
+    This is an actual test of the running SQL, not a re-citation of the
+    earlier static analysis — confirms requirement 7 ("do not change its SQL
+    unless testing proves it is necessary") with real evidence: no change was
+    necessary.
+11. **Manual Create still refuses a missing date** — `POST /admin/events`
+    with `coupleNames`/`venue`/`eventType` but no `weddingDate` re-rendered
+    the form (HTTP 200, not a redirect) with "Couple names/Celebrant, date,
+    and venue are required."; confirmed via DB query that no row was created
+    for that attempt.
+12. **Existing Wedding and Birthday events re-verified, read-only** — event
+    `id 2` ("Zainab & Omar", wedding, Botanical Bloom, dated 2026-11-01) and
+    event `id 19` ("Corner Test", birthday, Lady Gianna, dated 2026-12-31)
+    both loaded correctly (200) on dashboard, edit form, and public
+    invitation page; the invitation page showed the correctly formatted date
+    in both cases; the edit form's date input showed the correct raw
+    `YYYY-MM-DD` value in both cases; the Lady Gianna dashboard's Days-to-go
+    bubble showed `103` (a real number, not TBD, not NaN) for the dated
+    event. No writes were made to either event — GET requests only, per the
+    hard constraint not to use existing events as mutation targets. (Events
+    `id 1`/`id 4`/`id 6`, already noted elsewhere as carrying prior-phase test
+    side effects, were deliberately avoided in favor of `id 2`/`id 19`.)
+13. **All test records deleted after verification** — the two remaining test
+    events (id 39, id 41) were deleted via the normal admin delete flow (`POST
+    /admin/events/:id/delete`, 302 both times); a follow-up query for
+    `couple_names LIKE 'TEST%'` returned zero rows. Event 40 was already
+    deleted as part of test 9.
+14. **No existing local or production event was used as a mutation target at
+    any point in this phase** — every write-testing step (tests 5–9, 13) used
+    one of the three disposable id-39/40/41 test events created in test 2; the
+    only interaction with pre-existing events was the read-only checks in
+    test 12.
+
+### Local environment note
+
+The server had to be restarted mid-testing (`taskkill` on the listening PID,
+then a fresh `node server.js`) to pick up the `event.model.js` fix — the
+first restart attempt silently failed with `EADDRINUSE` because the prior
+`node server.js` background process was still holding port 3000, which
+briefly caused re-tests to appear to still hit the old, unfixed code. Not a
+repo issue; noted here only so the same confusion doesn't recur.

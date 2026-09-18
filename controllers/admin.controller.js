@@ -97,7 +97,13 @@ async function createEvent(req, res) {
 // Wedding date is a plain 'YYYY-MM-DD' string (see config/db.js's type
 // parser) — building the Date from an explicit local-midnight literal
 // avoids the same UTC-shift bug that parser exists to prevent.
+//
+// input_20 Phase 2: a draft event may have no date at all. Without this
+// guard, `new Date('nullT00:00:00')` is an Invalid Date and every caller
+// would have rendered the literal string "NaN" in a "Days to go" stat —
+// null is the signal every dashboard view checks for instead.
 function daysUntil(dateStr) {
+  if (!dateStr) return null;
   const target = new Date(`${dateStr}T00:00:00`);
   const diffMs = target.getTime() - new Date().setHours(0, 0, 0, 0);
   return Math.max(0, Math.round(diffMs / 86400000));
@@ -111,8 +117,12 @@ async function showDashboard(req, res) {
   const galleryPhotos = await galleryModel.findByEvent(event.id);
   const cameoPhotos = await cameoModel.findByEvent(event.id);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
+  // input_20 Phase 2: toggleStatus redirects back here with this query
+  // param when it refuses to publish a dateless draft — surfaced the same
+  // way updateEvent's own validation error already is elsewhere.
+  const error = req.query.error === 'needs_date' ? 'Set a date before publishing this event.' : null;
   res.render(`admin/themes/${event.theme}/dashboard`, {
-    event, guests, stats, galleryPhotos, cameoPhotos, baseUrl,
+    event, guests, stats, galleryPhotos, cameoPhotos, baseUrl, error,
     daysToGo: daysUntil(event.wedding_date), themes: AVAILABLE_THEMES,
   });
 }
@@ -138,12 +148,20 @@ async function updateEvent(req, res) {
     declineMessage, itinerary, invitationMessage, contactDetails, theme, accessMode,
     eventType, subtitle, footerNote, eventTimeNote,
   } = req.body;
-  if (!coupleNames || !weddingDate || !venue) {
+  if (!coupleNames || !venue) {
     // The dedicated edit page, Botanical Bloom's inline dashboard form, and
     // Lady Gianna's smaller "Event details" card all post here — redirecting
     // to the edit page on failure (rather than re-rendering whichever page
     // submitted) keeps this one handler simple; browsers already block
     // empty required fields client-side, so this path is rare.
+    //
+    // input_20 Phase 2: weddingDate is deliberately NOT required here,
+    // unlike createEvent's check below it stays out of — a booking-approved
+    // draft event starts with no date at all, and every update path (the
+    // full edit form, Botanical Bloom's inline form, Lady Gianna's smaller
+    // cards) must be able to save every *other* field on such an event
+    // without being blocked for a date nothing has collected yet. Manually
+    // creating a new event still requires one, unchanged, in createEvent.
     return res.redirect(`/admin/events/${req.params.id}/edit?error=1`);
   }
 
@@ -200,6 +218,14 @@ async function toggleStatus(req, res) {
   const event = await eventModel.findById(req.params.id);
   if (!event) return res.status(404).send('Wedding not found.');
   const nextStatus = event.status === 'live' ? 'draft' : 'live';
+  // input_20 Phase 2: only the draft->live direction needs a date — nothing
+  // stops an admin taking a dated, live event back to draft. The database's
+  // own events_live_requires_date CHECK constraint is the hard backstop for
+  // this same rule (schema.sql); this is the friendly, expected-path guard
+  // that keeps a normal click from ever reaching that constraint at all.
+  if (nextStatus === 'live' && !event.wedding_date) {
+    return res.redirect(`/admin/events/${req.params.id}?error=needs_date`);
+  }
   await eventModel.setStatus(event.id, nextStatus);
   res.redirect(`/admin/events/${req.params.id}`);
 }

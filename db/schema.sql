@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS admin (
 CREATE TABLE IF NOT EXISTS events (
   id                   SERIAL PRIMARY KEY,
   couple_names         TEXT NOT NULL,
-  wedding_date         DATE NOT NULL,
+  wedding_date         DATE,
   venue                TEXT NOT NULL,
   theme_color          TEXT NOT NULL DEFAULT '#8a6d3b',
   card_image           TEXT,
@@ -73,6 +73,27 @@ ALTER TABLE events ADD CONSTRAINT events_event_type_check CHECK (event_type IN (
 ALTER TABLE events ADD COLUMN IF NOT EXISTS subtitle TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS footer_note TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time_note TEXT;
+
+-- input_20 Phase 2: a booking-approved draft event won't have a real date
+-- yet (no artificial placeholder date — see input_20.md decision 5), so
+-- wedding_date can no longer be unconditionally NOT NULL. The inline
+-- CREATE TABLE above already reflects this for a brand-new database;
+-- DROP NOT NULL is itself idempotent (a no-op if already nullable), so
+-- it's safe to run on every database that already has this column,
+-- including ones created before this input. Existing rows are untouched
+-- — dropping a NOT NULL constraint never rewrites data, and every event
+-- that already had a real date keeps it exactly as it was.
+ALTER TABLE events ALTER COLUMN wedding_date DROP NOT NULL;
+-- The one thing that must never be true: a *live* event with no date —
+-- guests would see a page with no date to plan around. Named so the
+-- DROP CONSTRAINT IF EXISTS + ADD CONSTRAINT pair is idempotent, same
+-- pattern as events_event_type_check above. This is the hard backstop;
+-- the application layer (admin.controller.js's publish guard) is what
+-- actually stops this in normal use — this constraint exists for the
+-- case that guard is ever bypassed (a direct SQL update, a future bug).
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_live_requires_date;
+ALTER TABLE events ADD CONSTRAINT events_live_requires_date
+  CHECK (status <> 'live' OR wedding_date IS NOT NULL);
 
 -- Theme slug renamed from 'design-1' to 'botanical-bloom' (input_8) — fix
 -- up any events created under the old name.
@@ -147,7 +168,7 @@ ALTER TABLE cameo_photos ALTER COLUMN title DROP NOT NULL;
 CREATE TABLE IF NOT EXISTS event_archive (
   id                  SERIAL PRIMARY KEY,
   couple_names        TEXT NOT NULL,
-  wedding_date        DATE NOT NULL,
+  wedding_date        DATE,
   venue               TEXT NOT NULL,
   total_guests        INTEGER NOT NULL,
   total_seats         INTEGER NOT NULL,
@@ -161,3 +182,9 @@ CREATE TABLE IF NOT EXISTS event_archive (
   event_created_at    TIMESTAMPTZ NOT NULL,
   archived_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- input_20 Phase 2: a dateless draft event must be deletable (archiveAndDelete
+-- inserts the event's own wedding_date here before removing it from events)
+-- without failing on a NOT NULL violation. Idempotent (no-op if already
+-- nullable); no existing archived row's data changes.
+ALTER TABLE event_archive ALTER COLUMN wedding_date DROP NOT NULL;

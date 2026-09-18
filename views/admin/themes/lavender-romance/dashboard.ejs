@@ -30,7 +30,7 @@
         <h1><%= event.couple_names %></h1>
         <p class="lr-intro"><%= event.venue %></p>
       </div>
-      <div class="lr-date-pill"><%= formatEventDate(event.wedding_date) %></div>
+      <div class="lr-date-pill"><%= event.wedding_date ? formatEventDate(event.wedding_date) : 'Date TBD' %></div>
     </div>
 
     <div class="lr-dashboard-grid">
@@ -70,7 +70,7 @@
         <div class="lr-bubble-grid">
           <div class="lr-stat"><div class="lr-bubble"><%= stats.total_guests %></div><div><p>Invited guests</p><span><% if (event.access_mode === 'closed') { %>Door Scanner: <a href="/scan" target="_blank">open</a><% } else { %>&nbsp;<% } %></span></div></div>
           <div class="lr-stat"><div class="lr-bubble"><%= stats.responded %></div><div><p>RSVPs received</p><span><%= stats.total_guests > 0 ? Math.round(stats.responded / stats.total_guests * 100) : 0 %>% response rate</span></div></div>
-          <div class="lr-stat"><div class="lr-bubble"><%= daysToGo %></div><div><p>Days to go</p><span>Your moment is near</span></div></div>
+          <div class="lr-stat"><div class="lr-bubble"><%= daysToGo === null ? 'TBD' : daysToGo %></div><div><p>Days to go</p><span><%= daysToGo === null ? 'Set a date to see this' : 'Your moment is near' %></span></div></div>
           <div class="lr-stat"><div class="lr-bubble"><%= stats.checked_in %></div><div><p>Checked in</p><span><%= stats.seats_accepted %> seats accepted</span></div></div>
         </div>
       </article>
@@ -143,6 +143,9 @@
     <div class="bb-admin-section" style="margin-top:2rem;">
       <div class="bb-admin-card bb-danger">
         <h2>Danger zone</h2>
+        <% if (typeof error !== 'undefined' && error) { %>
+          <p class="bb-error"><%= error %></p>
+        <% } %>
         <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
           <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
         </form>

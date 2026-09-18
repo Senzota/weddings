@@ -52,6 +52,9 @@
 
         <div class="bb-admin-tile">
           <h2>Status: <%= event.status %></h2>
+          <% if (typeof error !== 'undefined' && error) { %>
+            <p class="bb-error"><%= error %></p>
+          <% } %>
           <form method="POST" action="/admin/events/<%= event.id %>/status">
             <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
           </form>
@@ -83,8 +86,8 @@
             <input type="text" name="coupleNames" value="<%= event.couple_names %>" required>
           </div>
           <div class="bb-admin-tile">
-            <label>Wedding date</label>
-            <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required>
+            <label>Wedding date<% if (!event.wedding_date) { %> <span style="font-weight:normal;">(not set — required before going live)</span><% } %></label>
+            <input type="date" name="weddingDate" value="<%= event.wedding_date || '' %>">
           </div>
           <div class="bb-admin-tile">
             <label>Venue</label>

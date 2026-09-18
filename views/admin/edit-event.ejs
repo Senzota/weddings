@@ -36,8 +36,8 @@
           <input type="text" name="subtitle" value="<%= event.subtitle || '' %>" placeholder="e.g. is turning TWO!">
         </div>
         <div class="bb-admin-tile">
-          <label>Wedding date</label>
-          <input type="date" name="weddingDate" value="<%= event.wedding_date %>" required>
+          <label>Wedding date<% if (!event.wedding_date) { %> <span style="font-weight:normal;">(not set yet — required before this event can go live)</span><% } %></label>
+          <input type="date" name="weddingDate" value="<%= event.wedding_date || '' %>">
         </div>
         <div class="bb-admin-tile">
           <label>Time note</label>
