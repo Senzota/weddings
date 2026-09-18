@@ -4,10 +4,10 @@
 Input 20 — Phase 3: Theme registry swatch metadata.
 
 ## Status
-Implemented and tested locally. **Not committed, not pushed — no migration
-needed, this phase makes no schema change.** Phase 1 and Phase 2 (below)
-remain deployed and verified; Phase 3 is local-only pending explicit approval
-to commit/push.
+Deployed and verified — all three required production checks pass. This
+phase has no admin-only or authenticated behavior to verify (it adds no new
+UI, no new route, no schema change), so there is no "not verified on
+production" gap for Phase 3 itself.
 
 ## Commits
 - `1aac3b2` — "Prepare event types for active-theme visibility" (Phase 1, the
@@ -22,10 +22,13 @@ to commit/push.
   implementation and documentation files)
 - `3f4c7a4` — "Add Phase 2 deployment handover report" (Phase 2, an earlier
   revision of this report)
-- No commit yet for Phase 3 — all Phase 3 work below is uncommitted
-  working-tree changes.
+- `8811d46` — "Add theme gallery swatch metadata" (Phase 3, the three
+  implementation and documentation files)
+- `[pending]` — "Add Phase 3 deployment handover report" (this report; hash
+  recorded in a follow-up small update once this commit is made — a file
+  cannot know its own future commit hash while being written).
 
-## Files changed (Phase 3, uncommitted)
+## Files changed (Phase 3, committed in `8811d46`)
 - `config/themes.js` — the only code file touched. Each of the three existing
   `AVAILABLE_THEMES` entries (`botanical-bloom`, `lavender-romance`,
   `lady-gianna`) gained two new optional fields: `swatchColors` (4 hex colors
@@ -68,8 +71,9 @@ Confirmed unchanged (verified, not assumed): `utils/eventLifecycle.js`,
 `models/archive.model.js`, `views/admin/event-form.ejs`.
 
 ## Migration (Phase 3)
-None. This phase adds no schema change — `config/themes.js` is plain JS data,
-not database state.
+None required, none run. This phase adds no schema change — `config/themes.js`
+is plain JS data, not database state. No `npm run db:migrate` was executed
+against production for this deployment.
 
 ## Tests (Phase 3)
 All 6 required checks run locally, using the same production-database-backed
@@ -138,9 +142,18 @@ implementation record"; highlights:
   across dashboard/edit/invitation — unaffected.
 
 ## Production verification (Phase 3)
-Not applicable — Phase 3 has not been deployed, and makes no server-side or
-database change that production rendering depends on (see Tests above for
-the local-against-production-data render check already done).
+Read-only checks only, per this deployment's explicit scope — no POST, PUT,
+PATCH, or DELETE requests were made, and no production data was created,
+edited, uploaded, deleted, or otherwise modified:
+- `GET /admin/login` → `200`.
+- `GET /invite/1` → `200`.
+- `GET /invite/10` → `200`.
+
+All three passed on the first check after waiting for Render's rollout to
+finish (learned from Phase 2: the first request right after a push can 500
+while Render is still mid-deploy, so this round polled `/admin/login` until
+it returned `200` before checking the other two). No migration was run
+against production for this deployment — confirmed above.
 
 ## Production verification (Phase 2)
 - **Schema** (queried directly against production, read-only): `events.wedding_date`
@@ -183,6 +196,19 @@ the local-against-production-data render check already done).
   error message; 7 of 9 event types still themeless by design; no live
   production event currently uses Botanical Bloom; local dev event `id 1`
   ("Amani na Zawadi") still carries an earlier test-induced `venue` change.
+
+## Local-environment note
+`.env`'s `DATABASE_URL` currently points at the production Neon database —
+set there for Phase 2's production migration and left in place through
+Phase 3's read-only verification, with the person's explicit confirmation
+each time it mattered. **Before any future local implementation or testing
+work that writes data** (creating/editing/deleting test events, running
+`npm run db:migrate` locally, anything beyond a read-only `GET`), restore
+`DATABASE_URL` to the local dev Postgres instance (`localhost:5433`) first —
+unless that specific task explicitly calls for production read-only
+verification again. This file is gitignored and edited directly by the
+person; this note exists only so the next phase doesn't assume `.env` is
+already pointed at local dev.
 
 ## Next recommended task
 Input 20 — Phase 4: Admin CSS separation.
