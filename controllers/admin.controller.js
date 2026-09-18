@@ -22,6 +22,16 @@ function resolveTheme(theme, eventType) {
   return DEFAULT_THEME_BY_EVENT_TYPE[type];
 }
 
+// input_20 Phase 1: a type is only ever offered in a selector once at
+// least one theme is registered for it — derived here, not stored as a
+// flag anywhere, so registering a real theme for e.g. 'graduation' later
+// is the only step needed to make it appear everywhere at once. Today
+// that's just 'wedding' and 'birthday', since those are the only two
+// themesForEventType() actually returns anything for.
+function activeEventTypes() {
+  return EVENT_TYPES.filter((t) => themesForEventType(t.slug).length > 0);
+}
+
 function showLogin(req, res) {
   res.render('admin/login', { error: null });
 }
@@ -49,7 +59,7 @@ async function listEvents(req, res) {
 }
 
 function newEventForm(req, res) {
-  res.render('admin/event-form', { event: null, error: null, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: EVENT_TYPES });
+  res.render('admin/event-form', { event: null, error: null, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: activeEventTypes() });
 }
 
 async function createEvent(req, res) {
@@ -58,7 +68,20 @@ async function createEvent(req, res) {
     theme, accessMode, eventType, subtitle, footerNote, eventTimeNote,
   } = req.body;
   if (!coupleNames || !weddingDate || !venue) {
-    return res.render('admin/event-form', { event: null, error: 'Couple names/Celebrant, date, and venue are required.', themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: EVENT_TYPES });
+    return res.render('admin/event-form', { event: null, error: 'Couple names/Celebrant, date, and venue are required.', themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: activeEventTypes() });
+  }
+  // A themeless (planned-but-not-yet-active) event type must never reach
+  // eventModel.create() — resolveTheme()'s fallback-to-default only makes
+  // sense between themes that both belong to the SAME type; there is no
+  // safe default to fall back to for a type with zero registered themes,
+  // and silently substituting a different type's theme (e.g. wedding's)
+  // would be exactly the silent-mapping behavior this input rules out.
+  // Rejected here with a normal form error, the same way a missing
+  // required field already is — not a raw 500, and not a bypass a direct
+  // POST (skipping the client-side selector entirely) could sneak past.
+  const requestedType = eventType || DEFAULT_EVENT_TYPE;
+  if (themesForEventType(requestedType).length === 0) {
+    return res.render('admin/event-form', { event: null, error: 'That event type is not available yet — no theme is registered for it.', themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: activeEventTypes() });
   }
   const event = await eventModel.create({
     coupleNames, weddingDate, venue,
@@ -98,7 +121,7 @@ async function showEditForm(req, res) {
   const event = await eventModel.findById(req.params.id);
   if (!event) return res.status(404).send('Wedding not found.');
   const error = req.query.error ? 'Couple names/Celebrant, date, and venue are required.' : null;
-  res.render('admin/edit-event', { event, error, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: EVENT_TYPES });
+  res.render('admin/edit-event', { event, error, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: activeEventTypes() });
 }
 
 async function showAssets(req, res) {
@@ -130,6 +153,14 @@ async function updateEvent(req, res) {
   // eventType of its own — falls back to the type already on record rather
   // than assuming 'wedding'.
   const existing = await eventModel.findById(req.params.id);
+
+  // Same themeless-type guard as createEvent — only fires when eventType is
+  // actually being changed to something with zero registered themes (a
+  // partial form that omits eventType entirely is unaffected, since it
+  // isn't trying to change it).
+  if (eventType !== undefined && themesForEventType(eventType).length === 0) {
+    return res.redirect(`/admin/events/${req.params.id}/edit?error=1`);
+  }
 
   let cardImage;
   let cardImagePublicId;

@@ -13,7 +13,7 @@
     <label>Event type
       <select name="eventType" id="eventType">
         <% eventTypes.forEach(function (t) { %>
-          <option value="<%= t.slug %>" <%= t.slug === 'wedding' ? 'selected' : '' %>><%= t.label %></option>
+          <option value="<%= t.slug %>" data-title-label="<%= t.titleLabel %>" <%= t.slug === 'wedding' ? 'selected' : '' %>><%= t.label %></option>
         <% }) %>
       </select>
     </label><br>
@@ -50,6 +50,12 @@
     // registering a wedding only offers wedding themes, a birthday only
     // offers birthday themes. Plain client-side filtering over the same
     // options the server already rendered, no separate endpoint needed.
+    //
+    // input_20 Phase 1: the "Couple names"/"Celebrant"/etc. label swap no
+    // longer hardcodes a birthday-vs-everything-else ternary — it reads
+    // each event-type <option>'s own data-title-label attribute instead,
+    // so it scales to every type in config/eventTypes.js with no further
+    // script change whenever a new one becomes active.
     (function () {
       var eventTypeSelect = document.getElementById('eventType');
       var themeSelect = document.getElementById('theme');
@@ -68,7 +74,8 @@
           if (matches && opt.value === themeSelect.value) currentStillVisible = true;
         });
         if (!currentStillVisible && firstVisible) themeSelect.value = firstVisible.value;
-        coupleNamesLabel.firstChild.textContent = type === 'birthday' ? 'Celebrant ' : 'Couple names ';
+        var selectedOption = eventTypeSelect.options[eventTypeSelect.selectedIndex];
+        coupleNamesLabel.firstChild.textContent = selectedOption.dataset.titleLabel + ' ';
       }
 
       eventTypeSelect.addEventListener('change', applyFilter);

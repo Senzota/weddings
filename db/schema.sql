@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS events (
   invitation_message   TEXT,
   contact_details       TEXT,
   access_mode          TEXT NOT NULL DEFAULT 'closed' CHECK (access_mode IN ('open', 'recognized', 'closed')),
-  event_type           TEXT NOT NULL DEFAULT 'wedding' CHECK (event_type IN ('wedding', 'birthday')),
+  event_type           TEXT NOT NULL DEFAULT 'wedding' CHECK (event_type IN (
+                         'wedding', 'birthday', 'bridal-shower', 'baby-shower',
+                         'engagement', 'anniversary', 'graduation', 'corporate', 'other'
+                       )),
   subtitle             TEXT,
   footer_note          TEXT,
   event_time_note      TEXT,
@@ -52,6 +55,21 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS access_mode TEXT NOT NULL DEFAULT 'c
 -- and event_time_note are new free-text fields usable by any event type.
 ALTER TABLE events ADD COLUMN IF NOT EXISTS event_type TEXT NOT NULL DEFAULT 'wedding'
   CHECK (event_type IN ('wedding', 'birthday'));
+-- input_20 Phase 1: widens the taxonomy from 2 to 9 event types. The
+-- ADD COLUMN above only ever fires once (when the column doesn't exist
+-- yet), so on every database that already has this column — local dev,
+-- and production — its CHECK constraint needs widening explicitly here.
+-- Drop-then-add on the same (Postgres-auto-generated) constraint name is
+-- idempotent and safe to re-run. No column is renamed; no existing row's
+-- event_type value changes — every event created before this input keeps
+-- reading back exactly as 'wedding' or 'birthday'. New types are added to
+-- the taxonomy only; nothing in the admin/public UI offers them yet
+-- (see config/eventTypes.js + admin.controller.js's active-type filter).
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_event_type_check;
+ALTER TABLE events ADD CONSTRAINT events_event_type_check CHECK (event_type IN (
+  'wedding', 'birthday', 'bridal-shower', 'baby-shower',
+  'engagement', 'anniversary', 'graduation', 'corporate', 'other'
+));
 ALTER TABLE events ADD COLUMN IF NOT EXISTS subtitle TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS footer_note TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS event_time_note TEXT;
