@@ -1,13 +1,13 @@
 # Chief Inspector Report
 
 ## Current phase
-Input 20 — Phase 2: Nullable event date support.
+Input 20 — Phase 3: Theme registry swatch metadata.
 
 ## Status
-Deployed and verified — all checks possible without production admin
-credentials pass. Admin-only checks (dateless-draft dashboard TBD display,
-publish-block, publish-after-date) verified locally only, not directly on
-production. See "Known limitations."
+Implemented and tested locally. **Not committed, not pushed — no migration
+needed, this phase makes no schema change.** Phase 1 and Phase 2 (below)
+remain deployed and verified; Phase 3 is local-only pending explicit approval
+to commit/push.
 
 ## Commits
 - `1aac3b2` — "Prepare event types for active-theme visibility" (Phase 1, the
@@ -20,8 +20,22 @@ production. See "Known limitations."
   revision of this report)
 - `9ed3add` — "Allow draft events without a date" (Phase 2, the nine
   implementation and documentation files)
-- This report's own commit hash is reported separately after it's made (a file
-  cannot know its own future commit hash while being written).
+- `3f4c7a4` — "Add Phase 2 deployment handover report" (Phase 2, an earlier
+  revision of this report)
+- No commit yet for Phase 3 — all Phase 3 work below is uncommitted
+  working-tree changes.
+
+## Files changed (Phase 3, uncommitted)
+- `config/themes.js` — the only code file touched. Each of the three existing
+  `AVAILABLE_THEMES` entries (`botanical-bloom`, `lavender-romance`,
+  `lady-gianna`) gained two new optional fields: `swatchColors` (4 hex colors
+  each, hand-picked from that theme's own `theme.css` custom properties — no
+  parser, no build step) and `tagline` (one short customer-facing sentence
+  per theme). Purely additive — no slug, `label`, `eventType`,
+  `DEFAULT_THEME`, `DEFAULT_THEME_BY_EVENT_TYPE`, or `themesForEventType()`
+  changed, and no new theme was added.
+- `input_20.md` — Phase 3 implementation record appended.
+- `PROMPT_REPORT.md` — this update.
 
 ## Files changed (Phase 2, committed in `9ed3add`)
 - `db/schema.sql` — `wedding_date` made nullable on `events` and
@@ -53,7 +67,39 @@ production. See "Known limitations."
 Confirmed unchanged (verified, not assumed): `utils/eventLifecycle.js`,
 `models/archive.model.js`, `views/admin/event-form.ejs`.
 
-## Migration
+## Migration (Phase 3)
+None. This phase adds no schema change — `config/themes.js` is plain JS data,
+not database state.
+
+## Tests (Phase 3)
+All 6 required checks run locally, using the same production-database-backed
+local server as the just-completed Phase 2 deployment (`.env` was still
+pointed at production from that work; confirmed with the person before
+proceeding, since every check here is read-only — `GET` requests only, no
+writes to any event):
+- `require('./config/themes')` loads without error; all four original
+  exports (`AVAILABLE_THEMES`, `DEFAULT_THEME`, `DEFAULT_THEME_BY_EVENT_TYPE`,
+  `themesForEventType`) still present.
+- All three themes have a non-empty `tagline` — confirmed programmatically.
+- All 12 `swatchColors` hex values (4 per theme × 3 themes) are valid hex —
+  confirmed programmatically.
+- `git diff config/themes.js` confirmed the change is purely additive — every
+  previously-existing line (slugs, labels, event types, `DEFAULT_THEME`,
+  `DEFAULT_THEME_BY_EVENT_TYPE`) is untouched; `themesForEventType('wedding')`
+  / `themesForEventType('birthday')` re-run and return the same slugs as
+  before.
+- Local app started; all 5 existing production events' invitation pages
+  (`/invite/1`, `/2`, `/4`, `/8`, `/10`) and `/admin/login` returned `200`
+  with no server errors.
+- Authenticated admin pages (Create/Edit forms, where `AVAILABLE_THEMES` is
+  actually iterated) could not be exercised this way — local dev admin
+  credentials don't match production's, and the session store for a
+  production-DB-backed server is production's own sessions table. Same
+  "no production admin credentials" gap as Phase 1/2, not new. The
+  programmatic checks above are sufficient to be confident this renders
+  correctly, since nothing about how the array is iterated changed.
+
+## Migration (Phase 2)
 - **Local**: applied via `npm run db:migrate` → `Schema applied.` Verified via
   `information_schema.columns` (both `wedding_date` columns now nullable) and
   `pg_constraint` (`events_live_requires_date` present with the expected
@@ -65,7 +111,7 @@ Confirmed unchanged (verified, not assumed): `utils/eventLifecycle.js`,
   was actually Neon and not the local dev database before running anything
   against it.
 
-## Tests
+## Tests (Phase 2)
 All 14 required checks run locally using only disposable test events (ids 39,
 40, 41 — created directly via `eventModel.create()`, one per theme, since
 `createEvent`'s form still requires a date as intended; all deleted after
@@ -91,7 +137,12 @@ implementation record"; highlights:
 - Existing Wedding (id 2) and Birthday (id 19) events re-verified read-only
   across dashboard/edit/invitation — unaffected.
 
-## Production verification
+## Production verification (Phase 3)
+Not applicable — Phase 3 has not been deployed, and makes no server-side or
+database change that production rendering depends on (see Tests above for
+the local-against-production-data render check already done).
+
+## Production verification (Phase 2)
 - **Schema** (queried directly against production, read-only): `events.wedding_date`
   and `event_archive.wedding_date` both `is_nullable = YES`;
   `events_live_requires_date` present with definition
@@ -120,18 +171,18 @@ implementation record"; highlights:
   inferred, not directly observed, for these three items.
 
 ## Known limitations
-- Phase 1's known limitations (no production admin credentials this session;
-  `updateEvent`'s generic error message; 7 of 9 event types still themeless by
-  design) still apply, unchanged.
-- The local server had to be restarted mid-Phase-2-testing because a stale
-  background process was still holding port 3000, briefly making retests
-  appear to hit the pre-fix code. Local tooling issue only, not a repo
-  concern — noted in `input_20.md` so it isn't mistaken for a real result.
-- Same as Phase 1: local dev event `id 1` ("Amani na Zawadi") still carries
-  its earlier test-induced `venue` change; not touched further this phase.
-- No live production event currently uses Botanical Bloom, so this deployment
-  did not directly exercise that theme's rendering on production itself
-  (same gap noted in Phase 1's report).
+- No production admin credentials available this session (recurring, since
+  Phase 1) — Phase 3's `AVAILABLE_THEMES` consumers in the admin Create/Edit
+  dropdowns could only be validated structurally, not by loading an
+  authenticated production-backed page. See Tests (Phase 3) above.
+- `swatchColors`/`tagline` are not read by any code yet — they're data for a
+  homepage gallery that doesn't exist until a later phase, so there is no
+  rendering path for the new fields themselves to have failed on even if the
+  admin-dropdown check above had been possible.
+- Phase 1/2 known limitations still apply, unchanged: `updateEvent`'s generic
+  error message; 7 of 9 event types still themeless by design; no live
+  production event currently uses Botanical Bloom; local dev event `id 1`
+  ("Amani na Zawadi") still carries an earlier test-induced `venue` change.
 
 ## Next recommended task
-Input 20 — Phase 3: Theme registry swatch metadata.
+Input 20 — Phase 4: Admin CSS separation.
