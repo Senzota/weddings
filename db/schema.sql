@@ -188,3 +188,35 @@ CREATE TABLE IF NOT EXISTS event_archive (
 -- without failing on a NOT NULL violation. Idempotent (no-op if already
 -- nullable); no existing archived row's data changes.
 ALTER TABLE event_archive ALTER COLUMN wedding_date DROP NOT NULL;
+
+-- input_20 Phase 5: public booking inquiries from the new homepage's Book
+-- Now form. A brand-new table, not a widened existing column, so the plain
+-- idempotent CREATE TABLE IF NOT EXISTS is sufficient — no DROP/ADD
+-- CONSTRAINT dance needed the way events.event_type's CHECK required.
+-- event_type's CHECK mirrors events_event_type_check's full 9-value list
+-- (defense-in-depth — the app only ever submits an ACTIVE type, but the
+-- constraint itself doesn't need to track which types are active today).
+-- preferred_theme has no CHECK, same precedent as events.theme, so themes
+-- can be added later without a migration. event_id is nullable and is only
+-- ever set once, by a future phase's approve transaction — Phase 5 never
+-- writes it. decided_by references admin(id) for the same future phase;
+-- Phase 5 never writes decided_at/decided_by either.
+CREATE TABLE IF NOT EXISTS booking_inquiries (
+  id               SERIAL PRIMARY KEY,
+  full_name        TEXT NOT NULL,
+  phone            TEXT NOT NULL,
+  email            TEXT NOT NULL,
+  event_type       TEXT NOT NULL CHECK (event_type IN (
+                     'wedding', 'birthday', 'bridal-shower', 'baby-shower',
+                     'engagement', 'anniversary', 'graduation', 'corporate', 'other'
+                   )),
+  preferred_theme  TEXT,
+  note             TEXT,
+  status           TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'approved', 'declined')),
+  event_id         INTEGER REFERENCES events(id) ON DELETE SET NULL,
+  decided_at       TIMESTAMPTZ,
+  decided_by       INTEGER REFERENCES admin(id),
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_inquiries_status ON booking_inquiries(status);

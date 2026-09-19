@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weddings 103 — Plan Your Event</title>
+  <!--
+    input_20 Phase 5: standalone public styling only. This page has no
+    `event` in scope — no theme.css, no admin-shared.css. Same precedent as
+    views/admin/events-list.ejs's self-contained inline <style>, not a
+    theme-scoped page.
+  -->
+  <style>
+    :root {
+      --ph-ink: #2b2622;
+      --ph-muted: #6b625a;
+      --ph-accent: #8a6d3b;
+      --ph-bg: #faf8f5;
+      --ph-card-bg: #fff;
+      --ph-border: #e6e0d8;
+      --ph-radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--ph-bg);
+      color: var(--ph-ink);
+      line-height: 1.55;
+    }
+    a { color: var(--ph-accent); }
+    .ph-wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+    .ph-hero {
+      padding: 64px 24px 48px;
+      text-align: center;
+      background: var(--ph-card-bg);
+      border-bottom: 1px solid var(--ph-border);
+    }
+    .ph-hero h1 { font-size: 2.2rem; margin: 0 0 12px; }
+    .ph-hero p { max-width: 560px; margin: 0 auto; color: var(--ph-muted); }
+    section.ph-section { padding: 48px 0; }
+    section.ph-section h2 { font-size: 1.5rem; margin: 0 0 24px; text-align: center; }
+    .ph-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .ph-card {
+      background: var(--ph-card-bg);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--ph-radius);
+      padding: 20px;
+    }
+    .ph-card h3 { margin: 0 0 8px; font-size: 1.1rem; }
+    .ph-card p { margin: 0; color: var(--ph-muted); font-size: 0.9rem; }
+    .ph-swatch-row { display: flex; gap: 6px; margin-bottom: 12px; }
+    .ph-swatch { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.08); }
+    .ph-how-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; text-align: center; }
+    .ph-how-steps div { padding: 16px; }
+    .ph-how-steps .ph-step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--ph-accent); color: #fff; font-weight: 600; margin-bottom: 8px;
+    }
+    .ph-pricing { text-align: center; }
+    .ph-pricing p { font-size: 1.1rem; color: var(--ph-muted); }
+    .ph-form-section { background: var(--ph-card-bg); border-top: 1px solid var(--ph-border); }
+    .ph-form { max-width: 560px; margin: 0 auto; display: grid; gap: 16px; }
+    .ph-form label { display: block; font-size: 0.9rem; margin-bottom: 6px; font-weight: 600; }
+    .ph-form input[type="text"],
+    .ph-form input[type="tel"],
+    .ph-form input[type="email"],
+    .ph-form select,
+    .ph-form textarea {
+      display: block;
+      width: 100%;
+      padding: 0.6em 0.75em;
+      border: 1px solid var(--ph-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ph-ink);
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    .ph-form textarea { min-height: 90px; }
+    .ph-form button {
+      padding: 0.75em 1.5em;
+      border: none;
+      border-radius: 999px;
+      background: var(--ph-accent);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ph-banner { padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; font-size: 0.95rem; }
+    .ph-banner-success { background: #e6f4ea; color: #1e4620; border: 1px solid #b7dfc0; }
+    .ph-banner-error { background: #fdeceb; color: #7a281f; border: 1px solid #f3c3bd; }
+    footer.ph-footer { text-align: center; padding: 32px 24px; color: var(--ph-muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header class="ph-hero">
+    <h1>Weddings 103</h1>
+    <p>Beautiful, personal digital invitations, RSVPs, and door check-in — tell us about your event and we'll set it up for you.</p>
+  </header>
+
+  <div class="ph-wrap">
+    <section class="ph-section" id="event-types">
+      <h2>What are you celebrating?</h2>
+      <div class="ph-card-grid">
+        <% eventTypes.forEach(function (t) { %>
+          <div class="ph-card">
+            <h3><%= t.label %></h3>
+            <p>For the <%= t.titleLabel.toLowerCase() %>.</p>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="ph-section" id="themes">
+      <h2>Choose a look</h2>
+      <div class="ph-card-grid">
+        <% themes.forEach(function (theme) { %>
+          <div class="ph-card">
+            <div class="ph-swatch-row">
+              <% (theme.swatchColors || []).forEach(function (color) { %>
+                <span class="ph-swatch" style="background: <%= color %>;"></span>
+              <% }) %>
+            </div>
+            <h3><%= theme.label %></h3>
+            <p><%= theme.tagline || '' %></p>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="ph-section" id="how-it-works">
+      <h2>How it works</h2>
+      <div class="ph-how-steps">
+        <div>
+          <span class="ph-step-num">1</span>
+          <p>Tell us about your event below.</p>
+        </div>
+        <div>
+          <span class="ph-step-num">2</span>
+          <p>We'll reach out to confirm the details with you.</p>
+        </div>
+        <div>
+          <span class="ph-step-num">3</span>
+          <p>You get your own dashboard to manage guests and invitations.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="ph-section ph-pricing" id="pricing">
+      <h2>Pricing</h2>
+      <p>Contact us for a custom quote.</p>
+    </section>
+  </div>
+
+  <section class="ph-section ph-form-section" id="book-now">
+    <div class="ph-wrap">
+      <h2>Book Now</h2>
+      <div class="ph-form">
+        <% if (typeof submitted !== 'undefined' && submitted) { %>
+          <p class="ph-banner ph-banner-success">Thank you — we've received your inquiry and will be in touch soon.</p>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error) { %>
+          <p class="ph-banner ph-banner-error"><%= error %></p>
+        <% } %>
+        <form method="POST" action="/inquiries">
+          <div>
+            <label for="fullName">Full name</label>
+            <input type="text" id="fullName" name="fullName" value="<%= (typeof values !== 'undefined' && values.fullName) || '' %>" required>
+          </div>
+          <div>
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" name="phone" value="<%= (typeof values !== 'undefined' && values.phone) || '' %>" required>
+          </div>
+          <div>
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="<%= (typeof values !== 'undefined' && values.email) || '' %>" required>
+          </div>
+          <div>
+            <label for="eventType">Event type</label>
+            <select id="eventType" name="eventType" required>
+              <option value="" <%= !(typeof values !== 'undefined' && values.eventType) ? 'selected' : '' %>>Select an event type</option>
+              <% eventTypes.forEach(function (t) { %>
+                <option value="<%= t.slug %>" <%= (typeof values !== 'undefined' && values.eventType === t.slug) ? 'selected' : '' %>><%= t.label %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div>
+            <label for="preferredTheme">Preferred theme (optional)</label>
+            <select id="preferredTheme" name="preferredTheme">
+              <option value="">No preference</option>
+              <% themes.forEach(function (theme) { %>
+                <option value="<%= theme.slug %>" data-event-type="<%= theme.eventType %>" <%= (typeof values !== 'undefined' && values.preferredTheme === theme.slug) ? 'selected' : '' %>><%= theme.label %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div>
+            <label for="note">Anything else? (optional)</label>
+            <textarea id="note" name="note"><%= (typeof values !== 'undefined' && values.note) || '' %></textarea>
+          </div>
+          <button type="submit">Send Inquiry</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <footer class="ph-footer">
+    <p>&copy; Weddings 103</p>
+  </footer>
+
+  <script src="/assets/js/booking-theme-filter.js"></script>
+</body>
+</html>

@@ -15,6 +15,7 @@ const pool = require('./config/db');
 const guestRoutes = require('./routes/guest.routes');
 const adminRoutes = require('./routes/admin.routes');
 const scanRoutes = require('./routes/scan.routes');
+const publicRoutes = require('./routes/public.routes');
 const { startEventLifecycleSweep } = require('./utils/eventLifecycle');
 const { formatEventDate } = require('./utils/formatDate');
 const { getDownloadUrl } = require('./utils/cloudinary');
@@ -50,7 +51,11 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 8 }, // 8 hours
 }));
 
-app.get('/', (req, res) => res.redirect('/admin/login'));
+// input_20 Phase 5: replaces the previous unconditional redirect to
+// /admin/login with the public homepage + booking-inquiry routes. Mounted
+// at '/' (GET / and POST /inquiries only — routes/public.routes.js), before
+// the catch-all 404 below, same as every other router.
+app.use('/', publicRoutes);
 app.use('/invite', guestRoutes);
 app.use('/admin', adminRoutes);
 app.use('/scan', scanRoutes);
