@@ -5,3 +5,9 @@ public/uploads/*
 !public/uploads/.gitkeep
 npm-debug.log*
 .DS_Store
+
+# Local AI/session artifacts — keep outside version control
+Memory.md
+SystemArc.md
+.claude/
+PROMPT_REPORT.md
