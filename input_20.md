@@ -1234,3 +1234,223 @@ only exercised indirectly (structural validation, not a rendered page). No
 code in this repo reads `swatchColors`/`tagline` yet — they exist solely as
 data for a homepage gallery that doesn't exist until a later phase — so there
 is no rendering path for the new fields themselves to fail on.
+
+## Phase 4 implementation record
+
+Status: implemented and verified locally (structural checks + read-only live
+checks). **Not committed, not pushed.** No schema change, no migration.
+
+### Files changed
+
+- `public/assets/css/admin-shared.css` (new) — structural/layout-only CSS
+  extracted from the three themes' near-identical `.bb-admin*` blocks:
+  display/grid/flex, positioning, spacing, sizing, responsive breakpoints,
+  form-control dimensions, generic card/table/button geometry. Never
+  defines a color, font, or background value; references
+  `var(--bb-admin-radius)` on the handful of selectors where corner radius
+  is the only thing that needs to vary by theme.
+- `public/themes/botanical-bloom/theme.css`, `lavender-romance/theme.css`,
+  `lady-gianna/theme.css` — the `.bb-admin*` block in each trimmed to
+  colors/fonts/backgrounds/borders/shadows/decorative rules only (see
+  "Extracted CSS categories" below for the exact split). Lavender Romance
+  and Lady Gianna each gained one new `:root` line,
+  `--bb-admin-radius: var(--bb-radius);` / `var(--lg-radius);` — an alias to
+  their own existing radius variable, not a new design value. Botanical
+  Bloom's existing `--bb-admin-radius: 10px;` is unchanged. No guest-facing
+  rule, no bespoke dashboard rule (`.lr-*`, `.lg-admin-*`), no color/font/
+  background value anywhere was touched.
+- `public/assets/js/theme-filter.js` (new) — the event-type/theme filter and
+  title-label-swap script, previously duplicated near-verbatim in
+  `event-form.ejs` and `edit-event.ejs`.
+- `views/admin/edit-event.ejs` — loads `admin-shared.css` then the selected
+  theme's `theme.css` (in that order); loads only that theme's own Google
+  Fonts (via `themes` — already passed by `showEditForm`, reading the new
+  `googleFonts` field) instead of a hardcoded 5-font-family union; replaced
+  its inline script with `<script src="/assets/js/theme-filter.js">`.
+- `views/admin/assets.ejs` — same CSS load-order fix; same per-theme font
+  fix, but via a small inline slug→URL table (see "Font approach" below for
+  why, not `themes`) since `showAssets()` doesn't pass theme data to this
+  view and the controller couldn't be changed this phase.
+- `views/admin/event-form.ejs` — its `#coupleNamesLabel` element changed
+  from a `<label>` wrapping the input directly to a `<label>` wrapping a
+  `<span id="coupleNamesLabel">` plus the input, so the shared script can
+  use one plain `textContent` assignment on both Create and Edit forms
+  without branching on DOM shape (Edit's label was already separate from
+  its input). Visually and functionally identical — same label text, same
+  input, same implicit label-for-input association via nesting. Replaced
+  its inline script with the same `<script src="/assets/js/theme-filter.js">`.
+- `config/themes.js` — added a `googleFonts` field to each theme entry (see
+  "Font approach" below for why this one file outside the original
+  "Modify only" list was touched — justified by requirement 5's own
+  explicit text). Purely additive, same pattern as Phase 3's
+  `swatchColors`/`tagline`.
+- `input_20.md` — this record.
+- `PROMPT_REPORT.md` — Phase 4 local status.
+
+No route, controller, model, or schema file was touched. `package.json` is
+unchanged (no new dependency — theme-filter.js is plain DOM JS, same as the
+two scripts it replaces).
+
+### Extracted CSS categories (what moved vs. what stayed)
+
+Moved to `admin-shared.css` when a rule (or the specific properties within
+it) were byte-identical across all three theme files: `box-sizing`,
+`max-width`/`margin: 0 auto` wrappers, `display`/grid-template-columns/flex
+properties and `gap`, `position`/`top`/`z-index` for the sticky header,
+padding/margin spacing amounts, `aspect-ratio`/`overflow`/`width`/`height`
+sizing, form-control `display: block; width: 100%; margin-top; padding`,
+table `border-collapse`/cell padding/`text-align`, and the two buttons'
+`border: none`/`cursor: pointer`/pixel dimensions. Also `border-radius: var(--bb-admin-radius)`
+on exactly three selectors (`.bb-admin-header-inner`, `.bb-admin-card,
+.bb-admin-tile`, `.bb-admin-photo-panel`) — the only ones where all three
+themes used their radius variable *bare* (no `calc()` offset, no literal
+override), so aliasing to one shared variable name preserves each theme's
+exact prior computed value.
+
+Deliberately kept in every theme file, even where the literal value happened
+to be identical across all three (e.g. `.bb-admin .bb-error { color:
+#b3261e; }`, `background: #fff;` on form controls): every `color`,
+`background`/`background-image`, `border-color` (and any `border` shorthand
+that sets one), `box-shadow`, `backdrop-filter`, `font-family`, `font-size`,
+`font-weight`, `letter-spacing`, `text-transform`. Also every `border-radius`
+that used a `calc()` offset or a theme-specific literal (inputs, nav-link
+pills, thumbnails, gallery items, Lady Gianna's 999px pill buttons) — these
+differ in more than just which variable they reference, so unifying them
+would have changed at least one theme's actual rendered radius. This is a
+deliberately conservative rule: **when in doubt, a property stayed
+theme-owned** rather than risk a visual regression for the sake of slightly
+more deduplication. Documented here so a future phase can revisit any of
+these with more surface area (e.g. per-theme radius-offset variables) if
+that's ever wanted — nothing here was left duplicated by oversight.
+
+Untouched entirely: guest-facing rules (`.bb-hero`, `.bb-overlay`,
+`.bb-state-area`, `.bb-tile-row`, `.bb-section`, `.bb-gallery-grid`, etc. —
+none of this is "admin" CSS at all); each theme's own bespoke dashboard
+classes (Lavender Romance's `.lr-*`, Lady Gianna's `.lg-admin-*`) — these
+were never duplicated across themes to begin with, since each theme's own
+dashboard is intentionally bespoke, not shared markup.
+
+### Font approach
+
+`edit-event.ejs` already received the full `themes` array from
+`showEditForm()` before this phase, so adding `googleFonts` to
+`config/themes.js` and looking it up there required no controller change —
+zero new duplication.
+
+`assets.ejs` was the harder case: `showAssets()` doesn't pass `themes` at
+all, and requirement 11's controller/route freeze meant that couldn't be
+added this phase. Two options were considered: (a) have the template
+`require('../../config/themes')` directly, or (b) inline a small static
+slug→URL table in the template itself, duplicating `config/themes.js`'s
+`googleFonts` values in exactly one place. Option (a) was tested directly
+(not assumed) and found unreliable — `ejs.render()`'s `require()` inside a
+compiled template does **not** resolve relative to the view file's own path
+even when a `filename` option is passed; it resolves relative to wherever
+EJS's own internal compile step runs, which is an implementation detail this
+app shouldn't depend on. (Verified with `node -e` reproducing the exact
+failure — see the test log below.) Option (b) was used instead: a small
+inline object literal in `assets.ejs`'s `<head>`, with a comment pointing at
+`config/themes.js` as the source of truth it's mirroring. This is the one
+place in this phase where data is genuinely duplicated rather than shared —
+called out here explicitly rather than left as a silent inconsistency.
+
+Each theme's Google Fonts URL was copied verbatim from that theme's own
+`dashboard.ejs` `<head>` (confirmed via `grep` immediately before use, not
+from memory), so the fonts now loaded on Create/Edit/Assets pages are
+exactly the same ones already proven correct on each theme's own dashboard —
+no new font families or weights introduced anywhere.
+
+### Tests run
+
+1. **`node --check`** on every changed/added `.js` file
+   (`config/themes.js`, `public/assets/js/theme-filter.js`) — all pass.
+2. **`ejs.compile()`** on all three changed `.ejs` files
+   (`edit-event.ejs`, `assets.ejs`, `event-form.ejs`) — all compile without
+   error.
+3. **Brace-balance check** on all four CSS files (`admin-shared.css` and the
+   three `theme.css` files) — open/close counts match on every file.
+4. **Structural dedup check**: `grep` for `.bb-admin-wrap`, `max-width:
+   1200px`, and `box-sizing: border-box` across the three theme files
+   confirms the shared `.bb-admin*` rules are no longer duplicated —
+   every remaining match is either Lady Gianna's own bespoke `.lg-admin*`
+   dashboard class or a guest-facing `body.*-page` rule, neither of which
+   this phase was ever supposed to touch.
+5. **`--bb-admin-radius` alias present in all three themes**, confirmed by
+   `grep`, with each value matching what that theme's admin section already
+   computed before this phase (Botanical Bloom 10px unchanged; Lavender
+   Romance now `var(--bb-radius)` = 26px, same as its prior direct
+   reference; Lady Gianna now `var(--lg-radius)` = 22px, same as its prior
+   direct reference) — preservation by construction, not just by testing.
+6. **`require()`-inside-EJS-template test** (see "Font approach" above) —
+   ran twice: once succeeding by accident (CWD-relative resolution from a
+   `node -e` eval context), once failing with the exact relative path
+   `edit-event.ejs` would need (`Cannot find module '../../config/themes'`)
+   even with a `filename` option passed to `ejs.render()`. This directly
+   informed the decision to use an inline table in `assets.ejs` instead.
+7. **Live local server, read-only only** (per explicit correction this
+   round: `.env` was left pointed at the production database rather than
+   switched to local, on the understanding that every check below is a
+   `GET` request only — no writes, no migrations, no admin-login attempt):
+   - `GET /admin/login` → `200`.
+   - `GET /assets/css/admin-shared.css` → `200`.
+   - `GET /assets/js/theme-filter.js` → `200`.
+   - `GET /themes/botanical-bloom/theme.css` → `200`.
+   - `GET /themes/lavender-romance/theme.css` → `200`.
+   - `GET /themes/lady-gianna/theme.css` → `200`.
+   - `GET /invite/:id` → `200` for all 5 existing events (ids 1, 2, 4, 8,
+     10), confirming the trimmed theme.css files still parse and apply
+     correctly on real guest-facing pages (these pages load the same
+     `theme.css` file the admin pages do, so a CSS syntax error introduced
+     anywhere in this phase's edits would show up here too).
+   - Server log inspected after all of the above — no errors.
+
+### Visual comparison — not completed this round
+
+No production or local admin credentials were used this round (explicitly
+forbidden this round unless the person provides safe credentials directly,
+which didn't happen). This means: **Create Event, Edit Event, and Assets
+pages for all three themes were not opened as a logged-in admin, and no
+before/after screenshots exist for this phase.** Structural confidence
+instead comes from: (a) the extraction method itself — every property that
+could conceivably produce a visual difference was deliberately left
+theme-owned rather than parameterized (see "deliberately conservative rule"
+above), so admin-shared.css only ever supplies a property a theme file
+doesn't already supply for that selector; (b) the `--bb-admin-radius` alias
+values are provably identical to each theme's prior computed radius on the
+three selectors that use it; (c) the guest-facing `/invite/:id` checks above
+prove the CSS files themselves are still valid and loadable, which rules out
+a syntax-level break, even though they don't exercise the admin-only
+selectors directly.
+
+**This is a real gap, not a formality**: the CSS-splitting method is sound
+by construction, but "sound by construction" has not been confirmed by an
+actual rendered pixel. If/when admin credentials become available, the
+concrete follow-up is: open `/admin/events/new`, `/admin/events/:id/edit`,
+and `/admin/events/:id/assets` for one event per theme, and diff each
+against a screenshot taken before this phase's CSS changes (or, if no
+before-screenshot exists, at minimum confirm each page's layout/spacing/
+colors look unchanged from what `input_15`'s/`input_13`'s admin-page work
+originally established).
+
+### Known limitations / issues found
+
+- The `assets.ejs` inline font table (see "Font approach") is genuinely
+  duplicated data, not a design preference — a direct consequence of the
+  controller-freeze constraint. If a future phase is allowed to touch
+  `controllers/admin.controller.js`, the cleanest fix is adding `themes:
+  AVAILABLE_THEMES` to `showAssets()`'s render call and switching
+  `assets.ejs` to the same `themes.find(...)` lookup `edit-event.ejs` uses,
+  removing the duplication entirely.
+- No visual/screenshot verification this round (see above) — the single
+  biggest open item before this phase should be considered fully proven
+  correct, not just structurally sound.
+- `event-form.ejs` still has no `<link>` to any stylesheet at all (true
+  before this phase too) — requirement 4 only named `edit-event.ejs` and
+  `assets.ejs` for the load-order fix, and requirement 7 ("do not redesign
+  any admin page") argued against adding styling to a previously-unstyled
+  page on this phase's own initiative, so it was left exactly as
+  unstyled as it already was.
+- No new issue/bug was found in existing behavior this phase (unlike Phase
+  2's `COALESCE` cast bug) — the `require()`-in-EJS finding above is a
+  constraint discovered during *this* implementation, not a pre-existing
+  defect.

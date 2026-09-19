@@ -17,7 +17,7 @@
         <% }) %>
       </select>
     </label><br>
-    <label id="coupleNamesLabel">Couple names <input type="text" name="coupleNames" required></label><br>
+    <label><span id="coupleNamesLabel">Couple names</span> <input type="text" name="coupleNames" required></label><br>
     <label>Subtitle <input type="text" name="subtitle" placeholder="e.g. is turning TWO!"></label><br>
     <label>Wedding date <input type="date" name="weddingDate" required></label><br>
     <label>Time note <input type="text" name="eventTimeNote" placeholder="e.g. Starting 10:00am till Late"></label><br>
@@ -45,42 +45,9 @@
   </form>
   <p><a href="/admin/events">&larr; Back to events</a></p>
 
-  <script>
-    // Theme choices are scoped to the selected event type (input_15 §A6):
-    // registering a wedding only offers wedding themes, a birthday only
-    // offers birthday themes. Plain client-side filtering over the same
-    // options the server already rendered, no separate endpoint needed.
-    //
-    // input_20 Phase 1: the "Couple names"/"Celebrant"/etc. label swap no
-    // longer hardcodes a birthday-vs-everything-else ternary — it reads
-    // each event-type <option>'s own data-title-label attribute instead,
-    // so it scales to every type in config/eventTypes.js with no further
-    // script change whenever a new one becomes active.
-    (function () {
-      var eventTypeSelect = document.getElementById('eventType');
-      var themeSelect = document.getElementById('theme');
-      var coupleNamesLabel = document.getElementById('coupleNamesLabel');
-      var themeOptions = Array.prototype.slice.call(themeSelect.options);
-
-      function applyFilter() {
-        var type = eventTypeSelect.value;
-        var firstVisible = null;
-        var currentStillVisible = false;
-        themeOptions.forEach(function (opt) {
-          var matches = opt.dataset.eventType === type;
-          opt.hidden = !matches;
-          opt.disabled = !matches;
-          if (matches && !firstVisible) firstVisible = opt;
-          if (matches && opt.value === themeSelect.value) currentStillVisible = true;
-        });
-        if (!currentStillVisible && firstVisible) themeSelect.value = firstVisible.value;
-        var selectedOption = eventTypeSelect.options[eventTypeSelect.selectedIndex];
-        coupleNamesLabel.firstChild.textContent = selectedOption.dataset.titleLabel + ' ';
-      }
-
-      eventTypeSelect.addEventListener('change', applyFilter);
-      applyFilter();
-    })();
-  </script>
+  <!-- input_20 Phase 4: was an inline copy of the same script as
+       edit-event.ejs (input_15 §A6 filtering, input_20 Phase 1 label swap)
+       — now shared, see public/assets/js/theme-filter.js. -->
+  <script src="/assets/js/theme-filter.js"></script>
 </body>
 </html>

@@ -6,7 +6,22 @@
   <title>Assets — <%= event.couple_names %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+  <%
+    // input_20 Phase 4: load only the selected event's own theme fonts, not
+    // Botanical Bloom's fonts unconditionally. showAssets() (admin
+    // controller) doesn't pass the theme registry to this view, so this
+    // mirrors config/themes.js's googleFonts values directly rather than
+    // requiring a controller change — see the Phase 4 record in input_20.md
+    // for why (edit-event.ejs, which already receives `themes`, reads
+    // config/themes.js's googleFonts field instead of duplicating this).
+    var assetsGoogleFontsBySlug = {
+      'botanical-bloom': 'https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap',
+      'lavender-romance': 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&display=swap',
+      'lady-gianna': 'https://fonts.googleapis.com/css2?family=Great+Vibes&family=Libre+Baskerville:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap',
+    };
+  %>
+  <link href="<%= assetsGoogleFontsBySlug[event.theme] || assetsGoogleFontsBySlug['botanical-bloom'] %>" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/admin-shared.css">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
 <body class="bb-admin">

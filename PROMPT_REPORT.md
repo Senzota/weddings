@@ -1,13 +1,19 @@
 # Chief Inspector Report
 
 ## Current phase
-Input 20 — Phase 3: Theme registry swatch metadata.
+Input 20 — Phase 4: Admin CSS separation.
 
 ## Status
-Deployed and verified — all three required production checks pass. This
-phase has no admin-only or authenticated behavior to verify (it adds no new
-UI, no new route, no schema change), so there is no "not verified on
-production" gap for Phase 3 itself.
+Implemented; server-side verification completed (structural/static checks,
+read-only live checks, and an authenticated local pass against the local
+development database — login, page loads, correct per-theme asset linking,
+no server errors). **Manual browser-rendering verification is explicitly
+deferred, by instruction — not attempted, not skipped due to a blocker.**
+**Not committed, not pushed — no schema change, no migration needed.**
+Phases 1–3 (below) remain deployed and verified; Phase 4 stays local-only
+pending both explicit approval to commit/push and, before that, the deferred
+manual visual check. See Known limitations for the three points that must
+stay explicit until that check happens.
 
 ## Commits
 - `1aac3b2` — "Prepare event types for active-theme visibility" (Phase 1, the
@@ -24,8 +30,40 @@ production" gap for Phase 3 itself.
   revision of this report)
 - `8811d46` — "Add theme gallery swatch metadata" (Phase 3, the three
   implementation and documentation files)
-- `6da18d9` — "Add Phase 3 deployment handover report" (this report, in its
-  previous revision)
+- `6da18d9` / `fa455fa` — "Add Phase 3 deployment handover report" and its
+  own commit-hash follow-up (Phase 3, this report's earlier revisions)
+- No commit yet for Phase 4 — all Phase 4 work below is uncommitted
+  working-tree changes.
+
+## Files changed (Phase 4, uncommitted)
+- `public/assets/css/admin-shared.css` (new) — structural/layout-only CSS
+  extracted from the three themes' duplicated `.bb-admin*` blocks. No color,
+  font, or background value defined here.
+- `public/themes/botanical-bloom/theme.css`, `lavender-romance/theme.css`,
+  `lady-gianna/theme.css` — each theme's `.bb-admin*` block trimmed to
+  colors/fonts/backgrounds/borders/shadows only. Lavender Romance and Lady
+  Gianna each gained one new alias variable,
+  `--bb-admin-radius: var(--bb-radius|--lg-radius)`, so admin-shared.css can
+  reference one consistent name — same value as before, not a new design
+  choice. No guest-facing or bespoke-dashboard (`.lr-*`, `.lg-admin-*`) rule
+  touched.
+- `public/assets/js/theme-filter.js` (new) — the event-type/theme filter and
+  title-label script, previously duplicated in two view files.
+- `views/admin/edit-event.ejs`, `views/admin/assets.ejs` — load
+  `admin-shared.css` then the selected theme's `theme.css`; load only that
+  theme's own Google Fonts instead of a hardcoded union.
+- `views/admin/event-form.ejs` — `#coupleNamesLabel` now wraps a `<span>`
+  (visually/functionally identical) so the shared script needs no DOM-shape
+  branching between Create and Edit forms.
+- `config/themes.js` — added a `googleFonts` field per theme (the one file
+  touched outside the task's literal file list, explicitly permitted by its
+  own instructions' text for exactly this addition). Purely additive.
+- `input_20.md` — Phase 4 implementation record, including the full
+  extraction-category breakdown and the `require()`-in-EJS test that ruled
+  out a cleaner alternative for `assets.ejs`'s font lookup.
+- `PROMPT_REPORT.md` — this update.
+
+No route, controller, model, schema, or `package.json` change.
 
 ## Files changed (Phase 3, committed in `8811d46`)
 - `config/themes.js` — the only code file touched. Each of the three existing
@@ -68,6 +106,39 @@ production" gap for Phase 3 itself.
 
 Confirmed unchanged (verified, not assumed): `utils/eventLifecycle.js`,
 `models/archive.model.js`, `views/admin/event-form.ejs`.
+
+## Migration (Phase 4)
+None required, none run. This phase touches only CSS/JS/EJS/config-data
+files — no schema change, no `npm run db:migrate`.
+
+## Tests (Phase 4)
+Full detail in `input_20.md`'s Phase 4 implementation record. Summary:
+- `node --check` on both changed/added JS files, `ejs.compile()` on all
+  three changed EJS files, brace-balance check on all four CSS files — all
+  pass.
+- Structural dedup confirmed via `grep`: the shared `.bb-admin*` rules no
+  longer appear duplicated in any theme.css; every remaining match is
+  Lady Gianna's own bespoke `.lg-admin*` dashboard or a guest-facing
+  `body.*-page` rule, both correctly untouched.
+- `--bb-admin-radius` alias present in all three themes, each value proven
+  identical to that theme's prior computed radius by construction (not
+  just by testing).
+- A real constraint was discovered and tested, not assumed:
+  `require()` inside a compiled EJS template does **not** resolve relative
+  to the view file's own path (confirmed by reproducing the exact failure
+  with `node -e`), which is why `assets.ejs` uses a small inline font table
+  instead of reading `config/themes.js` the way `edit-event.ejs` does — see
+  "Known limitations" below.
+- Live local server (read-only only, per this round's explicit correction:
+  `.env` stayed pointed at the production database, on the basis that
+  every check below is a `GET` request with no writes, no migration, no
+  admin-login attempt): `GET /admin/login` → `200`; `GET
+  /assets/css/admin-shared.css` → `200`; `GET /assets/js/theme-filter.js`
+  → `200`; `GET /themes/<slug>/theme.css` → `200` for all three themes;
+  `GET /invite/:id` → `200` for all 5 existing production events (ids 1, 2,
+  4, 8, 10) — these load the same trimmed `theme.css` files the admin pages
+  do, so this also rules out a CSS syntax break. No errors in the server
+  log for any of this.
 
 ## Migration (Phase 3)
 None required, none run. This phase adds no schema change — `config/themes.js`
@@ -140,6 +211,10 @@ implementation record"; highlights:
 - Existing Wedding (id 2) and Birthday (id 19) events re-verified read-only
   across dashboard/edit/invitation — unaffected.
 
+## Production verification (Phase 4)
+Not applicable — Phase 4 has not been deployed, and makes no schema or
+server-logic change for production to exercise.
+
 ## Production verification (Phase 3)
 Read-only checks only, per this deployment's explicit scope — no POST, PUT,
 PATCH, or DELETE requests were made, and no production data was created,
@@ -183,31 +258,44 @@ against production for this deployment — confirmed above.
   inferred, not directly observed, for these three items.
 
 ## Known limitations
+- **No browser console or pixel-level visual verification was performed.**
+  A local authenticated pass did confirm (server-side, via HTML inspection):
+  Botanical Bloom's and Lady Gianna's Dashboard/Edit/Assets pages all return
+  `200`, each loads only its own theme's Google Fonts, `admin-shared.css`
+  loads before `theme.css`, all linked assets resolve, and the DOM elements
+  `theme-filter.js` depends on are present. None of that substitutes for
+  actually looking at a rendered page or an open browser console — no
+  screenshot exists, and no one has confirmed the pages still *look* right.
+  This was explicitly deferred this round, not attempted and failed.
+- **Lavender Romance has no local event and was not visually verified.**
+  No local database event uses this theme, so its Dashboard/Edit/Assets
+  pages were never loaded, authenticated or otherwise, this round. A local
+  event for this theme would need to exist before any visual check of it is
+  possible.
+- **No data was created or modified for testing.** Every check this round
+  was read-only `GET` navigation against existing events (Botanical Bloom
+  id 2, Lady Gianna id 19); nothing was inserted, updated, or deleted.
+- `assets.ejs` duplicates its per-theme Google Fonts URLs in a small inline
+  table rather than reading `config/themes.js` the way `edit-event.ejs`
+  does, because `showAssets()` doesn't pass theme data to that view and the
+  controller couldn't be changed this phase. Fixable cleanly in a future
+  phase that's allowed to touch `controllers/admin.controller.js`.
 - No production admin credentials available this session (recurring, since
-  Phase 1) — Phase 3's `AVAILABLE_THEMES` consumers in the admin Create/Edit
-  dropdowns could only be validated structurally, not by loading an
-  authenticated production-backed page. See Tests (Phase 3) above.
-- `swatchColors`/`tagline` are not read by any code yet — they're data for a
-  homepage gallery that doesn't exist until a later phase, so there is no
-  rendering path for the new fields themselves to have failed on even if the
-  admin-dropdown check above had been possible.
+  Phase 1).
+- `swatchColors`/`tagline` are not read by any code yet — unchanged from
+  Phase 3, still waiting on a homepage gallery from a later phase.
 - Phase 1/2 known limitations still apply, unchanged: `updateEvent`'s generic
   error message; 7 of 9 event types still themeless by design; no live
   production event currently uses Botanical Bloom; local dev event `id 1`
   ("Amani na Zawadi") still carries an earlier test-induced `venue` change.
 
 ## Local-environment note
-`.env`'s `DATABASE_URL` currently points at the production Neon database —
-set there for Phase 2's production migration and left in place through
-Phase 3's read-only verification, with the person's explicit confirmation
-each time it mattered. **Before any future local implementation or testing
-work that writes data** (creating/editing/deleting test events, running
-`npm run db:migrate` locally, anything beyond a read-only `GET`), restore
-`DATABASE_URL` to the local dev Postgres instance (`localhost:5433`) first —
-unless that specific task explicitly calls for production read-only
-verification again. This file is gitignored and edited directly by the
-person; this note exists only so the next phase doesn't assume `.env` is
-already pointed at local dev.
+`.env`'s `DATABASE_URL` now points at the local dev Postgres instance
+(`localhost:5433`) again — switched back for this round's authenticated
+local verification pass (login, page loads for Botanical Bloom id 2 and
+Lady Gianna id 19), read-only throughout. Earlier in Phase 4 it had briefly
+been left pointed at production for a strictly read-only static-asset/
+invitation-page check; that is no longer the case as of this update.
 
 ## Next recommended task
-Input 20 — Phase 4: Admin CSS separation.
+Input 20 — Phase 5: Public homepage and booking inquiries.

@@ -6,7 +6,15 @@
   <title>Edit — <%= event.couple_names %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+  <%
+    // input_20 Phase 4: load only the selected event's own theme fonts,
+    // not a hardcoded union of every theme's fonts.
+    var currentTheme = themes.find(function (t) { return t.slug === event.theme; });
+  %>
+  <% if (currentTheme && currentTheme.googleFonts) { %>
+    <link href="<%= currentTheme.googleFonts %>" rel="stylesheet">
+  <% } %>
+  <link rel="stylesheet" href="/assets/css/admin-shared.css">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
 <body class="bb-admin">
@@ -111,39 +119,9 @@
     </form>
   </div>
 
-  <script>
-    // Same event-type-scoped theme filtering as the create form (input_15
-    // §A6) — changing event type here re-filters the theme options rather
-    // than leaving a mismatched theme selected.
-    //
-    // input_20 Phase 1: the label swap reads each event-type <option>'s
-    // own data-title-label attribute instead of a hardcoded ternary — see
-    // event-form.ejs for the same change and its rationale.
-    (function () {
-      var eventTypeSelect = document.getElementById('eventType');
-      var themeSelect = document.getElementById('theme');
-      var coupleNamesLabel = document.getElementById('coupleNamesLabel');
-      var themeOptions = Array.prototype.slice.call(themeSelect.options);
-
-      function applyFilter() {
-        var type = eventTypeSelect.value;
-        var firstVisible = null;
-        var currentStillVisible = false;
-        themeOptions.forEach(function (opt) {
-          var matches = opt.dataset.eventType === type;
-          opt.hidden = !matches;
-          opt.disabled = !matches;
-          if (matches && !firstVisible) firstVisible = opt;
-          if (matches && opt.value === themeSelect.value) currentStillVisible = true;
-        });
-        if (!currentStillVisible && firstVisible) themeSelect.value = firstVisible.value;
-        var selectedOption = eventTypeSelect.options[eventTypeSelect.selectedIndex];
-        coupleNamesLabel.textContent = selectedOption.dataset.titleLabel;
-      }
-
-      eventTypeSelect.addEventListener('change', applyFilter);
-      applyFilter();
-    })();
-  </script>
+  <!-- input_20 Phase 4: was an inline copy of the same script as
+       event-form.ejs (input_15 §A6 filtering, input_20 Phase 1 label swap)
+       — now shared, see public/assets/js/theme-filter.js. -->
+  <script src="/assets/js/theme-filter.js"></script>
 </body>
 </html>
