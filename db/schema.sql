@@ -220,3 +220,16 @@ CREATE TABLE IF NOT EXISTS booking_inquiries (
 );
 
 CREATE INDEX IF NOT EXISTS idx_booking_inquiries_status ON booking_inquiries(status);
+
+-- input_20 Phase 7: one client-access token per approved inquiry's event.
+-- event_id UNIQUE — one event has exactly one client token, ever; if a
+-- token ever needs rotating (lost link, security concern), that's a
+-- delete-and-reissue on this row, not a new table shape. token_hash only
+-- (sha256 hex of the raw token) — the raw token is never stored, only
+-- ever shown once at approval time, in the admin's one-time result page.
+CREATE TABLE IF NOT EXISTS client_access (
+  id           SERIAL PRIMARY KEY,
+  event_id     INTEGER NOT NULL UNIQUE REFERENCES events(id) ON DELETE CASCADE,
+  token_hash   TEXT NOT NULL UNIQUE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);

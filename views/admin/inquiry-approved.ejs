@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inquiry approved — <%= inquiry.full_name %></title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f2; color: #222; }
+    .app-header {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; background: #fff; border-bottom: 1px solid #ddd;
+    }
+    .app-header .brand { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; }
+    .app-main { max-width: 640px; margin: 0 auto; padding: 24px; }
+    .result-card { background: #fff; border: 1px solid #e6e0d8; border-radius: 12px; padding: 1.5rem; }
+    .result-banner { background: #e6f4ea; color: #1e4620; border: 1px solid #b7dfc0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; }
+    .link-warning { background: #fff8e6; color: #6b5200; border: 1px solid #f0dfb7; border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0; font-weight: 600; }
+    .link-box { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+    .link-box input { flex: 1; padding: 0.55em 0.75em; border: 1px solid #ccc; border-radius: 8px; font-family: monospace; font-size: 0.9rem; }
+    .link-box button { padding: 0.55em 1em; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+    .detail-row { margin-bottom: 0.75rem; }
+    .detail-label { display: block; font-size: 0.8rem; font-weight: 700; color: #6b625a; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <span class="brand">Weddings</span>
+    <form method="POST" action="/admin/logout"><button type="submit">Log out</button></form>
+  </header>
+
+  <main class="app-main">
+  <p><a href="/admin/inquiries/<%= inquiry.id %>">&larr; Back to inquiry</a></p>
+
+  <div class="result-card">
+    <p class="result-banner">Inquiry from <strong><%= inquiry.full_name %></strong> approved.</p>
+
+    <div class="detail-row">
+      <span class="detail-label">Draft event created</span>
+      <span>Event #<%= event.id %> (<%= event.couple_names %>) — draft, no date set yet</span>
+    </div>
+
+    <p class="link-warning">
+      Copy and share this link now (for example via WhatsApp). It will not be shown again —
+      only a secure hash of it is stored, not the link itself.
+    </p>
+    <div class="link-box">
+      <input type="text" readonly value="<%= clientLink %>" id="client-link" onclick="this.select()">
+      <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('client-link').value)">Copy</button>
+    </div>
+
+    <p style="margin-top:1.5rem;"><a href="/admin/inquiries">&larr; Back to all inquiries</a></p>
+  </div>
+  </main>
+</body>
+</html>

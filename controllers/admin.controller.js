@@ -362,11 +362,41 @@ async function listInquiries(req, res) {
 async function showInquiryDetail(req, res) {
   const inquiry = await inquiryModel.findById(req.params.id);
   if (!inquiry) return res.status(404).send('Inquiry not found.');
+  // input_20 Phase 7: approveInquiry/declineInquiry redirect back here with
+  // this query param when the atomic claim inside inquiryModel.approve()/
+  // decline() finds the inquiry already decided — same ?error=<code>
+  // convention as toggleStatus's ?error=needs_date.
+  const error = req.query.error === 'already_decided' ? 'This inquiry was already decided.' : null;
   res.render('admin/inquiry-detail', {
     inquiry,
+    error,
     eventTypeLabel: eventTypeLabel(inquiry.event_type),
     preferredThemeLabel: inquiry.preferred_theme ? themeLabel(inquiry.preferred_theme) : null,
   });
+}
+
+async function approveInquiry(req, res) {
+  const result = await inquiryModel.approve(req.params.id, req.session.adminId);
+  if (result.reason === 'not_found') return res.status(404).send('Inquiry not found.');
+  if (!result.ok) return res.redirect(`/admin/inquiries/${req.params.id}?error=already_decided`);
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  // input_20 Phase 7: this /client/<token> link is not a working route
+  // yet — that bootstrap route belongs to Phase 8. Shown here anyway,
+  // per this phase's own scope, because the token/hash pairing it points
+  // at is already stored in exactly the shape Phase 8 will need to
+  // validate it; only the route that reads it doesn't exist yet.
+  res.render('admin/inquiry-approved', {
+    inquiry: result.inquiry,
+    event: result.event,
+    clientLink: `${baseUrl}/client/${result.rawToken}`,
+  });
+}
+
+async function declineInquiry(req, res) {
+  const result = await inquiryModel.decline(req.params.id, req.session.adminId);
+  if (result.reason === 'not_found') return res.status(404).send('Inquiry not found.');
+  if (!result.ok) return res.redirect(`/admin/inquiries/${req.params.id}?error=already_decided`);
+  res.redirect(`/admin/inquiries/${req.params.id}`);
 }
 
 module.exports = {
@@ -375,5 +405,5 @@ module.exports = {
   showDashboard, showEditForm, showAssets, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
   exportGuestList, uploadGalleryPhotos, deleteGalleryPhoto,
   uploadCameoPhoto, deleteCameoPhoto,
-  listInquiries, showInquiryDetail,
+  listInquiries, showInquiryDetail, approveInquiry, declineInquiry,
 };

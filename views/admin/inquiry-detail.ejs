@@ -18,6 +18,11 @@
     .detail-row:last-child { margin-bottom: 0; }
     .detail-label { display: block; font-size: 0.8rem; font-weight: 700; color: #6b625a; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
     .detail-value { white-space: pre-line; }
+    .detail-error { background: #fdeceb; color: #7a281f; border: 1px solid #f3c3bd; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+    .detail-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+    .detail-actions button { padding: 0.6em 1.4em; border-radius: 999px; font-size: 0.95rem; cursor: pointer; border: 1px solid #ccc; background: #fff; }
+    .btn-approve { border-color: #2f6b3a; color: #2f6b3a; }
+    .btn-decline { border-color: #7a281f; color: #7a281f; }
   </style>
 </head>
 <body>
@@ -29,6 +34,10 @@
   <main class="app-main">
   <p><a href="/admin/inquiries">&larr; Back to inquiries</a></p>
   <h1><%= inquiry.full_name %></h1>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <p class="detail-error"><%= error %></p>
+  <% } %>
 
   <div class="detail-card">
     <div class="detail-row">
@@ -60,6 +69,19 @@
       <span class="detail-value"><%= inquiry.note || '' %></span>
     </div>
   </div>
+
+  <% if (inquiry.status === 'new') { %>
+    <div class="detail-actions">
+      <form method="POST" action="/admin/inquiries/<%= inquiry.id %>/approve"
+            onsubmit="return confirm('Approve this inquiry? This creates a draft event and a client-access link that cannot be shown again after this.');">
+        <button type="submit" class="btn-approve">Approve inquiry</button>
+      </form>
+      <form method="POST" action="/admin/inquiries/<%= inquiry.id %>/decline"
+            onsubmit="return confirm('Decline this inquiry? This cannot be undone through this page.');">
+        <button type="submit" class="btn-decline">Decline inquiry</button>
+      </form>
+    </div>
+  <% } %>
   </main>
 </body>
 </html>

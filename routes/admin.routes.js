@@ -28,5 +28,7 @@ router.post('/events/:id/cameos/:photoId/delete', requireAdmin, asyncHandler(adm
 
 router.get('/inquiries', requireAdmin, asyncHandler(adminController.listInquiries));
 router.get('/inquiries/:id', requireAdmin, asyncHandler(adminController.showInquiryDetail));
+router.post('/inquiries/:id/approve', requireAdmin, asyncHandler(adminController.approveInquiry));
+router.post('/inquiries/:id/decline', requireAdmin, asyncHandler(adminController.declineInquiry));
 
 module.exports = router;
