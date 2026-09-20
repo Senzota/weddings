@@ -26,4 +26,7 @@ router.post('/events/:id/gallery/:photoId/delete', requireAdmin, asyncHandler(ad
 router.post('/events/:id/cameos', requireAdmin, upload.single('photo'), asyncHandler(adminController.uploadCameoPhoto));
 router.post('/events/:id/cameos/:photoId/delete', requireAdmin, asyncHandler(adminController.deleteCameoPhoto));
 
+router.get('/inquiries', requireAdmin, asyncHandler(adminController.listInquiries));
+router.get('/inquiries/:id', requireAdmin, asyncHandler(adminController.showInquiryDetail));
+
 module.exports = router;

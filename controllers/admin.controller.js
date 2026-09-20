@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const ExcelJS = require('exceljs');
 const pool = require('../config/db');
 const eventModel = require('../models/event.model');
+const inquiryModel = require('../models/inquiry.model');
 const guestModel = require('../models/guest.model');
 const galleryModel = require('../models/gallery.model');
 const cameoModel = require('../models/cameo.model');
@@ -337,10 +338,42 @@ async function exportGuestList(req, res) {
   res.end();
 }
 
+// input_20 Phase 6: read-only admin inquiries list/detail. No approve/
+// decline yet (Phase 7) — every row is 'new' at this phase.
+function eventTypeLabel(slug) {
+  const match = EVENT_TYPES.find((t) => t.slug === slug);
+  return match ? match.label : slug;
+}
+function themeLabel(slug) {
+  const match = AVAILABLE_THEMES.find((t) => t.slug === slug);
+  return match ? match.label : slug;
+}
+
+async function listInquiries(req, res) {
+  const inquiries = await inquiryModel.findAll();
+  const rows = inquiries.map((inquiry) => ({
+    ...inquiry,
+    event_type_label: eventTypeLabel(inquiry.event_type),
+    preferred_theme_label: inquiry.preferred_theme ? themeLabel(inquiry.preferred_theme) : null,
+  }));
+  res.render('admin/inquiries-list', { inquiries: rows });
+}
+
+async function showInquiryDetail(req, res) {
+  const inquiry = await inquiryModel.findById(req.params.id);
+  if (!inquiry) return res.status(404).send('Inquiry not found.');
+  res.render('admin/inquiry-detail', {
+    inquiry,
+    eventTypeLabel: eventTypeLabel(inquiry.event_type),
+    preferredThemeLabel: inquiry.preferred_theme ? themeLabel(inquiry.preferred_theme) : null,
+  });
+}
+
 module.exports = {
   showLogin, login, logout,
   listEvents, newEventForm, createEvent,
   showDashboard, showEditForm, showAssets, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
   exportGuestList, uploadGalleryPhotos, deleteGalleryPhoto,
   uploadCameoPhoto, deleteCameoPhoto,
+  listInquiries, showInquiryDetail,
 };

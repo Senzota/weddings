@@ -13,4 +13,21 @@ async function create(fields) {
   return rows[0];
 }
 
-module.exports = { create };
+// input_20 Phase 6: read-only admin list/detail. Newest first — the
+// natural triage order for "what came in," same reasoning as every row
+// being 'new' at this phase (approve/decline doesn't exist until Phase 7).
+async function findAll() {
+  const { rows } = await pool.query('SELECT * FROM booking_inquiries ORDER BY created_at DESC');
+  return rows;
+}
+
+// Same guard as event.model.js's findById — id is a serial integer
+// column, so anything non-numeric would otherwise reach Postgres as
+// "invalid input syntax for type integer" instead of a normal not-found.
+async function findById(id) {
+  if (!/^\d+$/.test(String(id))) return undefined;
+  const { rows } = await pool.query('SELECT * FROM booking_inquiries WHERE id = $1', [id]);
+  return rows[0];
+}
+
+module.exports = { create, findAll, findById };

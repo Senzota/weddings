@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= inquiry.full_name %> — Inquiry</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f2; color: #222; }
+    .app-header {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; background: #fff; border-bottom: 1px solid #ddd;
+    }
+    .app-header .brand { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; }
+    .app-main { max-width: 640px; margin: 0 auto; padding: 24px; }
+    .detail-card { background: #fff; border: 1px solid #e6e0d8; border-radius: 12px; padding: 1.5rem; }
+    .detail-row { margin-bottom: 1rem; }
+    .detail-row:last-child { margin-bottom: 0; }
+    .detail-label { display: block; font-size: 0.8rem; font-weight: 700; color: #6b625a; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .detail-value { white-space: pre-line; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <span class="brand">Weddings</span>
+    <form method="POST" action="/admin/logout"><button type="submit">Log out</button></form>
+  </header>
+
+  <main class="app-main">
+  <p><a href="/admin/inquiries">&larr; Back to inquiries</a></p>
+  <h1><%= inquiry.full_name %></h1>
+
+  <div class="detail-card">
+    <div class="detail-row">
+      <span class="detail-label">Status</span>
+      <span class="detail-value"><%= inquiry.status %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Submitted</span>
+      <span class="detail-value"><%= inquiry.created_at.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Phone</span>
+      <span class="detail-value"><%= inquiry.phone %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Email</span>
+      <span class="detail-value"><%= inquiry.email %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Event type</span>
+      <span class="detail-value"><%= eventTypeLabel %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Preferred theme</span>
+      <span class="detail-value"><%= preferredThemeLabel || 'No preference' %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Note</span>
+      <span class="detail-value"><%= inquiry.note || '' %></span>
+    </div>
+  </div>
+  </main>
+</body>
+</html>
