@@ -47,8 +47,15 @@ async function login(req, res) {
   if (!valid) {
     return res.render('admin/login', { error: 'Invalid email or password.' });
   }
-  req.session.adminId = admin.id;
-  res.redirect('/admin/events');
+  // input_20 Phase 9B (M-1): same session-fixation protection
+  // clientAccount.controller.js's register/login already have — a fresh
+  // session id is issued first, then adminId is set on that new session,
+  // so a session id known before authentication can't be reused after it.
+  req.session.regenerate((err) => {
+    if (err) return res.status(500).send('Something went wrong.');
+    req.session.adminId = admin.id;
+    res.redirect('/admin/events');
+  });
 }
 
 function logout(req, res) {
@@ -336,11 +343,30 @@ async function toggleStatus(req, res) {
   res.redirect(`/admin/events/${req.params.id}`);
 }
 
+// input_20 Phase 9B (L-1/L-3): shared numeric-id + existence guard for the
+// five write-only mutation cores below. Every *read*-first core above
+// (getDashboardData et al.) already gets this for free via
+// eventModel.findById's own numeric guard — these five didn't, because
+// they never needed to load the event itself before this fix, only its
+// id. A malformed :id (admin) or a stale clientEventId left over after an
+// admin deletes the event (client) both now resolve to the same clean
+// not-found result these functions' siblings already give, instead of a
+// raw Postgres integer-cast/FK-violation error. Checked before any
+// Cloudinary call or database write, so an invalid/stale id never uploads
+// an orphaned asset or writes a row for an event that doesn't exist.
+async function findEventForMutation(eventId) {
+  if (!/^\d+$/.test(String(eventId))) return undefined;
+  return eventModel.findById(eventId);
+}
+
 // Bulk-add guests from pasted "Name, seat count[, invite group]" lines,
 // one guest per line — invite group (input_15 §A7) is optional and purely
 // descriptive, so a line with just "Name, seat count" still works exactly
 // as it did before this field existed.
 async function bulkAddGuestsCore(eventId, guestListRaw) {
+  const event = await findEventForMutation(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+
   const lines = (guestListRaw || '').split('\n').map((l) => l.trim()).filter(Boolean);
   const entries = lines.map((line) => {
     const [name, seatCountRaw, inviteGroupRaw] = line.split(',').map((part) => part.trim());
@@ -355,10 +381,12 @@ async function bulkAddGuestsCore(eventId, guestListRaw) {
   if (entries.length > 0) {
     await guestModel.bulkCreate(eventId, entries);
   }
+  return { ok: true };
 }
 
 async function bulkAddGuests(req, res) {
-  await bulkAddGuestsCore(req.params.id, req.body.guestList);
+  const result = await bulkAddGuestsCore(req.params.id, req.body.guestList);
+  if (!result.ok) return res.status(404).send('Wedding not found.');
   res.redirect(`/admin/events/${req.params.id}`);
 }
 
@@ -370,18 +398,26 @@ async function deleteEvent(req, res) {
 
 // One or more photos in a single request (upload.array).
 async function uploadGalleryPhotosCore(eventId, files) {
+  const event = await findEventForMutation(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+
   for (const file of (files || [])) {
     const result = await uploadImage(file.buffer, `weddings103/events/${eventId}/gallery`);
     await galleryModel.addPhoto(eventId, result.secure_url, result.public_id);
   }
+  return { ok: true };
 }
 
 async function uploadGalleryPhotos(req, res) {
-  await uploadGalleryPhotosCore(req.params.id, req.files);
+  const result = await uploadGalleryPhotosCore(req.params.id, req.files);
+  if (!result.ok) return res.status(404).send('Wedding not found.');
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
 async function deleteGalleryPhotoCore(eventId, photoId) {
+  const event = await findEventForMutation(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+
   const photo = await galleryModel.deletePhoto(eventId, photoId);
   if (photo) {
     try {
@@ -390,28 +426,38 @@ async function deleteGalleryPhotoCore(eventId, photoId) {
       console.error(`Failed to delete Cloudinary image ${photo.public_id}:`, err);
     }
   }
+  return { ok: true };
 }
 
 async function deleteGalleryPhoto(req, res) {
-  await deleteGalleryPhotoCore(req.params.id, req.params.photoId);
+  const result = await deleteGalleryPhotoCore(req.params.id, req.params.photoId);
+  if (!result.ok) return res.status(404).send('Wedding not found.');
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
 // Cameos are uploaded one at a time with a title, unlike Gallery's
 // multi-file batch — each entry is meant to carry its own caption.
 async function uploadCameoPhotoCore(eventId, file, title) {
+  const event = await findEventForMutation(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+
   if (file) {
     const result = await uploadImage(file.buffer, `weddings103/events/${eventId}/cameos`);
     await cameoModel.addPhoto(eventId, result.secure_url, result.public_id, title || null);
   }
+  return { ok: true };
 }
 
 async function uploadCameoPhoto(req, res) {
-  await uploadCameoPhotoCore(req.params.id, req.file, req.body.title);
+  const result = await uploadCameoPhotoCore(req.params.id, req.file, req.body.title);
+  if (!result.ok) return res.status(404).send('Wedding not found.');
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
 async function deleteCameoPhotoCore(eventId, photoId) {
+  const event = await findEventForMutation(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+
   const photo = await cameoModel.deletePhoto(eventId, photoId);
   if (photo) {
     try {
@@ -420,10 +466,12 @@ async function deleteCameoPhotoCore(eventId, photoId) {
       console.error(`Failed to delete Cloudinary image ${photo.public_id}:`, err);
     }
   }
+  return { ok: true };
 }
 
 async function deleteCameoPhoto(req, res) {
-  await deleteCameoPhotoCore(req.params.id, req.params.photoId);
+  const result = await deleteCameoPhotoCore(req.params.id, req.params.photoId);
+  if (!result.ok) return res.status(404).send('Wedding not found.');
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
