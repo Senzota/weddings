@@ -13,6 +13,13 @@ router.get('/events', requireAdmin, asyncHandler(adminController.listEvents));
 router.get('/events/new', requireAdmin, adminController.newEventForm);
 router.post('/events', requireAdmin, asyncHandler(adminController.createEvent));
 
+// input_20 Phase 10D: read-only, GET-only preview — registered before the
+// general GET /events/:id below purely for clarity/grouping with the other
+// static-suffix routes; Express matches by full path-segment shape, so a
+// 3-segment route like this one was never actually reachable-order-
+// dependent against the 2-segment GET /events/:id above it (unlike client
+// routes' GET /:token wildcard, which does have a real ordering hazard).
+router.get('/events/:id/client-preview', requireAdmin, asyncHandler(adminController.showClientPreview));
 router.get('/events/:id', requireAdmin, asyncHandler(adminController.showDashboard));
 router.get('/events/:id/edit', requireAdmin, asyncHandler(adminController.showEditForm));
 router.post('/events/:id', requireAdmin, upload.single('cardImage'), asyncHandler(adminController.updateEvent));

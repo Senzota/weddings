@@ -86,6 +86,14 @@
       </form>
     </div>
   <% } %>
+
+  <% if (inquiry.event_id) { %>
+    <!-- input_20 Phase 10D: event_id is only ever set at approval time
+         (inquiryModel.approve()'s own transaction), so this is exactly
+         "an approved, linked inquiry" — no separate query needed, the
+         value is already on this row from the existing SELECT *. -->
+    <p style="margin-top:1.5rem;"><a href="/admin/events/<%= inquiry.event_id %>/client-preview">View Client Portal</a></p>
+  <% } %>
   </main>
 </body>
 </html>

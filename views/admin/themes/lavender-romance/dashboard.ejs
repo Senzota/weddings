@@ -14,19 +14,31 @@
 <%
   // input_20 Phase 8: see botanical-bloom/dashboard.ejs's identical comment.
   var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var isPreview = typeof previewMode !== 'undefined' && previewMode;
   var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
   var editPath = isClient ? '/client/edit' : (basePath + '/edit');
 %>
 <body class="bb-admin">
+  <% if (isPreview) { %>
+    <div style="background:#fff3cd; color:#664d03; border-bottom:1px solid #ffe69c; padding:0.75rem 1.5rem; text-align:center; font-size:0.95rem;">
+      Admin preview — you are viewing this event as the client.
+      <a href="<%= returnToAdminUrl %>" style="margin-left:0.75rem; font-weight:600;">Return to Admin</a>
+    </div>
+  <% } %>
   <header class="bb-admin-header">
     <div class="bb-admin-header-inner">
-      <a class="bb-admin-header-title" href="<%= basePath %>"><%= event.couple_names %></a>
+      <% if (isPreview) { %>
+        <span class="bb-admin-header-title"><%= event.couple_names %></span>
+      <% } else { %>
+        <a class="bb-admin-header-title" href="<%= basePath %>"><%= event.couple_names %></a>
+      <% } %>
       <nav class="bb-admin-nav">
         <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
-        <a href="<%= editPath %>">Wedding Details</a>
-        <a href="<%= basePath %>/assets">Assets</a>
+        <% if (!isPreview) { %><a href="<%= editPath %>">Wedding Details</a><% } %>
+        <% if (!isPreview) { %><a href="<%= basePath %>/assets">Assets</a><% } %>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
         <% if (!isClient) { %><a href="/admin/events">All weddings</a><% } %>
+        <% if (!isClient) { %><a href="/admin/events/<%= event.id %>/client-preview">View Client Portal</a><% } %>
       </nav>
     </div>
   </header>
@@ -57,8 +69,10 @@
           <h2><%= event.couple_names %></h2>
           <p><%= event.venue %></p>
           <div class="lr-btn-row">
-            <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Wedding Link</button>
-            <a class="lr-plain-btn" href="<%= editPath %>">Edit details &rarr;</a>
+            <% if (!isPreview) { %>
+              <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Wedding Link</button>
+              <a class="lr-plain-btn" href="<%= editPath %>">Edit details &rarr;</a>
+            <% } %>
           </div>
         </div>
       </article>
@@ -101,7 +115,7 @@
 
       <!-- Gallery/Assets preview -->
       <article class="lr-card lr-gallery">
-        <div class="lr-section-head"><h2>Visual direction</h2><a href="<%= basePath %>/assets">Open Assets &rarr;</a></div>
+        <div class="lr-section-head"><h2>Visual direction</h2><% if (!isPreview) { %><a href="<%= basePath %>/assets">Open Assets &rarr;</a><% } %></div>
         <div class="lr-gallery-grid">
           <% const previewPhotos = galleryPhotos.slice(0, 3); %>
           <% if (previewPhotos.length > 0) { %>
@@ -133,23 +147,31 @@
                     <td><%= guest.seat_count %></td>
                     <td><span class="lr-code"><%= guest.passcode %></span></td>
                     <td><span class="lr-status"><%= guest.rsvp_status %></span></td>
-                    <td><button type="button" class="lr-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button></td>
+                    <td><% if (!isPreview) { %><button type="button" class="lr-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button><% } %></td>
                   </tr>
                 <% }) %>
               </tbody>
             </table>
           </div>
+          <% if (!isPreview) { %>
           <form method="POST" action="<%= basePath %>/guests" style="margin-top:1rem;">
             <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
             <textarea name="guestList" rows="4" placeholder="Sarah, 2&#10;James, 4, VIP"></textarea>
             <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
           </form>
+          <% } %>
         </article>
       <% } %>
     </div>
 
     <div class="bb-admin-section" style="margin-top:2rem;">
-      <% if (isClient) { %>
+      <% if (isPreview) { %>
+        <!-- input_20 Phase 10D: read-only, regardless of draft/live — no
+             form, no button, in either status. -->
+        <div class="bb-admin-card">
+          <p>Status: <%= event.status === 'live' ? 'Live' : 'Draft' %></p>
+        </div>
+      <% } else if (isClient) { %>
         <!-- input_20 Phase 8: no "Danger zone" heading/card for a client —
              delete is never an allowed capability, and publish is a plain
              action, not a dangerous one. Draft->live only, via

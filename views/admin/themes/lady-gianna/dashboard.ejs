@@ -14,18 +14,30 @@
 <%
   // input_20 Phase 8: see botanical-bloom/dashboard.ejs's identical comment.
   var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var isPreview = typeof previewMode !== 'undefined' && previewMode;
   var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
 %>
 <body class="lg-admin">
+  <% if (isPreview) { %>
+    <div style="background:#fff3cd; color:#664d03; border-bottom:1px solid #ffe69c; padding:0.75rem 1.5rem; text-align:center; font-size:0.95rem;">
+      Admin preview — you are viewing this event as the client.
+      <a href="<%= returnToAdminUrl %>" style="margin-left:0.75rem; font-weight:600;">Return to Admin</a>
+    </div>
+  <% } %>
   <header class="bb-admin-header">
     <div class="bb-admin-header-inner">
-      <a class="bb-admin-header-title" href="<%= basePath %>">&#127881; <%= event.couple_names %></a>
+      <% if (isPreview) { %>
+        <span class="bb-admin-header-title">&#127881; <%= event.couple_names %></span>
+      <% } else { %>
+        <a class="bb-admin-header-title" href="<%= basePath %>">&#127881; <%= event.couple_names %></a>
+      <% } %>
       <nav class="bb-admin-nav">
         <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
         <a href="#event-details">Event Details</a>
-        <a href="<%= basePath %>/assets">Assets</a>
+        <% if (!isPreview) { %><a href="<%= basePath %>/assets">Assets</a><% } %>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
         <% if (!isClient) { %><a href="/admin/events">All events</a><% } %>
+        <% if (!isClient) { %><a href="/admin/events/<%= event.id %>/client-preview">View Client Portal</a><% } %>
       </nav>
     </div>
   </header>
@@ -54,8 +66,10 @@
             <h2><%= event.couple_names %></h2>
             <p><%= event.subtitle || event.venue %></p>
             <div class="lg-admin-btn-row">
-              <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Invite Link</button>
-              <a class="bb-btn" href="<%= isClient ? '/client/edit' : (basePath + '/edit') %>">Edit details</a>
+              <% if (!isPreview) { %>
+                <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Invite Link</button>
+                <a class="bb-btn" href="<%= isClient ? '/client/edit' : (basePath + '/edit') %>">Edit details</a>
+              <% } %>
             </div>
           </div>
         </div>
@@ -92,6 +106,9 @@
       <!-- Itinerary card -->
       <article class="lg-admin-card lg-admin-itinerary">
         <h2>Itinerary</h2>
+        <% if (isPreview) { %>
+          <p style="white-space:pre-line;"><%= event.itinerary || 'No itinerary yet.' %></p>
+        <% } else { %>
         <form method="POST" action="<%= basePath %>">
           <input type="hidden" name="coupleNames" value="<%= event.couple_names %>">
           <input type="hidden" name="weddingDate" value="<%= event.wedding_date || '' %>">
@@ -99,11 +116,12 @@
           <textarea name="itinerary" placeholder="One item per line, e.g.&#10;10:00am - Arrival&#10;11:00am - Cake cutting&#10;1:00pm - Lunch"><%= event.itinerary || '' %></textarea>
           <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Save Itinerary</button>
         </form>
+        <% } %>
       </article>
 
       <!-- Assets card -->
       <article class="lg-admin-card lg-admin-assets">
-        <div class="lg-admin-section-head"><h2>Photos</h2><a href="<%= basePath %>/assets">Open Assets &rarr;</a></div>
+        <div class="lg-admin-section-head"><h2>Photos</h2><% if (!isPreview) { %><a href="<%= basePath %>/assets">Open Assets &rarr;</a><% } %></div>
         <div class="lg-admin-assets-preview">
           <% galleryPhotos.slice(0, 4).forEach(function (photo) { %>
             <div style="background-image:url('<%= photo.image_url %>')"></div>
@@ -120,6 +138,15 @@
         <% if (typeof error !== 'undefined' && error) { %>
           <p class="lg-error"><%= error %></p>
         <% } %>
+        <% if (isPreview) { %>
+          <div class="lg-admin-details-grid">
+            <div><label>Celebrant</label><p><%= event.couple_names %></p></div>
+            <div><label>Milestone</label><p><%= event.subtitle || '' %></p></div>
+            <div><label>Date</label><p><%= event.wedding_date || 'Not set' %></p></div>
+            <div class="lg-field-wide"><label>Time</label><p><%= event.event_time_note || '' %></p></div>
+            <div class="lg-field-wide"><label>Venue</label><p><%= event.venue %></p></div>
+          </div>
+        <% } else { %>
         <form method="POST" action="<%= basePath %>">
           <div class="lg-admin-details-grid">
             <div>
@@ -145,6 +172,7 @@
           </div>
           <button type="submit" class="bb-btn" style="margin-top:1rem;">Save Event Details</button>
         </form>
+        <% } %>
       </article>
 
       <!-- Guest list — input_14: omitted entirely for 'open' events. -->
@@ -165,23 +193,31 @@
                     <td><%= guest.seat_count %></td>
                     <td><span class="lg-code"><%= guest.passcode %></span></td>
                     <td><span class="lg-status"><%= guest.rsvp_status %></span></td>
-                    <td><button type="button" class="lg-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button></td>
+                    <td><% if (!isPreview) { %><button type="button" class="lg-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button><% } %></td>
                   </tr>
                 <% }) %>
               </tbody>
             </table>
           </div>
+          <% if (!isPreview) { %>
           <form method="POST" action="<%= basePath %>/guests" style="margin-top:1rem;">
             <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
             <textarea name="guestList" rows="4" placeholder="Sarah, 2&#10;James, 4, VIP"></textarea>
             <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
           </form>
+          <% } %>
         </article>
       <% } %>
 
       <!-- Danger zone — input_20 Phase 8: entirely different in client mode,
            see lavender-romance/dashboard.ejs's identical comment. -->
-      <% if (isClient) { %>
+      <% if (isPreview) { %>
+        <!-- input_20 Phase 10D: read-only, regardless of draft/live — no
+             form, no button, in either status. -->
+        <article class="lg-admin-card">
+          <p>Status: <%= event.status === 'live' ? 'Live' : 'Draft' %></p>
+        </article>
+      <% } else if (isClient) { %>
         <article class="lg-admin-card">
           <% if (typeof error !== 'undefined' && error) { %>
             <p class="lg-error"><%= error %></p>

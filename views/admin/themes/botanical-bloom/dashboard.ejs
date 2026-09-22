@@ -18,18 +18,30 @@
   // two, computed once here rather than repeating the ternary at every
   // link/form below.
   var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var isPreview = typeof previewMode !== 'undefined' && previewMode;
   var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
 %>
 <body class="bb-admin">
+  <% if (isPreview) { %>
+    <div style="background:#fff3cd; color:#664d03; border-bottom:1px solid #ffe69c; padding:0.75rem 1.5rem; text-align:center; font-size:0.95rem;">
+      Admin preview — you are viewing this event as the client.
+      <a href="<%= returnToAdminUrl %>" style="margin-left:0.75rem; font-weight:600;">Return to Admin</a>
+    </div>
+  <% } %>
   <header class="bb-admin-header">
     <div class="bb-admin-header-inner">
-      <a class="bb-admin-header-title" href="<%= basePath %>"><%= event.couple_names %></a>
+      <% if (isPreview) { %>
+        <span class="bb-admin-header-title"><%= event.couple_names %></span>
+      <% } else { %>
+        <a class="bb-admin-header-title" href="<%= basePath %>"><%= event.couple_names %></a>
+      <% } %>
       <nav class="bb-admin-nav">
         <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
         <a href="#wedding-details">Wedding Details</a>
-        <a href="<%= basePath %>/assets">Assets</a>
+        <% if (!isPreview) { %><a href="<%= basePath %>/assets">Assets</a><% } %>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
         <% if (!isClient) { %><a href="/admin/events">All weddings</a><% } %>
+        <% if (!isClient) { %><a href="/admin/events/<%= event.id %>/client-preview">View Client Portal</a><% } %>
       </nav>
     </div>
   </header>
@@ -46,8 +58,12 @@
       <div class="bb-admin-quick-grid">
         <div class="bb-admin-tile">
           <h2>Shareable invite link</h2>
-          <input type="text" readonly value="<%= baseUrl %>/invite/<%= event.id %>" onclick="this.select()">
-          <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>" style="margin-top:0.6rem;">Copy Link</button>
+          <% if (isPreview) { %>
+            <p><%= baseUrl %>/invite/<%= event.id %></p>
+          <% } else { %>
+            <input type="text" readonly value="<%= baseUrl %>/invite/<%= event.id %>" onclick="this.select()">
+            <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>" style="margin-top:0.6rem;">Copy Link</button>
+          <% } %>
         </div>
 
         <% if (!isClient && event.access_mode === 'closed') { %>
@@ -69,7 +85,11 @@
           <% if (typeof error !== 'undefined' && error) { %>
             <p class="bb-error"><%= error %></p>
           <% } %>
-          <% if (isClient) { %>
+          <% if (isPreview) { %>
+            <!-- input_20 Phase 10D: read-only, regardless of draft/live —
+                 no form, no button, in either status. -->
+            <p><%= event.status === 'live' ? 'Live' : 'Draft' %></p>
+          <% } else if (isClient) { %>
             <!-- input_20 Phase 8: draft->live only, via /client/publish
                  (publishCore) — a live event shows plain status text with
                  no form at all, so there is no markup path that could ever
@@ -107,6 +127,27 @@
       <% if (typeof error !== 'undefined' && error) { %>
         <p class="bb-error"><%= error %></p>
       <% } %>
+      <% if (isPreview) { %>
+        <!-- input_20 Phase 10D: read-only equivalent of the form below —
+             plain text in the same tile layout, no input/select/textarea/
+             file/button anywhere. -->
+        <div class="bb-details-grid">
+          <div class="bb-admin-tile"><label>Couple names</label><p><%= event.couple_names %></p></div>
+          <div class="bb-admin-tile"><label>Wedding date</label><p><%= event.wedding_date || 'Not set' %></p></div>
+          <div class="bb-admin-tile"><label>Venue</label><p><%= event.venue %></p></div>
+          <div class="bb-admin-tile">
+            <label>Card image</label>
+            <% if (event.card_image) { %>
+              <img src="<%= event.card_image %>" alt="Current card" style="max-width:100%;">
+            <% } else { %>
+              <p>No image</p>
+            <% } %>
+          </div>
+          <div class="bb-admin-tile bb-tile-wide"><label>Invitation message</label><p><%= event.invitation_message || '' %></p></div>
+          <div class="bb-admin-tile bb-tile-wide"><label>Itinerary</label><p style="white-space:pre-line;"><%= event.itinerary || '' %></p></div>
+          <div class="bb-admin-tile bb-tile-wide"><label>Contact details</label><p><%= event.contact_details || '' %></p></div>
+        </div>
+      <% } else { %>
       <form method="POST" action="<%= basePath %>" enctype="multipart/form-data">
         <div class="bb-details-grid">
           <div class="bb-admin-tile">
@@ -175,6 +216,7 @@
         </div>
         <button type="submit" class="bb-btn" style="margin-top:1.25rem;">Save</button>
       </form>
+      <% } %>
     </div>
 
     <!-- 5. Guest management: form+table (left) / instructions (right).
@@ -183,6 +225,7 @@
     <% if (event.access_mode !== 'open') { %>
       <div class="bb-admin-section bb-guest-mgmt" id="guest-list">
         <div>
+          <% if (!isPreview) { %>
           <div class="bb-admin-card" style="margin-bottom:1.5rem;">
             <h2>Add guests</h2>
             <form method="POST" action="<%= basePath %>/guests">
@@ -191,6 +234,7 @@
               <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Add Guests</button>
             </form>
           </div>
+          <% } %>
 
           <div class="bb-admin-card">
             <h2>Guest list</h2>
@@ -210,7 +254,7 @@
                     <td><%= guest.invite_group || '' %></td>
                     <td><%= guest.seat_count %></td>
                     <td><%= guest.passcode %></td>
-                    <td><button type="button" class="bb-btn copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button></td>
+                    <td><% if (!isPreview) { %><button type="button" class="bb-btn copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button><% } %></td>
                     <td><%= guest.rsvp_status %></td>
                     <td><%= guest.checked_in ? 'Yes' : 'No' %></td>
                   </tr>

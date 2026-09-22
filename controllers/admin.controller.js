@@ -154,6 +154,32 @@ async function showDashboard(req, res) {
   res.render(`admin/themes/${data.event.theme}/dashboard`, { ...data, baseUrl, error });
 }
 
+// input_20 Phase 10D: read-only admin preview of the same client-facing
+// dashboard — same data core as the real admin dashboard (getDashboardData),
+// same theme template, no session mutation of any kind (no clientId,
+// clientEventId, or admin session change), no token lookup. clientMode is
+// passed as true purely so the template reuses its existing "hide
+// admin-only nav" branches; previewMode additionally suppresses every
+// mutating control clientMode alone would still allow (publish, edit,
+// add-guest, asset upload) — see each theme dashboard's own Phase 10D
+// comment for how the two flags combine. Works identically for an
+// account-linked, anonymous/token-only, or admin-created event: this only
+// ever looks the event up by its own id, the same as the normal admin
+// dashboard already does.
+async function showClientPreview(req, res) {
+  const data = await getDashboardData(req.params.id);
+  if (!data) return res.status(404).send('Wedding not found.');
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  res.render(`admin/themes/${data.event.theme}/dashboard`, {
+    ...data,
+    baseUrl,
+    error: null,
+    clientMode: true,
+    previewMode: true,
+    returnToAdminUrl: `/admin/events/${data.event.id}`,
+  });
+}
+
 async function showEditForm(req, res) {
   const data = await getEditFormData(req.params.id);
   if (!data) return res.status(404).send('Wedding not found.');
@@ -499,6 +525,7 @@ module.exports = {
   showDashboard, showEditForm, showAssets, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
   exportGuestList, uploadGalleryPhotos, deleteGalleryPhoto,
   uploadCameoPhoto, deleteCameoPhoto,
+  showClientPreview,
   listInquiries, showInquiryDetail, approveInquiry, declineInquiry,
   // input_20 Phase 8: data-only cores + eventId-taking action cores, for
   // controllers/client.controller.js to call with req.session.clientEventId
