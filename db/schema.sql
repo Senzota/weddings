@@ -233,3 +233,20 @@ CREATE TABLE IF NOT EXISTS client_access (
   token_hash   TEXT NOT NULL UNIQUE,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- input_20 Phase 10A: self-service client account identity — separate from,
+-- and not yet linked to, booking_inquiries/events (that linkage is a later
+-- phase). Same minimal shape as the existing admin table (id/email UNIQUE/
+-- password_hash/created_at), plus full_name and optional phone since a
+-- client, unlike the single seeded admin, fills these in themselves at
+-- signup. email is stored already lowercased/trimmed by the application
+-- (models/client.model.js) before every insert, so this UNIQUE constraint
+-- is case-normalized in practice without needing a functional index.
+CREATE TABLE IF NOT EXISTS clients (
+  id            SERIAL PRIMARY KEY,
+  full_name     TEXT NOT NULL,
+  email         TEXT UNIQUE NOT NULL,
+  phone         TEXT,
+  password_hash TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);

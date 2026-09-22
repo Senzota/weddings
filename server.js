@@ -44,12 +44,29 @@ app.use(express.static(path.join(__dirname, 'public')));
 // jsqr version — no separate vendored copy to fall out of sync.
 app.get('/vendor/jsqr.js', (req, res) => res.sendFile(require.resolve('jsqr/dist/jsQR.js')));
 
+// input_20 Phase 10A: secure/httpOnly/sameSite added now that a real
+// client password-login exists (previously only cookie-store defaults
+// applied — no cookie-security options were set at all). secure is
+// conditional on NODE_ENV, not hardcoded true: this app already runs
+// behind Render's HTTPS-terminating proxy in production (trust proxy is
+// set above, and Render sets NODE_ENV=production by default), so
+// production gets a real Secure cookie — but a hardcoded `secure: true`
+// would make Express silently refuse to set the session cookie at all
+// over the plain-HTTP connection local development uses, breaking every
+// login (admin, client, this phase's new one) when run locally. httpOnly
+// was already Express-session's own default; stated explicitly here so
+// the intent isn't implicit.
 app.use(session({
   store: new pgSession({ pool, tableName: 'session', createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 }, // 8 hours
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 8, // 8 hours
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  },
 }));
 
 // input_20 Phase 5: replaces the previous unconditional redirect to

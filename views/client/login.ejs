@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — Weddings 103</title>
+  <style>
+    :root { --ph-ink: #2b2622; --ph-muted: #6b625a; --ph-accent: #8a6d3b; --ph-bg: #faf8f5; --ph-border: #e6e0d8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--ph-bg); color: var(--ph-ink); line-height: 1.55; }
+    a { color: var(--ph-accent); }
+    .ca-wrap { max-width: 440px; margin: 0 auto; padding: 48px 24px; }
+    h1 { font-size: 1.6rem; margin: 0 0 1.5rem; }
+    .ca-card { background: #fff; border: 1px solid var(--ph-border); border-radius: 12px; padding: 1.75rem; }
+    .ca-field { margin-bottom: 1rem; }
+    .ca-field label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+    .ca-field input {
+      display: block; width: 100%; padding: 0.6em 0.75em;
+      border: 1px solid var(--ph-border); border-radius: 8px;
+      background: #fff; color: var(--ph-ink); font-family: inherit; font-size: 1rem;
+    }
+    .ca-field input:focus { outline: 2px solid var(--ph-accent); outline-offset: 1px; }
+    .ca-btn {
+      display: block; width: 100%; padding: 0.75em 1.5em; margin-top: 0.5rem;
+      border: none; border-radius: 999px; background: var(--ph-accent);
+      color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    .ca-btn:focus { outline: 2px solid var(--ph-ink); outline-offset: 2px; }
+    .ca-error { background: #fdeceb; color: #7a281f; border: 1px solid #f3c3bd; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; }
+    .ca-foot { text-align: center; margin-top: 1.25rem; font-size: 0.9rem; color: var(--ph-muted); }
+  </style>
+</head>
+<body>
+  <div class="ca-wrap">
+    <h1>Sign in</h1>
+    <div class="ca-card">
+      <% if (typeof error !== 'undefined' && error) { %>
+        <p class="ca-error"><%= error %></p>
+      <% } %>
+      <form method="POST" action="/client/login" novalidate>
+        <div class="ca-field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" value="<%= (typeof values !== 'undefined' && values.email) || '' %>" required autocomplete="email">
+        </div>
+        <div class="ca-field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="ca-btn">Sign in</button>
+      </form>
+    </div>
+    <p class="ca-foot">Don't have an account? <a href="/client/register">Create one</a></p>
+    <p class="ca-foot"><a href="/">&larr; Back to homepage</a></p>
+  </div>
+</body>
+</html>

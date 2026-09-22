@@ -15,4 +15,15 @@ function requireClient(req, res, next) {
   return res.status(404).send('Link not found.');
 }
 
-module.exports = { requireAdmin, requireClient };
+// input_20 Phase 10A: checks only req.session.clientId — the account
+// identity, a separate key from clientEventId (Phase 8's per-event portal
+// session, still set only by a token or, later, an owned-event selection)
+// and from adminId. Unlike requireClient, this DOES have a real login page
+// to redirect to, since account login is a normal signed-in flow, not a
+// secret-link bootstrap.
+function requireClientAccount(req, res, next) {
+  if (req.session && req.session.clientId) return next();
+  return res.redirect('/client/login');
+}
+
+module.exports = { requireAdmin, requireClient, requireClientAccount };
