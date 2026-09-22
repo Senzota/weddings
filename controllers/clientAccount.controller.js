@@ -2,11 +2,41 @@ const bcrypt = require('bcrypt');
 const clientModel = require('../models/client.model');
 const eventModel = require('../models/event.model');
 const inquiryModel = require('../models/inquiry.model');
+const { EVENT_TYPES } = require('../config/eventTypes');
+const { AVAILABLE_THEMES } = require('../config/themes');
+const { formatEventDate } = require('../utils/formatDate');
 
 // Matches db/seed-admin.js's SALT_ROUNDS — same cost factor as this
 // project's existing admin password hashing, not a separately-invented
 // value.
 const SALT_ROUNDS = 12;
+
+// input_20 Phase 10C.1: the same slug->label lookups admin.controller.js
+// already does inline for its own inquiry/event displays, duplicated here
+// (not imported — neither is exported from that file) so the dashboard
+// never shows a raw 'botanical-bloom'/'wedding' slug to a client.
+function eventTypeLabel(slug) {
+  const match = EVENT_TYPES.find((t) => t.slug === slug);
+  return match ? match.label : slug;
+}
+function themeLabel(slug) {
+  const match = AVAILABLE_THEMES.find((t) => t.slug === slug);
+  return match ? match.label : slug;
+}
+
+// A client-friendly title built only from fields this dashboard is already
+// allowed to show (couple_names, event_type) — never an internal id. Every
+// event.couple_names value already exists for a reason unrelated to this
+// phase (an admin-typed name, or the booking inquiry's own full_name
+// carried over at approval — see inquiry.model.js's approve()), so this
+// only decides how to *present* that existing value per event type, per
+// this phase's own naming examples; it never invents new identity data.
+function eventDisplayTitle(event) {
+  const name = (event.couple_names || '').trim();
+  if (!name) return `${eventTypeLabel(event.event_type)} Celebration`;
+  if (event.event_type === 'birthday') return `${name}'s Birthday`;
+  return name;
+}
 
 function showRegister(req, res) {
   if (req.session && req.session.clientId) return res.redirect('/client/dashboard');
@@ -112,31 +142,46 @@ async function showDashboard(req, res) {
     return req.session.save(() => res.redirect('/client/login'));
   }
 
-  // input_20 Phase 10C: ownership is looked up only from the client's own
-  // session identity, never from anything request-supplied. The view gets
-  // booleans only — no event/inquiry object, id, or status ever reaches
-  // `client/dashboard`, by construction of what's passed to res.render
-  // below.
-  const event = await eventModel.findByClientId(req.session.clientId);
-  const hasPendingInquiry = event ? false : await inquiryModel.hasPendingForClient(req.session.clientId);
+  // input_20 Phase 10C.1: ownership is looked up only from the client's own
+  // session identity, never from anything request-supplied. hasPendingInquiry
+  // is computed independently of whether events exist (not short-circuited
+  // the way Phase 10C's single-event version did) — an owned event and a
+  // separate still-pending inquiry can both be true at once, and the
+  // dashboard shows a secondary notice for the latter without it displacing
+  // My Events. Each event is reduced to safe display-only fields before
+  // ever reaching the view: no client_id, no raw event id outside the one
+  // place (a hidden form field, rendered by the view, never as visible
+  // text) that ownership-scoped selection requires.
+  const events = await eventModel.findAllByClientId(req.session.clientId);
+  const hasPendingInquiry = await inquiryModel.hasPendingForClient(req.session.clientId);
+
+  const myEvents = events.map((event) => ({
+    id: event.id,
+    typeLabel: eventTypeLabel(event.event_type),
+    title: eventDisplayTitle(event),
+    dateLabel: event.wedding_date ? formatEventDate(event.wedding_date) : 'To be confirmed',
+    themeLabel: themeLabel(event.theme),
+    statusLabel: event.status === 'live' ? 'Live' : 'Draft',
+  }));
 
   res.render('client/dashboard', {
     client,
-    hasOwnedEvent: Boolean(event),
+    myEvents,
     hasPendingInquiry,
   });
 }
 
-// input_20 Phase 10C: the account-owned-event handoff into the existing
-// Phase 8 portal. The event is found solely via req.session.clientId —
-// req.params/req.query/req.body are never read here, so a forged eventId/
-// id/clientId field in the request has no path to influence which event
-// (if any) clientEventId gets set to. No owned event means a safe no-op
-// redirect: clientEventId is left exactly as it was (never cleared here),
-// since a failed account-selection attempt is not a reason to evict a
-// session that already reached the portal through a token.
+// input_20 Phase 10C.1: the account-owned-event handoff into the existing
+// Phase 8 portal, now scoped by a client-submitted eventId since an
+// account can own more than one event. The submitted value is only ever a
+// selection hint — findByIdAndClientId is the sole authority, matching
+// both id AND client_id in one query, so there is no window where an id
+// is treated as valid before ownership is confirmed. A missing, malformed,
+// nonexistent, or someone-else's-event id all collapse to the exact same
+// safe no-op: redirect to the dashboard without ever touching
+// clientEventId, revealing nothing about whether that id exists at all.
 async function selectEvent(req, res) {
-  const event = await eventModel.findByClientId(req.session.clientId);
+  const event = await eventModel.findByIdAndClientId(req.body.eventId, req.session.clientId);
 
   if (!event) {
     return res.redirect('/client/dashboard');

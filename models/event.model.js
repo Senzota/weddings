@@ -40,20 +40,35 @@ async function findById(id) {
   return rows[0];
 }
 
-// input_20 Phase 10C: the only ownership lookup this phase needs — finds
-// the account-owned event straight from clients.id, never from any
-// request-supplied event identifier. ORDER BY created_at DESC LIMIT 1 is
-// the "pick one deterministically" rule for a single-event dashboard
-// without a schema change: client_id is not UNIQUE (a client could end up
-// owning more than one event over time), so this picks the most recent
-// one rather than assuming there's only ever exactly one.
-async function findByClientId(clientId) {
+// input_20 Phase 10C.1: replaces Phase 10C's single-event findByClientId
+// (no remaining caller as of this phase — both of its call sites, in
+// clientAccount.controller.js, are updated below) now that the dashboard
+// must show every event a client owns, not just the most recent one.
+// Ownership comes solely from clients.id, never from any request-supplied
+// event identifier.
+async function findAllByClientId(clientId) {
   const { rows } = await pool.query(
     `SELECT * FROM events
      WHERE client_id = $1
-     ORDER BY created_at DESC
-     LIMIT 1`,
+     ORDER BY created_at DESC`,
     [clientId]
+  );
+  return rows;
+}
+
+// input_20 Phase 10C.1: the ownership-scoped lookup POST /client/select-event
+// needs now that a client picks among possibly several owned events — the
+// submitted eventId is a selection hint only, never authority, so this is
+// the one place that decides whether it actually belongs to this client.
+// Same numeric guard as findById (a forged/malformed id must never reach
+// Postgres as a syntax error), plus the client_id match in the same query
+// rather than as a separate check, so there is no window where an id is
+// treated as "found" before ownership is confirmed.
+async function findByIdAndClientId(eventId, clientId) {
+  if (!/^\d+$/.test(String(eventId))) return undefined;
+  const { rows } = await pool.query(
+    'SELECT * FROM events WHERE id = $1 AND client_id = $2',
+    [eventId, clientId]
   );
   return rows[0];
 }
@@ -149,4 +164,4 @@ async function getStats(id) {
   return rows[0];
 }
 
-module.exports = { create, findAll, findById, update, setStatus, getStats, findByClientId };
+module.exports = { create, findAll, findById, update, setStatus, getStats, findAllByClientId, findByIdAndClientId };
