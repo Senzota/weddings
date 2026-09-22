@@ -477,6 +477,13 @@ body.lg-locked { overflow: hidden; height: 100vh; }
 
 .lg-admin-danger { grid-column: span 4; border-color: var(--lg-rose); }
 
+/* Bug-fix pass: a semantically neutral full-width helper for grid items
+   that need the same grid-column: span 4 behavior as every other card in
+   .lg-admin-grid but aren't the (admin-only) danger zone — specifically the
+   client-facing status/publish card, which previously had no spanning
+   class at all and rendered squeezed into a single (of four) grid column. */
+.lg-admin-full { grid-column: span 4; }
+
 @media (max-width: 1000px) {
   .lg-admin-itinerary, .lg-admin-assets { grid-column: span 4; }
   .lg-bubble-grid { grid-template-columns: repeat(2, 1fr); }

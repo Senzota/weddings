@@ -4,6 +4,7 @@ const eventModel = require('../models/event.model');
 const inquiryModel = require('../models/inquiry.model');
 const { EVENT_TYPES } = require('../config/eventTypes');
 const { AVAILABLE_THEMES, themesForEventType } = require('../config/themes');
+const { ACCESS_MODES } = require('../config/accessModes');
 const { formatEventDate } = require('../utils/formatDate');
 
 // Matches db/seed-admin.js's SALT_ROUNDS — same cost factor as this
@@ -220,6 +221,7 @@ async function showBookEventForm(req, res) {
     client,
     eventTypes: activeEventTypes(),
     themes: AVAILABLE_THEMES,
+    accessModes: ACCESS_MODES,
     error: null,
     values: {},
   });
@@ -240,12 +242,13 @@ async function submitBookEvent(req, res) {
     return req.session.save(() => res.redirect('/client/login'));
   }
 
-  const { eventType, preferredTheme, note } = req.body;
-  const values = { eventType, preferredTheme, note };
+  const { eventType, preferredTheme, note, accessMode } = req.body;
+  const values = { eventType, preferredTheme, note, accessMode };
   const rerender = (error) => res.render('client/book-event', {
     client,
     eventTypes: activeEventTypes(),
     themes: AVAILABLE_THEMES,
+    accessModes: ACCESS_MODES,
     error,
     values,
   });
@@ -259,6 +262,14 @@ async function submitBookEvent(req, res) {
   if (preferredTheme && !themesForEventType(eventType).some((t) => t.slug === preferredTheme)) {
     return rerender('That theme is not available for the selected event type.');
   }
+  // Bug-fix pass: strictly validated against the existing registry — a
+  // missing or forged accessMode value (anything not already one of
+  // config/accessModes.js's own slugs) is rejected the same way an invalid
+  // eventType/preferredTheme already is above, and never silently coerced
+  // to 'closed' or any other value.
+  if (!accessMode || !ACCESS_MODES.some((m) => m.slug === accessMode)) {
+    return rerender('Please choose how guests should access this event.');
+  }
 
   await inquiryModel.create({
     fullName: client.full_name,
@@ -268,6 +279,7 @@ async function submitBookEvent(req, res) {
     preferredTheme,
     note,
     clientId: req.session.clientId,
+    preferredAccessMode: accessMode,
   });
   res.redirect('/client/dashboard');
 }

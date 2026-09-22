@@ -64,6 +64,11 @@
       <span class="detail-label">Preferred theme</span>
       <span class="detail-value"><%= preferredThemeLabel || 'No preference' %></span>
     </div>
+    <% var accessModeLabels = { open: 'Open event', recognized: 'Recognised guests', closed: 'Private event' }; %>
+    <div class="detail-row">
+      <span class="detail-label">Requested access mode</span>
+      <span class="detail-value"><%= accessModeLabels[inquiry.preferred_access_mode] || 'No preference stated' %></span>
+    </div>
     <div class="detail-row">
       <span class="detail-label">Note</span>
       <span class="detail-value"><%= inquiry.note || '' %></span>

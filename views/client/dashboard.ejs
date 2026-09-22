@@ -124,6 +124,20 @@
 
     /* State C: My Events */
     .cd-section-head { margin-bottom: 1.75rem; }
+    .cd-section-head-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .cd-cta-btn-secondary {
+      flex-shrink: 0;
+      background: transparent;
+      border: 1px solid var(--cd-accent-deep);
+      color: var(--cd-accent-deep);
+    }
+    .cd-cta-btn-secondary:hover { background: var(--cd-wash); color: var(--cd-accent-deep); }
     .cd-section-head h2 {
       font-family: 'Cormorant Garamond', serif;
       font-size: 1.9rem;
@@ -236,9 +250,12 @@
     </header>
 
     <% if (myEvents.length > 0) { %>
-      <section class="cd-section-head">
-        <h2>My Events</h2>
-        <p>Your approved celebrations are ready to manage.</p>
+      <section class="cd-section-head cd-section-head-row">
+        <div>
+          <h2>My Events</h2>
+          <p>Your approved celebrations are ready to manage.</p>
+        </div>
+        <a href="/client/book-event" class="cd-cta-btn cd-cta-btn-secondary">Book Another Event</a>
       </section>
 
       <div class="cd-events-grid <%= myEvents.length === 1 ? 'cd-events-single' : '' %>">

@@ -266,3 +266,19 @@ ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS client_id INTEGER
   REFERENCES clients(id) ON DELETE SET NULL;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS client_id INTEGER
   REFERENCES clients(id) ON DELETE SET NULL;
+
+-- Bug-fix pass (post-input_20): the authenticated client booking form never
+-- collected an access-mode preference, so every approved inquiry silently
+-- became events.access_mode = 'closed' (that column's own default) with no
+-- way for the client to ask for anything else. This column is the missing
+-- link: an optional, nullable preference recorded at booking time and read
+-- only by inquiry.model.js's approve() transaction (see that file). No
+-- DEFAULT here deliberately — NULL means "no preference stated," which
+-- covers every pre-existing row (nothing to backfill; a guess from old data
+-- would be exactly the kind of invented value this column exists to avoid)
+-- and the still-supported anonymous/legacy /inquiries path, which has no
+-- access-mode field either and must keep landing on events.access_mode's
+-- own existing default, completely unchanged. events.access_mode itself is
+-- untouched — this is additive on booking_inquiries only.
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS preferred_access_mode TEXT
+  CHECK (preferred_access_mode IN ('open', 'recognized', 'closed'));

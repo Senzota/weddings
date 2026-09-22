@@ -95,6 +95,35 @@
       font-size: 1rem;
     }
     .cb-field textarea { min-height: 100px; }
+    .cb-fieldset {
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+    .cb-fieldset legend {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      padding: 0;
+    }
+    .cb-radio-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6em;
+      padding: 0.65em 0.8em;
+      border: 1px solid var(--cd-border);
+      border-radius: 8px;
+      margin-top: 8px;
+      cursor: pointer;
+      font-weight: 400;
+    }
+    .cb-radio-option:first-of-type { margin-top: 4px; }
+    .cb-radio-option input[type="radio"] {
+      margin-top: 0.25em;
+      flex-shrink: 0;
+    }
+    .cb-radio-option strong { display: block; font-size: 0.95rem; }
+    .cb-radio-desc { display: block; font-size: 0.85rem; color: var(--cd-muted); margin-top: 2px; }
     .cb-submit-btn {
       display: inline-block;
       margin-top: 1.5rem;
@@ -143,6 +172,36 @@
               <option value="<%= t.slug %>" <%= values.eventType === t.slug ? 'selected' : '' %>><%= t.label %></option>
             <% }) %>
           </select>
+        </div>
+        <%
+          // Client-facing framing for each config/accessModes.js slug — the
+          // registry's own .label values are admin/technical wording
+          // ("Closed — code, RSVP, QR gatepass..."), not client-facing copy,
+          // so this maps each already-registered slug to plain guest-facing
+          // text. The <input value="..."> below still comes from
+          // accessModes[].slug itself, never a value invented here — this
+          // object only supplies display text for a slug the registry
+          // already defines.
+          var accessModeCopy = {
+            open: { title: 'Open event', description: 'Guests can access the invitation experience through the event link, subject to the platform’s existing rules.' },
+            recognized: { title: 'Recognised guests', description: 'Intended for identified invited guests under the existing event access rules.' },
+            closed: { title: 'Private event', description: 'Access is restricted to invited guests using the existing verification or passcode process.' },
+          };
+        %>
+        <div class="cb-field">
+          <fieldset class="cb-fieldset">
+            <legend>How should guests access this event?</legend>
+            <% accessModes.forEach(function (mode) { %>
+              <% var copy = accessModeCopy[mode.slug] || { title: mode.label, description: '' }; %>
+              <label class="cb-radio-option">
+                <input type="radio" name="accessMode" value="<%= mode.slug %>" required <%= values.accessMode === mode.slug ? 'checked' : '' %>>
+                <span>
+                  <strong><%= copy.title %></strong>
+                  <% if (copy.description) { %><span class="cb-radio-desc"><%= copy.description %></span><% } %>
+                </span>
+              </label>
+            <% }) %>
+          </fieldset>
         </div>
         <div class="cb-field">
           <label for="preferredTheme">Preferred theme (optional)</label>

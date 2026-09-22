@@ -9,12 +9,19 @@ const { themesForEventType, DEFAULT_THEME_BY_EVENT_TYPE } = require('../config/t
 // (controllers/public.controller.js) derives it from req.session.clientId
 // only, never from request body/query, and passes NULL for an anonymous
 // visitor. Nothing about validation or the existing insert shape changes.
+// Bug-fix pass: preferredAccessMode is the same shape of additive, optional
+// field — the authenticated client booking flow (clientAccount.controller.js)
+// passes one of 'open'/'recognized'/'closed' after validating it against
+// config/accessModes.js; the still-supported legacy/anonymous public
+// inquiry flow (public.controller.js) never passes this field at all, so it
+// lands as NULL here exactly as every column this function already treats
+// as optional does — no behavior change for that caller.
 async function create(fields) {
-  const { fullName, phone, email, eventType, preferredTheme, note, clientId } = fields;
+  const { fullName, phone, email, eventType, preferredTheme, note, clientId, preferredAccessMode } = fields;
   const { rows } = await pool.query(
-    `INSERT INTO booking_inquiries (full_name, phone, email, event_type, preferred_theme, note, client_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [fullName, phone, email, eventType, preferredTheme || null, note || null, clientId || null]
+    `INSERT INTO booking_inquiries (full_name, phone, email, event_type, preferred_theme, note, client_id, preferred_access_mode)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    [fullName, phone, email, eventType, preferredTheme || null, note || null, clientId || null, preferredAccessMode || null]
   );
   return rows[0];
 }
@@ -162,10 +169,25 @@ async function approve(id, adminId) {
     // same transaction. Never re-derived from email or any other request
     // data here — the inquiry row is the only source of truth, and an
     // anonymous inquiry's NULL client_id simply carries through as NULL.
+    // Bug-fix pass: preferred_access_mode is only ever NULL or one of the
+    // three valid slugs (booking_inquiries' own CHECK constraint already
+    // guarantees this — no re-validation needed here). When present, it's
+    // included explicitly in the INSERT; when NULL (every legacy/anonymous
+    // inquiry, and any client inquiry from before this column existed),
+    // the column is omitted entirely from the statement so
+    // events.access_mode's own existing DEFAULT 'closed' applies exactly
+    // as it always has — never a hardcoded 'closed' literal duplicated
+    // here, the real schema default.
+    const hasAccessModePreference = inquiry.preferred_access_mode !== null
+      && inquiry.preferred_access_mode !== undefined;
+    const insertColumns = `couple_names, wedding_date, venue, event_type, theme, status, client_id${hasAccessModePreference ? ', access_mode' : ''}`;
+    const insertPlaceholders = `$1, NULL, $2, $3, $4, 'draft', $5${hasAccessModePreference ? ', $6' : ''}`;
+    const insertParams = [inquiry.full_name, 'Venue to be confirmed', inquiry.event_type, theme, inquiry.client_id];
+    if (hasAccessModePreference) insertParams.push(inquiry.preferred_access_mode);
+
     const { rows: eventRows } = await client.query(
-      `INSERT INTO events (couple_names, wedding_date, venue, event_type, theme, status, client_id)
-       VALUES ($1, NULL, $2, $3, $4, 'draft', $5) RETURNING *`,
-      [inquiry.full_name, 'Venue to be confirmed', inquiry.event_type, theme, inquiry.client_id]
+      `INSERT INTO events (${insertColumns}) VALUES (${insertPlaceholders}) RETURNING *`,
+      insertParams
     );
     const event = eventRows[0];
 

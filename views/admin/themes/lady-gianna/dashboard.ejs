@@ -214,11 +214,11 @@
       <% if (isPreview) { %>
         <!-- input_20 Phase 10D: read-only, regardless of draft/live — no
              form, no button, in either status. -->
-        <article class="lg-admin-card">
+        <article class="lg-admin-card lg-admin-full">
           <p>Status: <%= event.status === 'live' ? 'Live' : 'Draft' %></p>
         </article>
       <% } else if (isClient) { %>
-        <article class="lg-admin-card">
+        <article class="lg-admin-card lg-admin-full">
           <% if (typeof error !== 'undefined' && error) { %>
             <p class="lg-error"><%= error %></p>
           <% } %>
