@@ -5,12 +5,16 @@ const { themesForEventType, DEFAULT_THEME_BY_EVENT_TYPE } = require('../config/t
 // input_20 Phase 5: only the minimal create operation this phase needs.
 // Listing (Phase 6), approve/decline (Phase 7), and token issuance
 // (Phase 8) are deliberately not implemented here yet.
+// input_20 Phase 10B: clientId is an additive, optional field — the caller
+// (controllers/public.controller.js) derives it from req.session.clientId
+// only, never from request body/query, and passes NULL for an anonymous
+// visitor. Nothing about validation or the existing insert shape changes.
 async function create(fields) {
-  const { fullName, phone, email, eventType, preferredTheme, note } = fields;
+  const { fullName, phone, email, eventType, preferredTheme, note, clientId } = fields;
   const { rows } = await pool.query(
-    `INSERT INTO booking_inquiries (full_name, phone, email, event_type, preferred_theme, note)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [fullName, phone, email, eventType, preferredTheme || null, note || null]
+    `INSERT INTO booking_inquiries (full_name, phone, email, event_type, preferred_theme, note, client_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [fullName, phone, email, eventType, preferredTheme || null, note || null, clientId || null]
   );
   return rows[0];
 }
@@ -116,10 +120,16 @@ async function approve(id, adminId) {
     // (a person's name, regardless of event type — see config/
     // eventTypes.js's titleLabel field, which only changes the *label*
     // shown for this same column, never what's stored in it).
+    // input_20 Phase 10B: carries the claimed inquiry's own client_id (set,
+    // if at all, only at submission time from req.session.clientId — see
+    // public.controller.js) straight onto the event it becomes, inside this
+    // same transaction. Never re-derived from email or any other request
+    // data here — the inquiry row is the only source of truth, and an
+    // anonymous inquiry's NULL client_id simply carries through as NULL.
     const { rows: eventRows } = await client.query(
-      `INSERT INTO events (couple_names, wedding_date, venue, event_type, theme, status)
-       VALUES ($1, NULL, $2, $3, $4, 'draft') RETURNING *`,
-      [inquiry.full_name, 'Venue to be confirmed', inquiry.event_type, theme]
+      `INSERT INTO events (couple_names, wedding_date, venue, event_type, theme, status, client_id)
+       VALUES ($1, NULL, $2, $3, $4, 'draft', $5) RETURNING *`,
+      [inquiry.full_name, 'Venue to be confirmed', inquiry.event_type, theme, inquiry.client_id]
     );
     const event = eventRows[0];
 

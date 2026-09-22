@@ -250,3 +250,19 @@ CREATE TABLE IF NOT EXISTS clients (
   password_hash TEXT NOT NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- input_20 Phase 10B: ownership linkage only — ties a booking inquiry (and
+-- later, the event it becomes) to the client account that submitted it, if
+-- any. Both columns are nullable: a signed-out visitor can still submit an
+-- inquiry exactly as before, leaving client_id NULL end to end. ON DELETE
+-- SET NULL rather than CASCADE — deleting a client account must never
+-- silently delete someone's booking inquiry or event; it should just
+-- become unowned again, the same state an anonymous submission is already
+-- in. No backfill: rows created before this phase have no session-derived
+-- client to attribute them to, so they stay NULL rather than being guessed
+-- at from email text (see inquiry.model.js's approve() for why email
+-- matching is deliberately never used to infer ownership).
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS client_id INTEGER
+  REFERENCES clients(id) ON DELETE SET NULL;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS client_id INTEGER
+  REFERENCES clients(id) ON DELETE SET NULL;

@@ -44,7 +44,13 @@ async function createInquiry(req, res) {
     return showHome(req, res, { error: 'That theme is not available for the selected event type.', values });
   }
 
-  await inquiryModel.create({ fullName, phone, email, eventType, preferredTheme, note });
+  // input_20 Phase 10B: server-derived only — req.session.clientId is set
+  // solely by the existing Phase 10A login/register flow, never by this
+  // request's own body/query, so a forged clientId field in the submitted
+  // form is simply ignored (inquiryModel.create() never reads req.body).
+  const clientId = req.session && req.session.clientId ? req.session.clientId : null;
+
+  await inquiryModel.create({ fullName, phone, email, eventType, preferredTheme, note, clientId });
   res.redirect('/?submitted=1');
 }
 

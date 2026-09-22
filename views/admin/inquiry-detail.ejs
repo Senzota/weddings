@@ -68,6 +68,10 @@
       <span class="detail-label">Note</span>
       <span class="detail-value"><%= inquiry.note || '' %></span>
     </div>
+    <div class="detail-row">
+      <span class="detail-label">Source</span>
+      <span class="detail-value"><%= inquiry.client_id ? 'Submitted from client account' : 'Anonymous booking' %></span>
+    </div>
   </div>
 
   <% if (inquiry.status === 'new') { %>
