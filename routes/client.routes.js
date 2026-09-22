@@ -1,10 +1,24 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const clientController = require('../controllers/client.controller');
 const clientAccountController = require('../controllers/clientAccount.controller');
 const { requireClient, requireClientAccount } = require('../middleware/auth.middleware');
 const upload = require('../config/upload');
 const asyncHandler = require('../utils/asyncHandler');
+
+// input_20 Phase 11A: a narrowly-scoped equivalent of public.routes.js's
+// own inquiryLimiter (same window/max) — a separate instance rather than
+// an imported/shared one, so this router doesn't need to reach into
+// public.routes.js and server.js stays untouched. Applied only to
+// POST /client/book-event below; every other client route (dashboard,
+// select-event, the Phase 8 portal) is unaffected.
+const bookEventLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // input_20 Phase 8 / Phase 10A. GET /:token is registered last among this
 // router's GET routes deliberately — Express matches routes in
@@ -24,6 +38,12 @@ router.get('/dashboard', requireClientAccount, asyncHandler(clientAccountControl
 // shadowed by GET /:token below regardless of registration order; kept
 // here anyway, grouped with the other requireClientAccount routes.
 router.post('/select-event', requireClientAccount, asyncHandler(clientAccountController.selectEvent));
+// input_20 Phase 11A: booking moves into the authenticated client account.
+// Static routes, so — like /select-event above — never shadowed by
+// GET /:token below regardless of order; grouped here with the other
+// requireClientAccount routes for the same clarity reason.
+router.get('/book-event', requireClientAccount, asyncHandler(clientAccountController.showBookEventForm));
+router.post('/book-event', requireClientAccount, bookEventLimiter, asyncHandler(clientAccountController.submitBookEvent));
 
 router.get('/edit', requireClient, asyncHandler(clientController.showEditForm));
 router.get('/assets', requireClient, asyncHandler(clientController.showAssets));

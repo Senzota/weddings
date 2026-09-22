@@ -3,7 +3,7 @@ const clientModel = require('../models/client.model');
 const eventModel = require('../models/event.model');
 const inquiryModel = require('../models/inquiry.model');
 const { EVENT_TYPES } = require('../config/eventTypes');
-const { AVAILABLE_THEMES } = require('../config/themes');
+const { AVAILABLE_THEMES, themesForEventType } = require('../config/themes');
 const { formatEventDate } = require('../utils/formatDate');
 
 // Matches db/seed-admin.js's SALT_ROUNDS — same cost factor as this
@@ -36,6 +36,16 @@ function eventDisplayTitle(event) {
   if (!name) return `${eventTypeLabel(event.event_type)} Celebration`;
   if (event.event_type === 'birthday') return `${name}'s Birthday`;
   return name;
+}
+
+// input_20 Phase 11A: the same "active means at least one theme is
+// registered for it" derivation public.controller.js's own activeEventTypes()
+// already uses for the (now-legacy) public inquiry form — duplicated here
+// for the same reason that file's own comment gives: neither
+// admin.controller.js nor public.controller.js exports this, and this
+// phase's scope doesn't touch either of those files.
+function activeEventTypes() {
+  return EVENT_TYPES.filter((t) => themesForEventType(t.slug).length > 0);
 }
 
 function showRegister(req, res) {
@@ -195,4 +205,74 @@ async function selectEvent(req, res) {
   });
 }
 
-module.exports = { showRegister, register, showLogin, login, logout, showDashboard, selectEvent };
+// input_20 Phase 11A: booking now lives inside the client account, not the
+// public homepage. Same "session references an account that no longer
+// exists" handling as showDashboard — clear only the client-account/access
+// keys and redirect to login, never touch adminId/verifiedGuests.
+async function showBookEventForm(req, res) {
+  const client = await clientModel.findById(req.session.clientId);
+  if (!client) {
+    delete req.session.clientId;
+    delete req.session.clientEventId;
+    return req.session.save(() => res.redirect('/client/login'));
+  }
+  res.render('client/book-event', {
+    client,
+    eventTypes: activeEventTypes(),
+    themes: AVAILABLE_THEMES,
+    error: null,
+    values: {},
+  });
+}
+
+// input_20 Phase 11A: the client-account equivalent of the (now-legacy)
+// public.controller.js#createInquiry — same active-type/theme-pairing
+// validation rules, called directly against inquiryModel.create() rather
+// than through an HTTP round-trip to POST /inquiries. fullName/phone/email
+// come only from the server-side client record just looked up here, never
+// from req.body, so a forged fullName/phone/email/clientId/status/eventId/
+// token field in the submitted form has no path to reach the inserted row.
+async function submitBookEvent(req, res) {
+  const client = await clientModel.findById(req.session.clientId);
+  if (!client) {
+    delete req.session.clientId;
+    delete req.session.clientEventId;
+    return req.session.save(() => res.redirect('/client/login'));
+  }
+
+  const { eventType, preferredTheme, note } = req.body;
+  const values = { eventType, preferredTheme, note };
+  const rerender = (error) => res.render('client/book-event', {
+    client,
+    eventTypes: activeEventTypes(),
+    themes: AVAILABLE_THEMES,
+    error,
+    values,
+  });
+
+  if (!eventType) {
+    return rerender('Please select an event type.');
+  }
+  if (!activeEventTypes().some((t) => t.slug === eventType)) {
+    return rerender('That event type is not available yet.');
+  }
+  if (preferredTheme && !themesForEventType(eventType).some((t) => t.slug === preferredTheme)) {
+    return rerender('That theme is not available for the selected event type.');
+  }
+
+  await inquiryModel.create({
+    fullName: client.full_name,
+    phone: client.phone,
+    email: client.email,
+    eventType,
+    preferredTheme,
+    note,
+    clientId: req.session.clientId,
+  });
+  res.redirect('/client/dashboard');
+}
+
+module.exports = {
+  showRegister, register, showLogin, login, logout, showDashboard, selectEvent,
+  showBookEventForm, submitBookEvent,
+};

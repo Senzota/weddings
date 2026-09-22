@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book an event — Weddings 103</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cd-ink: #2b2622;
+      --cd-muted: #6b625a;
+      --cd-accent: #a68a54;
+      --cd-accent-deep: #8a6d3b;
+      --cd-bg: #faf6ee;
+      --cd-card-bg: #fffdf9;
+      --cd-border: #e8dfd0;
+      --cd-radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--cd-bg);
+      color: var(--cd-ink);
+      line-height: 1.6;
+    }
+    a { color: var(--cd-accent-deep); }
+    :focus-visible {
+      outline: 3px solid var(--cd-accent-deep);
+      outline-offset: 3px;
+    }
+
+    .cb-wrap { max-width: 640px; margin: 0 auto; padding: 40px 24px 72px; }
+
+    .cb-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--cd-accent-deep);
+      margin: 0 0 10px;
+    }
+    .cb-identity {
+      margin: 0 0 8px;
+      color: var(--cd-muted);
+      font-size: 0.9rem;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    .cb-intro {
+      margin: 0 0 32px;
+      color: var(--cd-muted);
+    }
+
+    .cb-card {
+      background: var(--cd-card-bg);
+      border: 1px solid var(--cd-border);
+      border-radius: var(--cd-radius);
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(43, 38, 34, 0.05);
+    }
+    .cb-error {
+      background: #fdeceb;
+      color: #7a281f;
+      border: 1px solid #f3c3bd;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+    }
+    .cb-field { margin-bottom: 1.25rem; }
+    .cb-field:last-of-type { margin-bottom: 0; }
+    .cb-field label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .cb-field select,
+    .cb-field textarea {
+      display: block;
+      width: 100%;
+      padding: 0.65em 0.8em;
+      border: 1px solid var(--cd-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--cd-ink);
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    .cb-field textarea { min-height: 100px; }
+    .cb-submit-btn {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.75em 1.85em;
+      border: none;
+      border-radius: 999px;
+      background: var(--cd-accent-deep);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s ease;
+    }
+    .cb-submit-btn:hover { background: #755a2e; }
+    @media (prefers-reduced-motion: reduce) {
+      .cb-submit-btn { transition: none; }
+    }
+
+    .cb-foot { margin-top: 2rem; font-size: 0.9rem; }
+    .cb-foot a { color: var(--cd-muted); }
+
+    @media (max-width: 640px) {
+      .cb-wrap { padding: 28px 18px 56px; }
+      .cb-card { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cb-wrap">
+    <p class="cb-eyebrow">Weddings 103</p>
+    <p class="cb-identity">Booking as <%= client.full_name %></p>
+    <h1>Tell us about your event</h1>
+    <p class="cb-intro">A few details are all we need to start planning with you.</p>
+
+    <div class="cb-card">
+      <% if (error) { %>
+        <p class="cb-error"><%= error %></p>
+      <% } %>
+      <form method="POST" action="/client/book-event" novalidate>
+        <div class="cb-field">
+          <label for="eventType">Event type</label>
+          <select id="eventType" name="eventType" required>
+            <option value="" <%= !values.eventType ? 'selected' : '' %>>Select an event type</option>
+            <% eventTypes.forEach(function (t) { %>
+              <option value="<%= t.slug %>" <%= values.eventType === t.slug ? 'selected' : '' %>><%= t.label %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="cb-field">
+          <label for="preferredTheme">Preferred theme (optional)</label>
+          <select id="preferredTheme" name="preferredTheme">
+            <option value="">No preference</option>
+            <% themes.forEach(function (theme) { %>
+              <option value="<%= theme.slug %>" data-event-type="<%= theme.eventType %>" <%= values.preferredTheme === theme.slug ? 'selected' : '' %>><%= theme.label %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="cb-field">
+          <label for="note">Anything else? (optional)</label>
+          <textarea id="note" name="note"><%= values.note || '' %></textarea>
+        </div>
+        <button type="submit" class="cb-submit-btn">Send Booking Request</button>
+      </form>
+    </div>
+
+    <p class="cb-foot"><a href="/client/dashboard">&larr; Back to dashboard</a></p>
+  </div>
+
+  <script src="/assets/js/booking-theme-filter.js"></script>
+</body>
+</html>
