@@ -24,16 +24,32 @@
   <link rel="stylesheet" href="/assets/css/admin-shared.css">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
+<%
+  // input_20 Phase 8: this file wasn't in the originally-listed set of
+  // views to modify, but it's reused as-is for GET /client/assets (per
+  // the audit's "reuse existing views" design) and its header nav has an
+  // admin-only "All weddings" link — necessary to hide, same as every
+  // dashboard's identical link, so it's changed here too, minimally.
+  var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
+  // input_20 Phase 8: the client's gallery/cameo action routes are nested
+  // under /client/assets/... (per the approved client route list), while
+  // the admin's equivalents sit directly under the event base
+  // (/admin/events/:id/gallery, no /assets segment) — this second base
+  // path exists only because those two shapes genuinely differ, not a
+  // copy/paste inconsistency.
+  var assetsActionBase = isClient ? '/client/assets' : basePath;
+%>
 <body class="bb-admin">
   <header class="bb-admin-header">
     <div class="bb-admin-header-inner">
-      <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>"><%= event.couple_names %></a>
+      <a class="bb-admin-header-title" href="<%= basePath %>"><%= event.couple_names %></a>
       <nav class="bb-admin-nav">
-        <a href="/admin/events/<%= event.id %>#guest-list">Guest List</a>
-        <a href="/admin/events/<%= event.id %>#wedding-details">Wedding Details</a>
-        <a href="/admin/events/<%= event.id %>/assets" class="bb-admin-nav-active">Assets</a>
+        <a href="<%= basePath %>#guest-list">Guest List</a>
+        <a href="<%= basePath %>#wedding-details">Wedding Details</a>
+        <a href="<%= basePath %>/assets" class="bb-admin-nav-active">Assets</a>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
-        <a href="/admin/events">All weddings</a>
+        <% if (!isClient) { %><a href="/admin/events">All weddings</a><% } %>
       </nav>
     </div>
   </header>
@@ -46,7 +62,7 @@
       <div class="bb-admin-card">
         <h2>Gallery</h2>
         <p>Plain photos — no caption, shown to every guest who's entered their passcode.</p>
-        <form method="POST" action="/admin/events/<%= event.id %>/gallery" enctype="multipart/form-data">
+        <form method="POST" action="<%= assetsActionBase %>/gallery" enctype="multipart/form-data">
           <input type="file" name="photos" accept="image/png,image/jpeg,image/webp" multiple>
           <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Upload Photos</button>
         </form>
@@ -55,7 +71,7 @@
             <% galleryPhotos.forEach(function (photo) { %>
               <div class="bb-admin-gallery-item">
                 <img src="<%= photo.image_url %>" alt="">
-                <form method="POST" action="/admin/events/<%= event.id %>/gallery/<%= photo.id %>/delete" onsubmit="return confirm('Delete this photo?');">
+                <form method="POST" action="<%= assetsActionBase %>/gallery/<%= photo.id %>/delete" onsubmit="return confirm('Delete this photo?');">
                   <button type="submit" title="Delete photo">&times;</button>
                 </form>
               </div>
@@ -69,7 +85,10 @@
       <div class="bb-admin-card">
         <h2>Cameos</h2>
         <p>Photos of family/friends "who wish to be seen" — a title/caption is optional.</p>
-        <form method="POST" action="/admin/events/<%= event.id %>/cameos" enctype="multipart/form-data">
+        <!-- input_20 Phase 8: admin's route is plural (/cameos, existing);
+             the client route list this phase approved is singular
+             (/client/assets/cameo) — genuinely different paths, not a typo. -->
+        <form method="POST" action="<%= assetsActionBase %>/<%= isClient ? 'cameo' : 'cameos' %>" enctype="multipart/form-data">
           <label>Title (optional) <input type="text" name="title" placeholder="e.g. The Best Man, or a Save-the-Date for Aisha &amp; Zuberi"></label>
           <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required style="margin-top:0.6rem;">
           <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Upload Cameo</button>
@@ -82,7 +101,7 @@
                 <% if (photo.title) { %>
                   <span class="bb-admin-gallery-caption"><%= photo.title %></span>
                 <% } %>
-                <form method="POST" action="/admin/events/<%= event.id %>/cameos/<%= photo.id %>/delete" onsubmit="return confirm('Delete this cameo?');">
+                <form method="POST" action="<%= assetsActionBase %>/<%= isClient ? 'cameo' : 'cameos' %>/<%= photo.id %>/delete" onsubmit="return confirm('Delete this cameo?');">
                   <button type="submit" title="Delete cameo">&times;</button>
                 </form>
               </div>

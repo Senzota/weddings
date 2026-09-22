@@ -110,88 +110,108 @@ function daysUntil(dateStr) {
   return Math.max(0, Math.round(diffMs / 86400000));
 }
 
-async function showDashboard(req, res) {
-  const event = await eventModel.findById(req.params.id);
-  if (!event) return res.status(404).send('Wedding not found.');
+// input_20 Phase 8: data-only cores (eventId in, plain data out, no
+// render/response) — reused by both the admin route handlers below
+// (unchanged outward behavior) and controllers/client.controller.js
+// (which supplies req.session.clientEventId instead of req.params.id).
+// Splitting the data fetch from the render lets both callers render with
+// their own baseUrl/error/clientMode handling while sharing one fetch.
+async function getDashboardData(eventId) {
+  const event = await eventModel.findById(eventId);
+  if (!event) return null;
   const guests = await guestModel.findByEvent(event.id);
   const stats = await eventModel.getStats(event.id);
   const galleryPhotos = await galleryModel.findByEvent(event.id);
   const cameoPhotos = await cameoModel.findByEvent(event.id);
+  return {
+    event, guests, stats, galleryPhotos, cameoPhotos,
+    daysToGo: daysUntil(event.wedding_date), themes: AVAILABLE_THEMES,
+  };
+}
+
+async function getEditFormData(eventId) {
+  const event = await eventModel.findById(eventId);
+  if (!event) return null;
+  return { event, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: activeEventTypes() };
+}
+
+async function getAssetsData(eventId) {
+  const event = await eventModel.findById(eventId);
+  if (!event) return null;
+  const galleryPhotos = await galleryModel.findByEvent(event.id);
+  const cameoPhotos = await cameoModel.findByEvent(event.id);
+  return { event, galleryPhotos, cameoPhotos };
+}
+
+async function showDashboard(req, res) {
+  const data = await getDashboardData(req.params.id);
+  if (!data) return res.status(404).send('Wedding not found.');
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   // input_20 Phase 2: toggleStatus redirects back here with this query
   // param when it refuses to publish a dateless draft — surfaced the same
   // way updateEvent's own validation error already is elsewhere.
   const error = req.query.error === 'needs_date' ? 'Set a date before publishing this event.' : null;
-  res.render(`admin/themes/${event.theme}/dashboard`, {
-    event, guests, stats, galleryPhotos, cameoPhotos, baseUrl, error,
-    daysToGo: daysUntil(event.wedding_date), themes: AVAILABLE_THEMES,
-  });
+  res.render(`admin/themes/${data.event.theme}/dashboard`, { ...data, baseUrl, error });
 }
 
 async function showEditForm(req, res) {
-  const event = await eventModel.findById(req.params.id);
-  if (!event) return res.status(404).send('Wedding not found.');
+  const data = await getEditFormData(req.params.id);
+  if (!data) return res.status(404).send('Wedding not found.');
   const error = req.query.error ? 'Couple names/Celebrant, date, and venue are required.' : null;
-  res.render('admin/edit-event', { event, error, themes: AVAILABLE_THEMES, accessModes: ACCESS_MODES, eventTypes: activeEventTypes() });
+  res.render('admin/edit-event', { ...data, error });
 }
 
 async function showAssets(req, res) {
-  const event = await eventModel.findById(req.params.id);
-  if (!event) return res.status(404).send('Wedding not found.');
-  const galleryPhotos = await galleryModel.findByEvent(event.id);
-  const cameoPhotos = await cameoModel.findByEvent(event.id);
-  res.render('admin/assets', { event, galleryPhotos, cameoPhotos });
+  const data = await getAssetsData(req.params.id);
+  if (!data) return res.status(404).send('Wedding not found.');
+  res.render('admin/assets', data);
 }
 
-async function updateEvent(req, res) {
+// input_20 Phase 8: isClient forces two fields to always be ignored,
+// regardless of what's in `fields` — accessMode (admin-only, never a
+// client capability) and eventType (a client's event type is fixed at
+// approval time; "default to preserving the original approved event
+// type" per this phase's own requirement). Everything else about this
+// function's validation/behavior is identical for both callers — the
+// admin wrapper below calls this with isClient=false on every existing
+// code path, so admin behavior is unchanged.
+async function updateEventCore(eventId, fields, file, isClient) {
   const {
     coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText,
     declineMessage, itinerary, invitationMessage, contactDetails, theme, accessMode,
     eventType, subtitle, footerNote, eventTimeNote,
-  } = req.body;
-  if (!coupleNames || !venue) {
-    // The dedicated edit page, Botanical Bloom's inline dashboard form, and
-    // Lady Gianna's smaller "Event details" card all post here — redirecting
-    // to the edit page on failure (rather than re-rendering whichever page
-    // submitted) keeps this one handler simple; browsers already block
-    // empty required fields client-side, so this path is rare.
-    //
-    // input_20 Phase 2: weddingDate is deliberately NOT required here,
-    // unlike createEvent's check below it stays out of — a booking-approved
-    // draft event starts with no date at all, and every update path (the
-    // full edit form, Botanical Bloom's inline form, Lady Gianna's smaller
-    // cards) must be able to save every *other* field on such an event
-    // without being blocked for a date nothing has collected yet. Manually
-    // creating a new event still requires one, unchanged, in createEvent.
-    return res.redirect(`/admin/events/${req.params.id}/edit?error=1`);
-  }
+  } = fields;
+  if (!coupleNames || !venue) return { ok: false, reason: 'validation' };
 
   // Needed both for Cloudinary cleanup (image-replace path) and to resolve
   // the submitted theme against the event's *current* type when a partial
   // form (e.g. Lady Gianna's "Event details" card) doesn't submit an
   // eventType of its own — falls back to the type already on record rather
   // than assuming 'wedding'.
-  const existing = await eventModel.findById(req.params.id);
+  const existing = await eventModel.findById(eventId);
+  if (!existing) return { ok: false, reason: 'not_found' };
 
   // Same themeless-type guard as createEvent — only fires when eventType is
   // actually being changed to something with zero registered themes (a
   // partial form that omits eventType entirely is unaffected, since it
-  // isn't trying to change it).
-  if (eventType !== undefined && themesForEventType(eventType).length === 0) {
-    return res.redirect(`/admin/events/${req.params.id}/edit?error=1`);
+  // isn't trying to change it). Never applies to a client call — a client
+  // can never actually change eventType (below), so there's nothing here
+  // for that guard to protect against for that caller.
+  if (!isClient && eventType !== undefined && themesForEventType(eventType).length === 0) {
+    return { ok: false, reason: 'validation' };
   }
 
   let cardImage;
   let cardImagePublicId;
-  if (req.file) {
-    const result = await uploadImage(req.file.buffer, `weddings103/events/${req.params.id}`);
+  if (file) {
+    const result = await uploadImage(file.buffer, `weddings103/events/${eventId}`);
     cardImage = result.secure_url;
     cardImagePublicId = result.public_id;
 
     // Best-effort cleanup of the image this one replaces — don't leave it
     // orphaned on Cloudinary, but don't let a delete failure block the
     // update that already succeeded.
-    if (existing && existing.card_image_public_id) {
+    if (existing.card_image_public_id) {
       deleteImage(existing.card_image_public_id).catch((err) => {
         console.error(`Failed to delete replaced Cloudinary image ${existing.card_image_public_id}:`, err);
       });
@@ -201,33 +221,90 @@ async function updateEvent(req, res) {
   // Only resolve/clamp the theme when one was actually submitted — a
   // partial form omitting `theme` entirely must leave it untouched
   // (eventModel.update's COALESCE), not silently reset it to that type's
-  // default.
+  // default. A client's choice is validated against the event's own,
+  // unchangeable event_type — never against a submitted (and, for a
+  // client, always-ignored) eventType value.
   const resolvedTheme = theme !== undefined
-    ? resolveTheme(theme, eventType || (existing && existing.event_type))
+    ? resolveTheme(theme, isClient ? existing.event_type : (eventType || existing.event_type))
     : undefined;
 
-  await eventModel.update(req.params.id, {
+  await eventModel.update(eventId, {
     coupleNames, weddingDate, venue, themeColor,
     acceptButtonText, declineButtonText, declineMessage, cardImage, cardImagePublicId,
-    itinerary, invitationMessage, contactDetails, theme: resolvedTheme, accessMode,
-    eventType, subtitle, footerNote, eventTimeNote,
+    itinerary, invitationMessage, contactDetails, theme: resolvedTheme,
+    accessMode: isClient ? undefined : accessMode,
+    eventType: isClient ? undefined : eventType,
+    subtitle, footerNote, eventTimeNote,
   });
+  return { ok: true };
+}
+
+async function updateEvent(req, res) {
+  // The dedicated edit page, Botanical Bloom's inline dashboard form, and
+  // Lady Gianna's smaller "Event details" card all post here — redirecting
+  // to the edit page on failure (rather than re-rendering whichever page
+  // submitted) keeps this one handler simple; browsers already block
+  // empty required fields client-side, so this path is rare.
+  //
+  // input_20 Phase 2: weddingDate is deliberately NOT required here,
+  // unlike createEvent's check below it stays out of — a booking-approved
+  // draft event starts with no date at all, and every update path (the
+  // full edit form, Botanical Bloom's inline form, Lady Gianna's smaller
+  // cards) must be able to save every *other* field on such an event
+  // without being blocked for a date nothing has collected yet. Manually
+  // creating a new event still requires one, unchanged, in createEvent.
+  // Preserves the exact original behavior for a nonexistent id: this
+  // never 404s here (unlike the client wrapper) — it falls through to the
+  // same redirect a validation failure gets, same as before this
+  // function was split into a core (eventModel.update on a missing id was
+  // always a harmless no-op, and the subsequent dashboard redirect below
+  // was always what actually surfaced the 404, via showDashboard's own
+  // check — unchanged).
+  const result = await updateEventCore(req.params.id, req.body, req.file, false);
+  if (!result.ok) return res.redirect(`/admin/events/${req.params.id}/edit?error=1`);
   res.redirect(`/admin/events/${req.params.id}`);
+}
+
+// input_20 Phase 8: split so a client can be handed a safe, exported
+// draft->live-only function with no way to ever also reach the
+// live->draft direction — that direction (unpublishCore) stays private
+// to this file, reachable only from toggleStatus below. Not a runtime
+// permission check: there is no unpublish function for a client
+// controller to even import, so there is no reachable code path for it
+// to call regardless of what any request contains.
+async function publishCore(eventId) {
+  const event = await eventModel.findById(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+  if (event.status === 'live') return { ok: true, event }; // already live: no-op, not an error
+  // input_20 Phase 2: the database's own events_live_requires_date CHECK
+  // constraint is the hard backstop for this same rule (schema.sql); this
+  // is the friendly, expected-path guard that keeps a normal request from
+  // ever reaching that constraint at all — identical for both the admin
+  // and client callers.
+  if (!event.wedding_date) return { ok: false, reason: 'needs_date' };
+  const updated = await eventModel.setStatus(event.id, 'live');
+  return { ok: true, event: updated };
+}
+
+async function unpublishCore(eventId) {
+  const event = await eventModel.findById(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+  if (event.status === 'draft') return { ok: true, event }; // already draft: no-op
+  const updated = await eventModel.setStatus(event.id, 'draft');
+  return { ok: true, event: updated };
 }
 
 async function toggleStatus(req, res) {
   const event = await eventModel.findById(req.params.id);
   if (!event) return res.status(404).send('Wedding not found.');
-  const nextStatus = event.status === 'live' ? 'draft' : 'live';
-  // input_20 Phase 2: only the draft->live direction needs a date — nothing
-  // stops an admin taking a dated, live event back to draft. The database's
-  // own events_live_requires_date CHECK constraint is the hard backstop for
-  // this same rule (schema.sql); this is the friendly, expected-path guard
-  // that keeps a normal click from ever reaching that constraint at all.
-  if (nextStatus === 'live' && !event.wedding_date) {
-    return res.redirect(`/admin/events/${req.params.id}?error=needs_date`);
+  if (event.status === 'live') {
+    await unpublishCore(req.params.id);
+  } else {
+    const result = await publishCore(req.params.id);
+    if (!result.ok && result.reason === 'needs_date') {
+      return res.redirect(`/admin/events/${req.params.id}?error=needs_date`);
+    }
   }
-  await eventModel.setStatus(event.id, nextStatus);
   res.redirect(`/admin/events/${req.params.id}`);
 }
 
@@ -235,9 +312,8 @@ async function toggleStatus(req, res) {
 // one guest per line — invite group (input_15 §A7) is optional and purely
 // descriptive, so a line with just "Name, seat count" still works exactly
 // as it did before this field existed.
-async function bulkAddGuests(req, res) {
-  const { guestList } = req.body;
-  const lines = (guestList || '').split('\n').map((l) => l.trim()).filter(Boolean);
+async function bulkAddGuestsCore(eventId, guestListRaw) {
+  const lines = (guestListRaw || '').split('\n').map((l) => l.trim()).filter(Boolean);
   const entries = lines.map((line) => {
     const [name, seatCountRaw, inviteGroupRaw] = line.split(',').map((part) => part.trim());
     const seatCount = parseInt(seatCountRaw, 10);
@@ -249,8 +325,12 @@ async function bulkAddGuests(req, res) {
   }).filter((entry) => entry.name);
 
   if (entries.length > 0) {
-    await guestModel.bulkCreate(req.params.id, entries);
+    await guestModel.bulkCreate(eventId, entries);
   }
+}
+
+async function bulkAddGuests(req, res) {
+  await bulkAddGuestsCore(req.params.id, req.body.guestList);
   res.redirect(`/admin/events/${req.params.id}`);
 }
 
@@ -261,17 +341,20 @@ async function deleteEvent(req, res) {
 }
 
 // One or more photos in a single request (upload.array).
-async function uploadGalleryPhotos(req, res) {
-  const files = req.files || [];
-  for (const file of files) {
-    const result = await uploadImage(file.buffer, `weddings103/events/${req.params.id}/gallery`);
-    await galleryModel.addPhoto(req.params.id, result.secure_url, result.public_id);
+async function uploadGalleryPhotosCore(eventId, files) {
+  for (const file of (files || [])) {
+    const result = await uploadImage(file.buffer, `weddings103/events/${eventId}/gallery`);
+    await galleryModel.addPhoto(eventId, result.secure_url, result.public_id);
   }
+}
+
+async function uploadGalleryPhotos(req, res) {
+  await uploadGalleryPhotosCore(req.params.id, req.files);
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
-async function deleteGalleryPhoto(req, res) {
-  const photo = await galleryModel.deletePhoto(req.params.id, req.params.photoId);
+async function deleteGalleryPhotoCore(eventId, photoId) {
+  const photo = await galleryModel.deletePhoto(eventId, photoId);
   if (photo) {
     try {
       await deleteImage(photo.public_id);
@@ -279,22 +362,29 @@ async function deleteGalleryPhoto(req, res) {
       console.error(`Failed to delete Cloudinary image ${photo.public_id}:`, err);
     }
   }
+}
+
+async function deleteGalleryPhoto(req, res) {
+  await deleteGalleryPhotoCore(req.params.id, req.params.photoId);
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
 // Cameos are uploaded one at a time with a title, unlike Gallery's
 // multi-file batch — each entry is meant to carry its own caption.
-async function uploadCameoPhoto(req, res) {
-  const { title } = req.body;
-  if (req.file) {
-    const result = await uploadImage(req.file.buffer, `weddings103/events/${req.params.id}/cameos`);
-    await cameoModel.addPhoto(req.params.id, result.secure_url, result.public_id, title || null);
+async function uploadCameoPhotoCore(eventId, file, title) {
+  if (file) {
+    const result = await uploadImage(file.buffer, `weddings103/events/${eventId}/cameos`);
+    await cameoModel.addPhoto(eventId, result.secure_url, result.public_id, title || null);
   }
+}
+
+async function uploadCameoPhoto(req, res) {
+  await uploadCameoPhotoCore(req.params.id, req.file, req.body.title);
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
-async function deleteCameoPhoto(req, res) {
-  const photo = await cameoModel.deletePhoto(req.params.id, req.params.photoId);
+async function deleteCameoPhotoCore(eventId, photoId) {
+  const photo = await cameoModel.deletePhoto(eventId, photoId);
   if (photo) {
     try {
       await deleteImage(photo.public_id);
@@ -302,6 +392,10 @@ async function deleteCameoPhoto(req, res) {
       console.error(`Failed to delete Cloudinary image ${photo.public_id}:`, err);
     }
   }
+}
+
+async function deleteCameoPhoto(req, res) {
+  await deleteCameoPhotoCore(req.params.id, req.params.photoId);
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
@@ -406,4 +500,13 @@ module.exports = {
   exportGuestList, uploadGalleryPhotos, deleteGalleryPhoto,
   uploadCameoPhoto, deleteCameoPhoto,
   listInquiries, showInquiryDetail, approveInquiry, declineInquiry,
+  // input_20 Phase 8: data-only cores + eventId-taking action cores, for
+  // controllers/client.controller.js to call with req.session.clientEventId
+  // in place of req.params.id. unpublishCore is deliberately never
+  // exported — there is no client-reachable path to it anywhere.
+  getDashboardData, getEditFormData, getAssetsData,
+  updateEventCore, bulkAddGuestsCore,
+  uploadGalleryPhotosCore, deleteGalleryPhotoCore,
+  uploadCameoPhotoCore, deleteCameoPhotoCore,
+  publishCore,
 };

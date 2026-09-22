@@ -17,24 +17,35 @@
   <link rel="stylesheet" href="/assets/css/admin-shared.css">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
+<%
+  // input_20 Phase 8: a client can never change event type (fixed at
+  // approval time) or access mode (admin-only) — both fields are hidden
+  // entirely below, not just visually de-emphasized, and the server-side
+  // stripping in admin.controller.js's updateEventCore is the actual
+  // guard regardless of what this view does or doesn't show.
+  var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
+  var currentEventType = eventTypes.find(function (t) { return t.slug === event.event_type; });
+%>
 <body class="bb-admin">
   <div class="bb-admin-wrap">
-    <p class="bb-admin-back"><a href="/admin/events/<%= event.id %>">&larr; Back to <%= event.couple_names %></a></p>
+    <p class="bb-admin-back"><a href="<%= basePath %>">&larr; Back to <%= event.couple_names %></a></p>
     <h1>Edit Event</h1>
     <% if (typeof error !== 'undefined' && error) { %>
       <p class="bb-error"><%= error %></p>
     <% } %>
-    <form method="POST" action="/admin/events/<%= event.id %>" enctype="multipart/form-data">
+    <form method="POST" action="<%= basePath %>" enctype="multipart/form-data">
       <div class="bb-details-grid">
-        <div class="bb-admin-tile">
-          <label>Event type</label>
-          <select name="eventType" id="eventType">
-            <% eventTypes.forEach(function (t) { %>
-              <option value="<%= t.slug %>" data-title-label="<%= t.titleLabel %>" <%= event.event_type === t.slug ? 'selected' : '' %>><%= t.label %></option>
-            <% }) %>
-          </select>
-        </div>
-        <% var currentEventType = eventTypes.find(function (t) { return t.slug === event.event_type; }); %>
+        <% if (!isClient) { %>
+          <div class="bb-admin-tile">
+            <label>Event type</label>
+            <select name="eventType" id="eventType">
+              <% eventTypes.forEach(function (t) { %>
+                <option value="<%= t.slug %>" data-title-label="<%= t.titleLabel %>" <%= event.event_type === t.slug ? 'selected' : '' %>><%= t.label %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } %>
         <div class="bb-admin-tile">
           <label id="coupleNamesLabel"><%= currentEventType ? currentEventType.titleLabel : 'Couple names' %></label>
           <input type="text" name="coupleNames" value="<%= event.couple_names %>" required>
@@ -58,19 +69,32 @@
         <div class="bb-admin-tile">
           <label>Theme</label>
           <select name="theme" id="theme">
-            <% themes.forEach(function (t) { %>
+            <%
+              // input_20 Phase 8: a client's options are restricted
+              // server-side to themes belonging to their own (fixed) event
+              // type — same themesForEventType-style filter this app
+              // already uses elsewhere, just applied to the option list
+              // itself instead of client-side JS, since there's no
+              // eventType select here for that JS to react to in client
+              // mode. updateEventCore independently re-validates this
+              // regardless of what the rendered options are.
+              var themeOptions = isClient ? themes.filter(function (t) { return t.eventType === event.event_type; }) : themes;
+            %>
+            <% themeOptions.forEach(function (t) { %>
               <option value="<%= t.slug %>" data-event-type="<%= t.eventType %>" <%= event.theme === t.slug ? 'selected' : '' %>><%= t.label %></option>
             <% }) %>
           </select>
         </div>
-        <div class="bb-admin-tile bb-tile-wide">
-          <label>Access mode</label>
-          <select name="accessMode">
-            <% accessModes.forEach(function (m) { %>
-              <option value="<%= m.slug %>" <%= event.access_mode === m.slug ? 'selected' : '' %>><%= m.label %></option>
-            <% }) %>
-          </select>
-        </div>
+        <% if (!isClient) { %>
+          <div class="bb-admin-tile bb-tile-wide">
+            <label>Access mode</label>
+            <select name="accessMode">
+              <% accessModes.forEach(function (m) { %>
+                <option value="<%= m.slug %>" <%= event.access_mode === m.slug ? 'selected' : '' %>><%= m.label %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } %>
         <div class="bb-admin-tile">
           <label>Theme color</label>
           <input type="color" name="themeColor" value="<%= event.theme_color %>">
@@ -119,9 +143,16 @@
     </form>
   </div>
 
-  <!-- input_20 Phase 4: was an inline copy of the same script as
-       event-form.ejs (input_15 §A6 filtering, input_20 Phase 1 label swap)
-       — now shared, see public/assets/js/theme-filter.js. -->
-  <script src="/assets/js/theme-filter.js"></script>
+  <% if (!isClient) { %>
+    <!-- input_20 Phase 4: was an inline copy of the same script as
+         event-form.ejs (input_15 §A6 filtering, input_20 Phase 1 label swap)
+         — now shared, see public/assets/js/theme-filter.js.
+         input_20 Phase 8: never loaded in client mode — that script expects
+         an #eventType select, which client mode doesn't render (a client's
+         event type never changes), and the theme options are already
+         server-side restricted to the client's own type above, so there is
+         nothing left for it to filter. -->
+    <script src="/assets/js/theme-filter.js"></script>
+  <% } %>
 </body>
 </html>

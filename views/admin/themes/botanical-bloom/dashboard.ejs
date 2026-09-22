@@ -10,16 +10,26 @@
   <link rel="stylesheet" href="/assets/css/admin-shared.css">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
+
+<%
+  // input_20 Phase 8: this same dashboard template renders for both an
+  // admin (req.params.id-based routes) and a client (fixed, id-free
+  // /client routes) — basePath is the one thing that differs between the
+  // two, computed once here rather than repeating the ternary at every
+  // link/form below.
+  var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
+%>
 <body class="bb-admin">
   <header class="bb-admin-header">
     <div class="bb-admin-header-inner">
-      <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>"><%= event.couple_names %></a>
+      <a class="bb-admin-header-title" href="<%= basePath %>"><%= event.couple_names %></a>
       <nav class="bb-admin-nav">
         <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
         <a href="#wedding-details">Wedding Details</a>
-        <a href="/admin/events/<%= event.id %>/assets">Assets</a>
+        <a href="<%= basePath %>/assets">Assets</a>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
-        <a href="/admin/events">All weddings</a>
+        <% if (!isClient) { %><a href="/admin/events">All weddings</a><% } %>
       </nav>
     </div>
   </header>
@@ -40,9 +50,12 @@
           <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>" style="margin-top:0.6rem;">Copy Link</button>
         </div>
 
-        <% if (event.access_mode === 'closed') { %>
+        <% if (!isClient && event.access_mode === 'closed') { %>
           <!-- input_14: only 'closed' events ever generate a QR gatepass,
-               so this tile is meaningless (and hidden) for 'open'/'recognized'. -->
+               so this tile is meaningless (and hidden) for 'open'/'recognized'.
+               input_20 Phase 8: also hidden entirely in client mode — the
+               scanner route itself is untouched and stays public, this is
+               just keeping it off the client's own navigation. -->
           <div class="bb-admin-tile">
             <h2>Door scanner</h2>
             <p>No login needed for door staff.</p>
@@ -56,9 +69,23 @@
           <% if (typeof error !== 'undefined' && error) { %>
             <p class="bb-error"><%= error %></p>
           <% } %>
-          <form method="POST" action="/admin/events/<%= event.id %>/status">
-            <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
-          </form>
+          <% if (isClient) { %>
+            <!-- input_20 Phase 8: draft->live only, via /client/publish
+                 (publishCore) — a live event shows plain status text with
+                 no form at all, so there is no markup path that could ever
+                 submit a live->draft request from the client dashboard. -->
+            <% if (event.status === 'live') { %>
+              <p>Live</p>
+            <% } else { %>
+              <form method="POST" action="/client/publish">
+                <button type="submit" class="bb-btn">Publish</button>
+              </form>
+            <% } %>
+          <% } else { %>
+            <form method="POST" action="/admin/events/<%= event.id %>/status">
+              <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
+            </form>
+          <% } %>
         </div>
 
         <div class="bb-admin-tile">
@@ -80,7 +107,7 @@
       <% if (typeof error !== 'undefined' && error) { %>
         <p class="bb-error"><%= error %></p>
       <% } %>
-      <form method="POST" action="/admin/events/<%= event.id %>" enctype="multipart/form-data">
+      <form method="POST" action="<%= basePath %>" enctype="multipart/form-data">
         <div class="bb-details-grid">
           <div class="bb-admin-tile">
             <label>Couple names</label>
@@ -158,7 +185,7 @@
         <div>
           <div class="bb-admin-card" style="margin-bottom:1.5rem;">
             <h2>Add guests</h2>
-            <form method="POST" action="/admin/events/<%= event.id %>/guests">
+            <form method="POST" action="<%= basePath %>/guests">
               <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
               <textarea name="guestList" rows="5" placeholder="Sarah, 2&#10;James, 4, VIP"></textarea>
               <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Add Guests</button>
@@ -167,7 +194,11 @@
 
           <div class="bb-admin-card">
             <h2>Guest list</h2>
-            <p><a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Guest List (Excel)</a></p>
+            <!-- input_20 Phase 8: export is admin-only, not in the client's
+                 allowed capability list. -->
+            <% if (!isClient) { %>
+              <p><a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Guest List (Excel)</a></p>
+            <% } %>
             <table>
               <thead>
                 <tr><th>Name</th><th>Invitation type</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>
@@ -199,15 +230,18 @@
       </div>
     <% } %>
 
-    <!-- Danger zone -->
-    <div class="bb-admin-section">
-      <div class="bb-admin-card bb-danger">
-        <h2>Danger zone</h2>
-        <form method="POST" action="/admin/events/<%= event.id %>/delete" onsubmit="return confirm('Delete this wedding permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
-          <button type="submit" class="bb-btn">Delete Wedding</button>
-        </form>
+    <!-- Danger zone — input_20 Phase 8: entirely absent in client mode,
+         not just hidden — delete is never an allowed client capability. -->
+    <% if (!isClient) { %>
+      <div class="bb-admin-section">
+        <div class="bb-admin-card bb-danger">
+          <h2>Danger zone</h2>
+          <form method="POST" action="/admin/events/<%= event.id %>/delete" onsubmit="return confirm('Delete this wedding permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
+            <button type="submit" class="bb-btn">Delete Wedding</button>
+          </form>
+        </div>
       </div>
-    </div>
+    <% } %>
   </div>
 
   <script>

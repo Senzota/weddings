@@ -16,6 +16,7 @@ const guestRoutes = require('./routes/guest.routes');
 const adminRoutes = require('./routes/admin.routes');
 const scanRoutes = require('./routes/scan.routes');
 const publicRoutes = require('./routes/public.routes');
+const clientRoutes = require('./routes/client.routes');
 const { startEventLifecycleSweep } = require('./utils/eventLifecycle');
 const { formatEventDate } = require('./utils/formatDate');
 const { getDownloadUrl } = require('./utils/cloudinary');
@@ -59,6 +60,9 @@ app.use('/', publicRoutes);
 app.use('/invite', guestRoutes);
 app.use('/admin', adminRoutes);
 app.use('/scan', scanRoutes);
+// input_20 Phase 8: client token bootstrap + the client's own restricted
+// event-management routes (see routes/client.routes.js).
+app.use('/client', clientRoutes);
 
 app.use((req, res) => res.status(404).send('Not found.'));
 

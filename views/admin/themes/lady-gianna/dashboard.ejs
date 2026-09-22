@@ -10,16 +10,22 @@
   <link rel="stylesheet" href="/assets/css/admin-shared.css">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
+
+<%
+  // input_20 Phase 8: see botanical-bloom/dashboard.ejs's identical comment.
+  var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
+%>
 <body class="lg-admin">
   <header class="bb-admin-header">
     <div class="bb-admin-header-inner">
-      <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>">&#127881; <%= event.couple_names %></a>
+      <a class="bb-admin-header-title" href="<%= basePath %>">&#127881; <%= event.couple_names %></a>
       <nav class="bb-admin-nav">
         <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
         <a href="#event-details">Event Details</a>
-        <a href="/admin/events/<%= event.id %>/assets">Assets</a>
+        <a href="<%= basePath %>/assets">Assets</a>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
-        <a href="/admin/events">All events</a>
+        <% if (!isClient) { %><a href="/admin/events">All events</a><% } %>
       </nav>
     </div>
   </header>
@@ -49,7 +55,7 @@
             <p><%= event.subtitle || event.venue %></p>
             <div class="lg-admin-btn-row">
               <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Invite Link</button>
-              <a class="bb-btn" href="/admin/events/<%= event.id %>/edit">Edit details</a>
+              <a class="bb-btn" href="<%= isClient ? '/client/edit' : (basePath + '/edit') %>">Edit details</a>
             </div>
           </div>
         </div>
@@ -66,7 +72,7 @@
         <div class="lg-bubble-grid">
           <div class="lg-bubble-stat">
             <div class="lg-bubble"><%= stats.total_guests %></div>
-            <div><p>Invited guests</p><span><% if (event.access_mode === 'closed') { %>Door Scanner: <a href="/scan" target="_blank">open</a><% } else { %>&nbsp;<% } %></span></div>
+            <div><p>Invited guests</p><span><% if (!isClient && event.access_mode === 'closed') { %>Door Scanner: <a href="/scan" target="_blank">open</a><% } else { %>&nbsp;<% } %></span></div>
           </div>
           <div class="lg-bubble-stat">
             <div class="lg-bubble"><%= stats.responded %></div>
@@ -86,7 +92,7 @@
       <!-- Itinerary card -->
       <article class="lg-admin-card lg-admin-itinerary">
         <h2>Itinerary</h2>
-        <form method="POST" action="/admin/events/<%= event.id %>">
+        <form method="POST" action="<%= basePath %>">
           <input type="hidden" name="coupleNames" value="<%= event.couple_names %>">
           <input type="hidden" name="weddingDate" value="<%= event.wedding_date || '' %>">
           <input type="hidden" name="venue" value="<%= event.venue %>">
@@ -97,7 +103,7 @@
 
       <!-- Assets card -->
       <article class="lg-admin-card lg-admin-assets">
-        <div class="lg-admin-section-head"><h2>Photos</h2><a href="/admin/events/<%= event.id %>/assets">Open Assets &rarr;</a></div>
+        <div class="lg-admin-section-head"><h2>Photos</h2><a href="<%= basePath %>/assets">Open Assets &rarr;</a></div>
         <div class="lg-admin-assets-preview">
           <% galleryPhotos.slice(0, 4).forEach(function (photo) { %>
             <div style="background-image:url('<%= photo.image_url %>')"></div>
@@ -114,7 +120,7 @@
         <% if (typeof error !== 'undefined' && error) { %>
           <p class="lg-error"><%= error %></p>
         <% } %>
-        <form method="POST" action="/admin/events/<%= event.id %>">
+        <form method="POST" action="<%= basePath %>">
           <div class="lg-admin-details-grid">
             <div>
               <label>Celebrant</label>
@@ -146,7 +152,7 @@
         <article class="lg-admin-card lg-admin-guests" id="guest-list">
           <div class="lg-admin-section-head">
             <h2>Guest list</h2>
-            <a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Excel</a>
+            <% if (!isClient) { %><a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Excel</a><% } %>
           </div>
           <div class="lg-table-wrap">
             <table>
@@ -165,7 +171,7 @@
               </tbody>
             </table>
           </div>
-          <form method="POST" action="/admin/events/<%= event.id %>/guests" style="margin-top:1rem;">
+          <form method="POST" action="<%= basePath %>/guests" style="margin-top:1rem;">
             <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
             <textarea name="guestList" rows="4" placeholder="Sarah, 2&#10;James, 4, VIP"></textarea>
             <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
@@ -173,20 +179,36 @@
         </article>
       <% } %>
 
-      <!-- Danger zone -->
-      <article class="lg-admin-card lg-admin-danger">
-        <h2>Danger zone</h2>
-        <% if (typeof error !== 'undefined' && error) { %>
-          <p class="lg-error"><%= error %></p>
-        <% } %>
-        <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
-          <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
-        </form>
-        <form method="POST" action="/admin/events/<%= event.id %>/delete" style="display:inline-block;" onsubmit="return confirm('Delete this event permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
-          <button type="submit" class="bb-btn">Delete Event</button>
-        </form>
-        <p style="margin-top:0.75rem;">Status: <%= event.status %></p>
-      </article>
+      <!-- Danger zone — input_20 Phase 8: entirely different in client mode,
+           see lavender-romance/dashboard.ejs's identical comment. -->
+      <% if (isClient) { %>
+        <article class="lg-admin-card">
+          <% if (typeof error !== 'undefined' && error) { %>
+            <p class="lg-error"><%= error %></p>
+          <% } %>
+          <% if (event.status === 'live') { %>
+            <p>Status: Live</p>
+          <% } else { %>
+            <form method="POST" action="/client/publish">
+              <button type="submit" class="bb-btn">Publish</button>
+            </form>
+          <% } %>
+        </article>
+      <% } else { %>
+        <article class="lg-admin-card lg-admin-danger">
+          <h2>Danger zone</h2>
+          <% if (typeof error !== 'undefined' && error) { %>
+            <p class="lg-error"><%= error %></p>
+          <% } %>
+          <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
+            <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
+          </form>
+          <form method="POST" action="/admin/events/<%= event.id %>/delete" style="display:inline-block;" onsubmit="return confirm('Delete this event permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
+            <button type="submit" class="bb-btn">Delete Event</button>
+          </form>
+          <p style="margin-top:0.75rem;">Status: <%= event.status %></p>
+        </article>
+      <% } %>
 
     </div>
   </div>

@@ -10,16 +10,23 @@
   <link rel="stylesheet" href="/assets/css/admin-shared.css">
   <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
 </head>
+
+<%
+  // input_20 Phase 8: see botanical-bloom/dashboard.ejs's identical comment.
+  var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
+  var editPath = isClient ? '/client/edit' : (basePath + '/edit');
+%>
 <body class="bb-admin">
   <header class="bb-admin-header">
     <div class="bb-admin-header-inner">
-      <a class="bb-admin-header-title" href="/admin/events/<%= event.id %>"><%= event.couple_names %></a>
+      <a class="bb-admin-header-title" href="<%= basePath %>"><%= event.couple_names %></a>
       <nav class="bb-admin-nav">
         <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
-        <a href="/admin/events/<%= event.id %>/edit">Wedding Details</a>
-        <a href="/admin/events/<%= event.id %>/assets">Assets</a>
+        <a href="<%= editPath %>">Wedding Details</a>
+        <a href="<%= basePath %>/assets">Assets</a>
         <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
-        <a href="/admin/events">All weddings</a>
+        <% if (!isClient) { %><a href="/admin/events">All weddings</a><% } %>
       </nav>
     </div>
   </header>
@@ -51,7 +58,7 @@
           <p><%= event.venue %></p>
           <div class="lr-btn-row">
             <button type="button" class="bb-btn copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>">Copy Wedding Link</button>
-            <a class="lr-plain-btn" href="/admin/events/<%= event.id %>/edit">Edit details &rarr;</a>
+            <a class="lr-plain-btn" href="<%= editPath %>">Edit details &rarr;</a>
           </div>
         </div>
       </article>
@@ -69,7 +76,7 @@
       <article class="lr-card lr-stats">
         <div class="lr-section-head"><h2>At a glance</h2></div>
         <div class="lr-bubble-grid">
-          <div class="lr-stat"><div class="lr-bubble"><%= stats.total_guests %></div><div><p>Invited guests</p><span><% if (event.access_mode === 'closed') { %>Door Scanner: <a href="/scan" target="_blank">open</a><% } else { %>&nbsp;<% } %></span></div></div>
+          <div class="lr-stat"><div class="lr-bubble"><%= stats.total_guests %></div><div><p>Invited guests</p><span><% if (!isClient && event.access_mode === 'closed') { %>Door Scanner: <a href="/scan" target="_blank">open</a><% } else { %>&nbsp;<% } %></span></div></div>
           <div class="lr-stat"><div class="lr-bubble"><%= stats.responded %></div><div><p>RSVPs received</p><span><%= stats.total_guests > 0 ? Math.round(stats.responded / stats.total_guests * 100) : 0 %>% response rate</span></div></div>
           <div class="lr-stat"><div class="lr-bubble"><%= daysToGo === null ? 'TBD' : daysToGo %></div><div><p>Days to go</p><span><%= daysToGo === null ? 'Set a date to see this' : 'Your moment is near' %></span></div></div>
           <div class="lr-stat"><div class="lr-bubble"><%= stats.checked_in %></div><div><p>Checked in</p><span><%= stats.seats_accepted %> seats accepted</span></div></div>
@@ -94,7 +101,7 @@
 
       <!-- Gallery/Assets preview -->
       <article class="lr-card lr-gallery">
-        <div class="lr-section-head"><h2>Visual direction</h2><a href="/admin/events/<%= event.id %>/assets">Open Assets &rarr;</a></div>
+        <div class="lr-section-head"><h2>Visual direction</h2><a href="<%= basePath %>/assets">Open Assets &rarr;</a></div>
         <div class="lr-gallery-grid">
           <% const previewPhotos = galleryPhotos.slice(0, 3); %>
           <% if (previewPhotos.length > 0) { %>
@@ -113,7 +120,7 @@
         <article class="lr-card lr-guests" id="guest-list">
           <div class="lr-section-head">
             <div><p class="bb-label">Your inner circle</p><h2>Guest list</h2></div>
-            <a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Excel</a>
+            <% if (!isClient) { %><a class="bb-btn" href="/admin/events/<%= event.id %>/export">Download Excel</a><% } %>
           </div>
           <div class="lr-table-wrap">
             <table>
@@ -132,7 +139,7 @@
               </tbody>
             </table>
           </div>
-          <form method="POST" action="/admin/events/<%= event.id %>/guests" style="margin-top:1rem;">
+          <form method="POST" action="<%= basePath %>/guests" style="margin-top:1rem;">
             <p>One guest per line: <code>Name, seat count</code> (optionally <code>, invitation type</code>)</p>
             <textarea name="guestList" rows="4" placeholder="Sarah, 2&#10;James, 4, VIP"></textarea>
             <button type="submit" class="bb-btn" style="margin-top:0.6rem;">Add Guests</button>
@@ -142,19 +149,40 @@
     </div>
 
     <div class="bb-admin-section" style="margin-top:2rem;">
-      <div class="bb-admin-card bb-danger">
-        <h2>Danger zone</h2>
-        <% if (typeof error !== 'undefined' && error) { %>
-          <p class="bb-error"><%= error %></p>
-        <% } %>
-        <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
-          <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
-        </form>
-        <form method="POST" action="/admin/events/<%= event.id %>/delete" style="display:inline-block;" onsubmit="return confirm('Delete this wedding permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
-          <button type="submit" class="bb-btn">Delete Wedding</button>
-        </form>
-        <p style="margin-top:0.75rem;">Status: <%= event.status %></p>
-      </div>
+      <% if (isClient) { %>
+        <!-- input_20 Phase 8: no "Danger zone" heading/card for a client —
+             delete is never an allowed capability, and publish is a plain
+             action, not a dangerous one. Draft->live only, via
+             /client/publish (publishCore); a live event shows plain status
+             text with no form at all, so there is no markup path that
+             could ever submit a live->draft request. -->
+        <div class="bb-admin-card">
+          <% if (typeof error !== 'undefined' && error) { %>
+            <p class="bb-error"><%= error %></p>
+          <% } %>
+          <% if (event.status === 'live') { %>
+            <p>Status: Live</p>
+          <% } else { %>
+            <form method="POST" action="/client/publish">
+              <button type="submit" class="bb-btn">Publish</button>
+            </form>
+          <% } %>
+        </div>
+      <% } else { %>
+        <div class="bb-admin-card bb-danger">
+          <h2>Danger zone</h2>
+          <% if (typeof error !== 'undefined' && error) { %>
+            <p class="bb-error"><%= error %></p>
+          <% } %>
+          <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
+            <button type="submit" class="bb-btn"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
+          </form>
+          <form method="POST" action="/admin/events/<%= event.id %>/delete" style="display:inline-block;" onsubmit="return confirm('Delete this wedding permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
+            <button type="submit" class="bb-btn">Delete Wedding</button>
+          </form>
+          <p style="margin-top:0.75rem;">Status: <%= event.status %></p>
+        </div>
+      <% } %>
     </div>
   </div>
 
