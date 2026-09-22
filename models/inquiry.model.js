@@ -19,6 +19,22 @@ async function create(fields) {
   return rows[0];
 }
 
+// input_20 Phase 10C: existence-only check for the account dashboard's
+// "under review" state — deliberately selects a constant, not inquiry
+// columns, so there is never inquiry data in `rows` for a caller to
+// accidentally leak to a view; only rows.length is ever meaningful here.
+async function hasPendingForClient(clientId) {
+  const { rows } = await pool.query(
+    `SELECT 1
+     FROM booking_inquiries
+     WHERE client_id = $1
+       AND status = 'new'
+     LIMIT 1`,
+    [clientId]
+  );
+  return rows.length > 0;
+}
+
 // input_20 Phase 6: read-only admin list/detail. Newest first — the
 // natural triage order for "what came in," same reasoning as every row
 // being 'new' at this phase (approve/decline doesn't exist until Phase 7).
@@ -157,4 +173,4 @@ async function approve(id, adminId) {
   }
 }
 
-module.exports = { create, findAll, findById, approve, decline };
+module.exports = { create, findAll, findById, approve, decline, hasPendingForClient };

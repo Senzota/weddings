@@ -19,6 +19,11 @@ router.get('/login', asyncHandler(clientAccountController.showLogin));
 router.post('/login', asyncHandler(clientAccountController.login));
 router.post('/logout', requireClientAccount, clientAccountController.logout);
 router.get('/dashboard', requireClientAccount, asyncHandler(clientAccountController.showDashboard));
+// input_20 Phase 10C: account-owned-event handoff into the existing Phase 8
+// portal. A POST route, so — unlike the GET routes above — it can never be
+// shadowed by GET /:token below regardless of registration order; kept
+// here anyway, grouped with the other requireClientAccount routes.
+router.post('/select-event', requireClientAccount, asyncHandler(clientAccountController.selectEvent));
 
 router.get('/edit', requireClient, asyncHandler(clientController.showEditForm));
 router.get('/assets', requireClient, asyncHandler(clientController.showAssets));

@@ -1,5 +1,7 @@
 const bcrypt = require('bcrypt');
 const clientModel = require('../models/client.model');
+const eventModel = require('../models/event.model');
+const inquiryModel = require('../models/inquiry.model');
 
 // Matches db/seed-admin.js's SALT_ROUNDS — same cost factor as this
 // project's existing admin password hashing, not a separately-invented
@@ -109,7 +111,43 @@ async function showDashboard(req, res) {
     delete req.session.clientId;
     return req.session.save(() => res.redirect('/client/login'));
   }
-  res.render('client/dashboard', { client });
+
+  // input_20 Phase 10C: ownership is looked up only from the client's own
+  // session identity, never from anything request-supplied. The view gets
+  // booleans only — no event/inquiry object, id, or status ever reaches
+  // `client/dashboard`, by construction of what's passed to res.render
+  // below.
+  const event = await eventModel.findByClientId(req.session.clientId);
+  const hasPendingInquiry = event ? false : await inquiryModel.hasPendingForClient(req.session.clientId);
+
+  res.render('client/dashboard', {
+    client,
+    hasOwnedEvent: Boolean(event),
+    hasPendingInquiry,
+  });
 }
 
-module.exports = { showRegister, register, showLogin, login, logout, showDashboard };
+// input_20 Phase 10C: the account-owned-event handoff into the existing
+// Phase 8 portal. The event is found solely via req.session.clientId —
+// req.params/req.query/req.body are never read here, so a forged eventId/
+// id/clientId field in the request has no path to influence which event
+// (if any) clientEventId gets set to. No owned event means a safe no-op
+// redirect: clientEventId is left exactly as it was (never cleared here),
+// since a failed account-selection attempt is not a reason to evict a
+// session that already reached the portal through a token.
+async function selectEvent(req, res) {
+  const event = await eventModel.findByClientId(req.session.clientId);
+
+  if (!event) {
+    return res.redirect('/client/dashboard');
+  }
+
+  req.session.clientEventId = event.id;
+
+  return req.session.save((err) => {
+    if (err) return res.status(500).send('Something went wrong.');
+    return res.redirect('/client');
+  });
+}
+
+module.exports = { showRegister, register, showLogin, login, logout, showDashboard, selectEvent };

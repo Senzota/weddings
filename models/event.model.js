@@ -40,6 +40,24 @@ async function findById(id) {
   return rows[0];
 }
 
+// input_20 Phase 10C: the only ownership lookup this phase needs — finds
+// the account-owned event straight from clients.id, never from any
+// request-supplied event identifier. ORDER BY created_at DESC LIMIT 1 is
+// the "pick one deterministically" rule for a single-event dashboard
+// without a schema change: client_id is not UNIQUE (a client could end up
+// owning more than one event over time), so this picks the most recent
+// one rather than assuming there's only ever exactly one.
+async function findByClientId(clientId) {
+  const { rows } = await pool.query(
+    `SELECT * FROM events
+     WHERE client_id = $1
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [clientId]
+  );
+  return rows[0];
+}
+
 // Undefined means "this form doesn't know about this field at all" (e.g.
 // Lady Gianna's dashboard "Event details" card only submits a handful of
 // fields) — that must leave the column untouched via COALESCE. An
@@ -131,4 +149,4 @@ async function getStats(id) {
   return rows[0];
 }
 
-module.exports = { create, findAll, findById, update, setStatus, getStats };
+module.exports = { create, findAll, findById, update, setStatus, getStats, findByClientId };

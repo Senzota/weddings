@@ -24,13 +24,28 @@
 <body>
   <div class="ca-wrap">
     <p>Signed in as <strong><%= client.full_name %></strong></p>
-    <h1>Your client account is ready.</h1>
-    <div class="ca-card">
-      <p>Booking and "Our Wedding" access will appear here after the next account-linking phase.</p>
-      <form method="POST" action="/client/logout" style="margin-top:1rem;">
-        <button type="submit" class="ca-btn">Sign out</button>
-      </form>
-    </div>
+    <% if (hasOwnedEvent) { %>
+      <h1>Our Wedding</h1>
+      <div class="ca-card">
+        <p>Your wedding workspace is ready.</p>
+        <form method="post" action="/client/select-event">
+          <button type="submit" class="ca-btn">Open Our Wedding</button>
+        </form>
+      </div>
+    <% } else if (hasPendingInquiry) { %>
+      <h1>Your booking request is under review.</h1>
+      <div class="ca-card">
+        <p>We'll let you know once it's been reviewed.</p>
+      </div>
+    <% } else { %>
+      <h1>No active wedding yet.</h1>
+      <div class="ca-card">
+        <p>Nothing to show here yet.</p>
+      </div>
+    <% } %>
+    <form method="POST" action="/client/logout" style="margin-top:1rem;">
+      <button type="submit" class="ca-btn">Sign out</button>
+    </form>
     <p class="ca-foot"><a href="/">&larr; Back to homepage</a></p>
   </div>
 </body>
