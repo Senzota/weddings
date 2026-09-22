@@ -38,4 +38,11 @@ router.get('/inquiries/:id', requireAdmin, asyncHandler(adminController.showInqu
 router.post('/inquiries/:id/approve', requireAdmin, asyncHandler(adminController.approveInquiry));
 router.post('/inquiries/:id/decline', requireAdmin, asyncHandler(adminController.declineInquiry));
 
+// input_20 Phase 11B: read-only admin client directory — GET-only, no
+// mutation route exists for either. /clients/:id has no collision risk
+// with /clients above it (different path-segment count), same reasoning
+// as /events/:id/client-preview's own ordering comment.
+router.get('/clients', requireAdmin, asyncHandler(adminController.listClients));
+router.get('/clients/:id', requireAdmin, asyncHandler(adminController.showClientDetail));
+
 module.exports = router;

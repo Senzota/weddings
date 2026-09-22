@@ -73,6 +73,26 @@ async function findByIdAndClientId(eventId, clientId) {
   return rows[0];
 }
 
+// input_20 Phase 11B: the admin client-detail page's read-only ownership
+// query — same numeric-id guard and client_id filter as
+// findByIdAndClientId, but returning every one of a client's events (not
+// scoped to one id) and only the columns admin/client-detail.ejs actually
+// needs, rather than SELECT * (no token/access-mode/contact data reaches
+// the view this way). Never used by the client account/portal side — this
+// is the admin-only equivalent of findAllByClientId, kept separate so
+// neither caller's column list constrains the other's.
+async function findAllByClientIdForAdmin(clientId) {
+  if (!/^\d+$/.test(String(clientId))) return [];
+  const { rows } = await pool.query(
+    `SELECT id, event_type, couple_names, wedding_date, theme, status
+     FROM events
+     WHERE client_id = $1
+     ORDER BY created_at DESC`,
+    [clientId]
+  );
+  return rows;
+}
+
 // Undefined means "this form doesn't know about this field at all" (e.g.
 // Lady Gianna's dashboard "Event details" card only submits a handful of
 // fields) — that must leave the column untouched via COALESCE. An
@@ -164,4 +184,7 @@ async function getStats(id) {
   return rows[0];
 }
 
-module.exports = { create, findAll, findById, update, setStatus, getStats, findAllByClientId, findByIdAndClientId };
+module.exports = {
+  create, findAll, findById, update, setStatus, getStats,
+  findAllByClientId, findByIdAndClientId, findAllByClientIdForAdmin,
+};

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clients — Admin</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f2; color: #222; }
+    .app-header {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; background: #fff; border-bottom: 1px solid #ddd;
+    }
+    .app-header .brand { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; }
+    .app-main { max-width: 1000px; margin: 0 auto; padding: 24px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    caption { text-align: left; margin-bottom: 0.5rem; color: #6b625a; }
+    th, td { text-align: left; padding: 0.6em 0.75em; border-bottom: 1px solid #e6e0d8; }
+    th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: #6b625a; }
+    tr:last-child td { border-bottom: none; }
+    td a { color: #222; text-decoration: none; font-weight: 600; }
+    td a:hover, td a:focus-visible { text-decoration: underline; }
+    a:focus-visible, td a:focus-visible { outline: 3px solid #8a6d3b; outline-offset: 2px; }
+    .table-wrap { overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <span class="brand">Weddings</span>
+    <form method="POST" action="/admin/logout"><button type="submit">Log out</button></form>
+  </header>
+
+  <main class="app-main">
+  <p><a href="/admin/events">&larr; Back to weddings</a></p>
+  <h1>Clients</h1>
+
+  <% if (clients.length === 0) { %>
+    <p>No clients yet.</p>
+  <% } else { %>
+    <div class="table-wrap">
+      <table>
+        <caption>Client accounts, newest first.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Client name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Phone</th>
+            <th scope="col">Joined</th>
+            <th scope="col">Events</th>
+            <th scope="col">Pending</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% clients.forEach(function (client) { %>
+            <tr>
+              <td><%= client.full_name %></td>
+              <td><%= client.email %></td>
+              <td><%= client.phone || '' %></td>
+              <td><%= client.created_at.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %></td>
+              <td><%= client.event_count %></td>
+              <td><%= client.pending_inquiry_count %></td>
+              <td><a href="/admin/clients/<%= client.id %>">View Client</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+  </main>
+</body>
+</html>

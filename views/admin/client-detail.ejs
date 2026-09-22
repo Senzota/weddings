@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= client.full_name %> — Client</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f2; color: #222; }
+    .app-header {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; background: #fff; border-bottom: 1px solid #ddd;
+    }
+    .app-header .brand { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; }
+    .app-main { max-width: 900px; margin: 0 auto; padding: 24px; }
+    section.detail-section { margin-top: 2rem; }
+    section.detail-section h2 { font-size: 1.2rem; margin: 0 0 1rem; }
+    .detail-card { background: #fff; border: 1px solid #e6e0d8; border-radius: 12px; padding: 1.5rem; }
+    .detail-row { margin-bottom: 1rem; }
+    .detail-row:last-child { margin-bottom: 0; }
+    .detail-label { display: block; font-size: 0.8rem; font-weight: 700; color: #6b625a; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .item-list { display: flex; flex-direction: column; gap: 1rem; }
+    .item-card {
+      background: #fff; border: 1px solid #e6e0d8; border-radius: 12px;
+      padding: 1.25rem; display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .item-eyebrow { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6b625a; margin: 0 0 0.3rem; }
+    .item-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.3rem; }
+    .item-meta { font-size: 0.9rem; color: #6b625a; margin: 0; }
+    .item-links { display: flex; gap: 0.75rem; flex-shrink: 0; }
+    .item-links a { color: #222; font-weight: 600; text-decoration: none; }
+    .item-links a:hover, .item-links a:focus-visible, a:focus-visible { text-decoration: underline; outline: 3px solid #8a6d3b; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <span class="brand">Weddings</span>
+    <form method="POST" action="/admin/logout"><button type="submit">Log out</button></form>
+  </header>
+
+  <main class="app-main">
+  <p><a href="/admin/clients">&larr; Back to clients</a></p>
+  <h1>Client profile</h1>
+
+  <div class="detail-card">
+    <div class="detail-row">
+      <span class="detail-label">Name</span>
+      <span><%= client.full_name %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Email</span>
+      <span><%= client.email %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Phone</span>
+      <span><%= client.phone || '' %></span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Joined</span>
+      <span><%= client.created_at.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %></span>
+    </div>
+  </div>
+
+  <section class="detail-section">
+    <h2>Owned Events</h2>
+    <% if (ownedEvents.length === 0) { %>
+      <p>No events yet.</p>
+    <% } else { %>
+      <div class="item-list">
+        <% ownedEvents.forEach(function (event) { %>
+          <div class="item-card">
+            <div>
+              <p class="item-eyebrow"><%= event.typeLabel %> &middot; <%= event.statusLabel %></p>
+              <p class="item-title"><%= event.title %></p>
+              <p class="item-meta"><%= event.dateLabel %> &middot; <%= event.themeLabel %></p>
+            </div>
+            <div class="item-links">
+              <a href="/admin/events/<%= event.id %>">Open Event</a>
+              <a href="/admin/events/<%= event.id %>/client-preview">View Client Portal</a>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="detail-section">
+    <h2>Pending Booking Requests</h2>
+    <% if (pendingList.length === 0) { %>
+      <p>No pending booking requests.</p>
+    <% } else { %>
+      <div class="item-list">
+        <% pendingList.forEach(function (inquiry) { %>
+          <div class="item-card">
+            <div>
+              <p class="item-eyebrow"><%= inquiry.typeLabel %></p>
+              <p class="item-title"><%= inquiry.preferredThemeLabel || 'No preference' %></p>
+              <p class="item-meta">Submitted <%= inquiry.createdAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %></p>
+            </div>
+            <div class="item-links">
+              <a href="/admin/inquiries/<%= inquiry.id %>">View Inquiry</a>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+  </main>
+</body>
+</html>

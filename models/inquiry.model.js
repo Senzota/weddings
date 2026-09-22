@@ -35,6 +35,26 @@ async function hasPendingForClient(clientId) {
   return rows.length > 0;
 }
 
+// input_20 Phase 11B: the admin client-detail page's read-only pending-
+// inquiries query — same numeric-id guard as findById, filtered to this
+// client's still-`new` inquiries, returning only the columns
+// admin/client-detail.ejs needs (never full_name/phone/email/note — those
+// belong to the client account itself, already shown separately, and the
+// note is deliberately never surfaced in any list view, same as
+// hasPendingForClient's existence-only precedent above).
+async function findPendingByClientId(clientId) {
+  if (!/^\d+$/.test(String(clientId))) return [];
+  const { rows } = await pool.query(
+    `SELECT id, event_type, preferred_theme, created_at
+     FROM booking_inquiries
+     WHERE client_id = $1
+       AND status = 'new'
+     ORDER BY created_at DESC`,
+    [clientId]
+  );
+  return rows;
+}
+
 // input_20 Phase 6: read-only admin list/detail. Newest first — the
 // natural triage order for "what came in," same reasoning as every row
 // being 'new' at this phase (approve/decline doesn't exist until Phase 7).
@@ -173,4 +193,4 @@ async function approve(id, adminId) {
   }
 }
 
-module.exports = { create, findAll, findById, approve, decline, hasPendingForClient };
+module.exports = { create, findAll, findById, approve, decline, hasPendingForClient, findPendingByClientId };

@@ -3,6 +3,7 @@ const ExcelJS = require('exceljs');
 const pool = require('../config/db');
 const eventModel = require('../models/event.model');
 const inquiryModel = require('../models/inquiry.model');
+const clientModel = require('../models/client.model');
 const guestModel = require('../models/guest.model');
 const galleryModel = require('../models/gallery.model');
 const cameoModel = require('../models/cameo.model');
@@ -11,6 +12,7 @@ const { AVAILABLE_THEMES, DEFAULT_THEME_BY_EVENT_TYPE, themesForEventType } = re
 const { ACCESS_MODES } = require('../config/accessModes');
 const { EVENT_TYPES, DEFAULT_EVENT_TYPE } = require('../config/eventTypes');
 const { uploadImage, deleteImage } = require('../utils/cloudinary');
+const { formatEventDate } = require('../utils/formatDate');
 
 // The theme dropdown is filtered client-side (JS) by the selected event
 // type, but a request can still arrive with a mismatched pair (stale
@@ -519,6 +521,59 @@ async function declineInquiry(req, res) {
   res.redirect(`/admin/inquiries/${req.params.id}`);
 }
 
+// input_20 Phase 11B: same naming convention as
+// clientAccount.controller.js's own eventDisplayTitle (duplicated for the
+// same reason eventTypeLabel/themeLabel above are duplicated rather than
+// imported — that file isn't a shared module either way) — a title built
+// only from fields this page is already allowed to show, never an
+// internal id: couple_names as-is for a wedding-style event, "X's
+// Birthday" for a birthday, a safe type-label fallback when couple_names
+// is empty.
+function eventDisplayTitle(event) {
+  const name = (event.couple_names || '').trim();
+  if (!name) return `${eventTypeLabel(event.event_type)} Celebration`;
+  if (event.event_type === 'birthday') return `${name}'s Birthday`;
+  return name;
+}
+
+// input_20 Phase 11B: read-only admin client directory. listClients passes
+// through exactly what clientModel.findAllWithCounts() already returns
+// (id/full_name/email/phone/created_at/event_count/pending_inquiry_count)
+// — no password_hash, no token/session data ever leaves that query in the
+// first place, so there's nothing further to strip here.
+async function listClients(req, res) {
+  const clients = await clientModel.findAllWithCounts();
+  res.render('admin/clients-list', { clients });
+}
+
+async function showClientDetail(req, res) {
+  const client = await clientModel.findById(req.params.id);
+  if (!client) return res.status(404).send('Client not found.');
+
+  const [events, pendingInquiries] = await Promise.all([
+    eventModel.findAllByClientIdForAdmin(client.id),
+    inquiryModel.findPendingByClientId(client.id),
+  ]);
+
+  const ownedEvents = events.map((event) => ({
+    id: event.id,
+    typeLabel: eventTypeLabel(event.event_type),
+    title: eventDisplayTitle(event),
+    dateLabel: event.wedding_date ? formatEventDate(event.wedding_date) : 'To be confirmed',
+    themeLabel: themeLabel(event.theme),
+    statusLabel: event.status === 'live' ? 'Live' : 'Draft',
+  }));
+
+  const pendingList = pendingInquiries.map((inquiry) => ({
+    id: inquiry.id,
+    typeLabel: eventTypeLabel(inquiry.event_type),
+    preferredThemeLabel: inquiry.preferred_theme ? themeLabel(inquiry.preferred_theme) : null,
+    createdAt: inquiry.created_at,
+  }));
+
+  res.render('admin/client-detail', { client, ownedEvents, pendingList });
+}
+
 module.exports = {
   showLogin, login, logout,
   listEvents, newEventForm, createEvent,
@@ -527,6 +582,7 @@ module.exports = {
   uploadCameoPhoto, deleteCameoPhoto,
   showClientPreview,
   listInquiries, showInquiryDetail, approveInquiry, declineInquiry,
+  listClients, showClientDetail,
   // input_20 Phase 8: data-only cores + eventId-taking action cores, for
   // controllers/client.controller.js to call with req.session.clientEventId
   // in place of req.params.id. unpublishCore is deliberately never
