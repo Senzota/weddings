@@ -184,16 +184,15 @@
           </div>
           <div class="lg-table-wrap">
             <table>
-              <thead><tr><th>Guest</th><th>Invitation type</th><th>Seats</th><th>Passcode</th><th>RSVP</th><th></th></tr></thead>
+              <thead><tr><th>Name</th><th>Seats</th><th>Code</th><th>RSVP</th><th>Checked in</th></tr></thead>
               <tbody>
                 <% guests.forEach(function (guest) { %>
                   <tr>
                     <td><div class="lg-guest-name"><span class="lg-avatar"><%= guest.name.charAt(0) %></span><%= guest.name %></div></td>
-                    <td><%= guest.invite_group || '' %></td>
                     <td><%= guest.seat_count %></td>
-                    <td><span class="lg-code"><%= guest.passcode %></span></td>
+                    <td><span class="lg-code"><%= guest.passcode %></span><% if (!isPreview) { %> <button type="button" class="lg-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button><% } %></td>
                     <td><span class="lg-status"><%= guest.rsvp_status %></span></td>
-                    <td><% if (!isPreview) { %><button type="button" class="lg-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy code</button><% } %></td>
+                    <td><%= guest.checked_in ? 'Yes' : 'No' %></td>
                   </tr>
                 <% }) %>
               </tbody>

@@ -245,16 +245,14 @@
             <% } %>
             <table>
               <thead>
-                <tr><th>Name</th><th>Invitation type</th><th>Seats</th><th>Passcode</th><th></th><th>RSVP</th><th>Checked in</th></tr>
+                <tr><th>Name</th><th>Seats</th><th>Code</th><th>RSVP</th><th>Checked in</th></tr>
               </thead>
               <tbody>
                 <% guests.forEach(function(guest) { %>
                   <tr>
                     <td><%= guest.name %></td>
-                    <td><%= guest.invite_group || '' %></td>
                     <td><%= guest.seat_count %></td>
-                    <td><%= guest.passcode %></td>
-                    <td><% if (!isPreview) { %><button type="button" class="bb-btn copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button><% } %></td>
+                    <td><%= guest.passcode %><% if (!isPreview) { %> <button type="button" class="bb-btn copy-btn" data-copy="<%= guest.passcode %>">Copy Code</button><% } %></td>
                     <td><%= guest.rsvp_status %></td>
                     <td><%= guest.checked_in ? 'Yes' : 'No' %></td>
                   </tr>

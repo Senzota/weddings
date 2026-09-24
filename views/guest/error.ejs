@@ -16,10 +16,15 @@
       background: #f6f2e7;
       color: #3a3128;
       font-family: Georgia, serif;
+      flex-direction: column;
+      gap: 1rem;
     }
+    a { color: #3a3128; }
+    a:focus-visible { outline: 2px solid #3a3128; outline-offset: 3px; }
   </style>
 </head>
 <body>
   <p><%= message %></p>
+  <p><a href="/">&larr; Back to homepage</a></p>
 </body>
 </html>

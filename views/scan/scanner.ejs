@@ -18,6 +18,8 @@
     #manual-entry { margin-top: 16px; }
     #manual-entry input { font-size: 1rem; padding: 6px; }
     #manual-entry button, #start-btn { font-size: 1rem; padding: 8px 16px; }
+    .scanner-home { display: inline-block; margin-top: 20px; }
+    .scanner-home:focus-visible { outline: 2px solid #222; outline-offset: 3px; }
   </style>
 </head>
 <body>
@@ -35,6 +37,8 @@
         <button type="submit">Check In</button>
       </form>
     </div>
+
+    <a class="scanner-home" href="/">&larr; Home</a>
   </div>
 
   <script src="/vendor/jsqr.js"></script>
