@@ -18,6 +18,13 @@
       'botanical-bloom': 'https://fonts.googleapis.com/css2?family=Beau+Rivage&family=Cormorant+Garamond:wght@400;500;600&display=swap',
       'lavender-romance': 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=DM+Sans:wght@400;500;600;700&family=Great+Vibes&display=swap',
       'lady-gianna': 'https://fonts.googleapis.com/css2?family=Great+Vibes&family=Libre+Baskerville:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap',
+      // Completion patch item 2: matches config/themes.js's own Plain Card
+      // googleFonts value exactly, so this shared page's heading font
+      // actually matches the .bb-admin h1/h2 font-family Plain Card's own
+      // theme.css now declares (edit-event.ejs already picks this up via
+      // `themes.find(...)`; this file never received the theme registry,
+      // hence its own separate map — see this map's original comment).
+      'plain-card': 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap',
     };
   %>
   <link href="<%= assetsGoogleFontsBySlug[event.theme] || assetsGoogleFontsBySlug['botanical-bloom'] %>" rel="stylesheet">

@@ -1130,6 +1130,17 @@ body.pc-locked { overflow: hidden; height: 100vh; }
   font-size: 0.85rem;
 }
 
+.portal-panel input[type="text"][readonly] {
+  width: 100%;
+  margin-top: 8px;
+  padding: 0.6em 0.8em;
+  border: 1px solid var(--gold-soft);
+  background: #ece3d4;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
 @media (max-width: 900px) {
   .portal-workspace {
     grid-template-columns: 1fr;
@@ -1179,4 +1190,161 @@ body.pc-locked { overflow: hidden; height: 100vh; }
   .portal-invites-heading .portal-dark-button {
     width: 100%;
   }
+}
+
+/* =========================================
+   PLAIN CARD — SHARED ADMIN EDIT/ASSETS PAGES
+   views/admin/edit-event.ejs and views/admin/assets.ejs are reused as-is by
+   every theme (input_20 Phase 4/8) — admin-shared.css, loaded before this
+   file on those two pages, already supplies every layout/geometry rule for
+   the shared .bb-admin-* class names; only this theme's own colors/fonts/
+   backgrounds belong here, the same minimal scope every other theme's own
+   block already uses. Neither shared template is modified — this is a
+   CSS-only visual treatment, following the file's own load-order contract. */
+.bb-admin {
+  background: var(--paper-deep);
+  color: var(--ink);
+  font-family: "DM Sans", sans-serif;
+  font-size: 15px;
+}
+.bb-admin a { color: var(--gold); }
+.bb-admin h1 { font-family: "Playfair Display", serif; color: var(--ink); font-weight: 600; font-size: 2.2rem; }
+.bb-admin h2 { font-family: "Playfair Display", serif; color: var(--ink); font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 1.3rem; }
+
+.bb-admin-header-inner {
+  background: var(--paper);
+  border: 1px solid var(--gold-soft);
+}
+.bb-admin-header-title { font-family: "Playfair Display", serif; font-weight: 600; font-size: 1.3rem; color: var(--ink); }
+.bb-admin-nav a { color: var(--ink); font-size: 0.8rem; font-weight: 600; }
+.bb-admin-nav a:hover, .bb-admin-nav a.bb-admin-nav-active { color: var(--gold); }
+
+.bb-admin-card, .bb-admin-tile {
+  background: var(--paper);
+  border: 1px solid var(--gold-soft);
+}
+.bb-admin-photo-panel { background: #ece3d4; }
+.bb-admin-thumb { background: #ece3d4; }
+
+.bb-admin label { font-size: 0.85rem; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
+.bb-admin input[type="text"], .bb-admin input[type="date"], .bb-admin input[type="email"],
+.bb-admin input[type="password"], .bb-admin input[type="color"], .bb-admin input[type="file"],
+.bb-admin textarea, .bb-admin select {
+  border: 1px solid var(--gold-soft);
+  background: var(--white);
+  color: var(--ink);
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.95rem;
+}
+.bb-admin input[readonly] { background: #ece3d4; }
+.bb-admin th, .bb-admin td { border-bottom: 1px solid var(--gold-soft); }
+.bb-admin th { color: var(--gold); font-weight: 700; text-transform: uppercase; font-size: 0.7rem; }
+.bb-admin .bb-btn { font-size: 0.75rem; }
+.bb-admin .bb-stats strong { font-size: 1.7rem; color: var(--gold); font-family: "Playfair Display", serif; font-weight: 600; }
+.bb-admin .bb-danger { border-color: rgba(122, 58, 52, 0.5); }
+.bb-admin .bb-error { color: #86413a; }
+
+.bb-admin-gallery-item button { background: rgba(36, 31, 26, 0.72); color: var(--white); }
+.bb-admin-gallery-caption { background: rgba(36, 31, 26, 0.72); color: var(--white); font-size: 0.7rem; line-height: 1.2; }
+
+.bb-btn {
+  display: inline-block;
+  border: 1px solid var(--gold);
+  color: var(--ink);
+  background: transparent;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+.bb-btn:hover, .bb-btn:focus-visible { background: var(--ink); color: var(--white); border-color: var(--ink); outline: none; transform: translateY(-1px); }
+
+/* =========================================
+   PLAIN CARD — ITINERARY (invitation card, lower area)
+   No visual reference exists for this in the approved package; extends the
+   same event-details token language (--muted / --gold-soft / detail-label
+   letter-spacing) already used just above it in the card. */
+.pc-itinerary {
+  margin: 0 0 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--gold-soft);
+  text-align: left;
+}
+.pc-itinerary .detail-label {
+  display: block;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.pc-itinerary-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+.pc-itinerary-list li {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--gold-soft);
+  overflow-wrap: break-word;
+}
+.pc-itinerary-list li:last-child { border-bottom: none; }
+
+/* =========================================
+   PLAIN CARD — QR PASS OVERLAY (closed events, verified guest only)
+   Replaces a permanently-rendered QR code with a "Show my QR pass" trigger;
+   the existing real qrDataUrl/gatepass markup only ever moves into this
+   overlay — no new QR/gatepass/token mechanism is introduced. Hidden via
+   the standard `hidden` attribute (not just visually) until opened, so
+   nothing here ever occupies layout space or is reachable in the
+   accessibility tree while closed. */
+.pc-qr-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.pc-qr-modal[hidden] { display: none; }
+.pc-qr-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 19, 15, 0.78);
+}
+.pc-qr-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  padding: clamp(30px, 6vw, 40px) clamp(20px, 5vw, 28px) 26px;
+  text-align: center;
+  background: var(--paper-deep);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 50px rgba(9, 7, 5, 0.4);
+  clip-path: polygon(
+    0 18px, 18px 0, calc(100% - 18px) 0, 100% 18px,
+    100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px)
+  );
+}
+.pc-qr-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px;
+}
+.pc-qr-modal-close:hover, .pc-qr-modal-close:focus-visible { color: var(--ink); outline: none; }
+body.pc-modal-open { overflow: hidden; }
+@media (max-width: 420px) {
+  .pc-qr-modal-card { max-width: 100%; }
 }

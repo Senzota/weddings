@@ -105,6 +105,23 @@
               <a href="<%= basePath %>/edit" class="portal-outline-button">Change photo</a>
             <% } %>
           </article>
+
+          <% if (!isPreview && event.status === 'live') { %>
+            <!-- Completion patch item 3: never shown in admin-preview
+                 (isPreview excludes it entirely, not just the button), and
+                 never shown for a draft event — resolveLiveEvent() in
+                 guest.controller.js only ever serves /invite/:id once
+                 event.status === 'live', so the link would be a dead 404 for
+                 a draft. Uses the exact same baseUrl/`/invite/:id` shape
+                 every other theme's own "Copy Link" already sends to
+                 navigator.clipboard — no new URL format invented. -->
+            <article class="portal-panel">
+              <p class="panel-label">SHARE</p>
+              <h2>Invitation link</h2>
+              <input type="text" readonly value="<%= baseUrl %>/invite/<%= event.id %>" onclick="this.select()">
+              <button type="button" class="portal-outline-button copy-btn" data-copy="<%= baseUrl %>/invite/<%= event.id %>" style="margin-top:0.75rem;">Copy Invitation Link</button>
+            </article>
+          <% } %>
         </div>
 
         <article class="portal-preview-panel">

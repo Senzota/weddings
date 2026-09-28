@@ -581,3 +581,183 @@ structural, not visual:
   value, or database URL was printed or exposed at any point.
 - Admin-preview mode confirmed strictly read-only for Plain Card, matching
   the existing three-theme pattern.
+
+# Phase: Plain Card Completion Patch
+
+Commit: `fix(theme): complete plain card guest experience`
+Base commit: `aa4abb4 feat(theme): add plain card event experience`
+
+Six specific gaps identified by the project owner after Plain Card's initial
+release, fixed here. All changes are view/CSS-only inside files already
+established as in-scope (Plain Card's own theme.css/views, plus two lines in
+the shared `admin/assets.ejs` font map — see item 2). No route, controller,
+model, middleware, schema, session, or access-mode logic was touched.
+
+## Files changed
+
+```
+public/themes/plain-card/theme.css              — new CSS: bb-admin/edit-page
+                                                    theming, QR modal, itinerary,
+                                                    invitation-link input styling
+views/guest/themes/plain-card/invitation.ejs    — itinerary section, personalized
+                                                    message, QR overlay/modal
+views/admin/themes/plain-card/dashboard.ejs      — Copy Invitation Link panel
+views/admin/assets.ejs                          — added Plain Card font entry
+PROMPT-REPORT.md                                — this section
+```
+
+## 1. Closed-event QR overlay
+
+`guest.controller.js#renderInvitation` already computed everything needed
+(`state === 'qr'` only for a verified closed-event guest with a non-expired
+gatepass, plus `qrDataUrl`/`checkedIn`) — no controller change was made or
+needed. In `invitation.ejs`, the QR `<img>` that used to render permanently
+inside the card now renders inside a `hidden`-by-default `.pc-qr-modal`,
+opened only by a new "Show my QR pass" button that exists only inside the
+`state === 'qr'` branch. A small inline script (guarded by
+`if (!trigger || !modal) return;`, so it no-ops on every other state) toggles
+the `hidden` attribute, listens for `Escape`, and returns focus to the
+trigger button on close — no page navigation ever occurs, so closing leaves
+the guest at the exact scroll position they were at. No new QR, gatepass,
+token, or verification mechanism was created; the exact existing
+`qrDataUrl`/`gatepass.checked_in` values are reused. Verified live: the QR
+image and "Show my QR pass" button are completely absent from the HTML for
+open events, recognized events, and an unverified visitor to a closed event
+(confirmed via direct fetch with no session/passcode) — the data simply
+isn't in the response, not just hidden by CSS.
+
+## 2. Plain Card styled edit page
+
+`views/admin/edit-event.ejs` and `views/admin/assets.ejs` are already shared,
+unmodified-in-form templates reused by every theme (confirmed by direct
+inspection of `client.controller.js`/`admin.controller.js`) — their form
+action, method, `enctype`, input names, hidden fields, and redirects are
+identical regardless of theme. Every existing theme already styles this
+shared markup purely through its own `theme.css`, via the generic
+`.bb-admin-*` class names `admin-shared.css` supplies the layout/geometry
+for (see that file's own header comment) — Plain Card's `theme.css` simply
+had no such rules yet. Added a `.bb-admin-*` color/font block (matching
+exactly the same selector set the other three themes' own blocks use) plus
+a new `.bb-btn` base definition, using Plain Card's existing ivory/gold/
+Playfair Display token language. **Zero changes to either shared template.**
+Also added a `'plain-card'` entry to `assets.ejs`'s own hardcoded
+`assetsGoogleFontsBySlug` map (previously fell back to Botanical Bloom's
+fonts) — a one-line, additive, in-scope view change so the now-themed
+`.bb-admin` headings actually load Plain Card's own font family; flagged
+here explicitly since it's a minor addition beyond item 2's literal
+"edit page" wording, in the same file family, with no risk to the other
+three themes (their own map entries are untouched). Verified live: both
+pages render `200` for a Plain Card event with `Playfair Display` in the
+loaded fonts and `class="bb-admin"` on `<body>`; the edit form's POST target
+(`/admin/events/:id`) is unchanged; an existing Botanical Bloom event's edit
+and assets pages still render `200` with their own unchanged fonts.
+
+## 3. Copy Invitation Link
+
+Added a new panel to the Plain Card dashboard only,
+`<% if (!isPreview && event.status === 'live') { %>`, containing a readonly
+input and a button using the exact same `class="copy-btn" data-copy="..."`
+convention (and the same already-existing inline clipboard `<script>`) every
+other theme's own "Copy Link" button already uses — no new JavaScript
+mechanism was added. The URL is `<%= baseUrl %>/invite/<%= event.id %>`,
+built from `baseUrl` (`${req.protocol}://${req.get('host')}`), which every
+dashboard render path (admin, client, and admin-preview) already receives
+from the controller — no controller change was needed. `baseUrl` correctly
+reflects `https` in production via the existing `app.set('trust proxy', 1)`.
+The always-present readonly input (`onclick="this.select()"`) itself serves
+as the safe manual fallback if the Clipboard API is unavailable. Verified
+live: present and correct on a live event's normal dashboard; absent from
+`GET /admin/events/:id/client-preview` (admin-preview); absent from a draft
+event's dashboard.
+
+## 4. Restore existing authorized actions
+
+Audited against the live dashboard and found **already correct** — no code
+change was needed for this item. Add Guests (guarded `!isPreview`), the
+Assets link (`<%= basePath %>/assets`, guarded to not appear in preview),
+and Cameos management (handled by the same shared `assets.ejs` Cameos
+section every other theme also links to via its own single "Assets" link —
+none of the three existing themes have a separate dashboard-level Cameos
+link either) were all already present from the initial Plain Card release.
+Verified live: `GET /admin/events/:id` for a normal admin session shows the
+Assets link, Other Details link, and the Add-Guests form; `GET
+/admin/events/:id/client-preview` shows none of them (only "Return to
+Admin").
+
+## 5. Personalized guest message
+
+First inspected `guests` table columns directly
+(`id, event_id, name, seat_count, passcode, email, rsvp_status,
+responded_at, created_at, invite_group`) and `models/guest.model.js` in
+full — confirmed **no per-guest custom-message field exists** anywhere in
+schema or model. Per the task's own instruction for this case, implemented
+the generated message from existing guest data only, with correct
+singular/plural grammar, added to `invitation.ejs`:
+`"Hi <name>, 1 seat is reserved for you."` / `"Hi <name>, 2 seats are
+reserved for you."`, followed by `"Show your QR pass at the door."` only for
+closed, verified, accepted guests (`state === 'qr'`). This text is only ever
+rendered inside `state !== 'open'` branches with a resolved `guest` object —
+never shown to open-event visitors (no guest identity exists there) or to
+unverified recognized/closed visitors (that's `state === null`, the passcode
+overlay, an entirely separate branch). `event.invitation_message` and
+`event.footer_note` are untouched. No schema or model change was made.
+Verified live: a 1-seat guest sees "1 seat is reserved for you."; a 3-seat
+guest sees "3 seats are reserved for you."; a closed, accepted, 1-seat guest
+sees the full "...reserved for you. Show your QR pass at the door." copy.
+
+## 6. Itinerary and QR placement
+
+Added a `.pc-itinerary` section to `invitation.ejs`, reusing the exact same
+`(event.itinerary || '').split('\n')...filter(Boolean)` parsing
+`other-details.ejs` already uses, rendered between the event-details block
+and the RSVP/QR state block ("lower invitation area"), cleanly omitted when
+`event.itinerary` is empty. The "Show my QR pass" button (item 1) sits
+inside the state block immediately below the itinerary section, never
+replacing or hiding it, and the QR itself only ever appears in the overlay
+modal — it never occupies the itinerary's layout space. Verified live: an
+open event with itinerary text shows both the itinerary list and (since open
+events have no RSVP/QR at all) nothing else in that area; a closed, accepted
+guest sees the itinerary followed by the "Show my QR pass" button, with the
+modal itself only appearing after the button is clicked (client-side, not
+independently verifiable via a plain HTTP fetch, but the modal's `hidden`
+attribute and the QR `<img>`'s presence only inside that hidden container
+were confirmed in the raw HTML response).
+
+## Local test evidence
+
+`.env` confirmed pointed at `localhost:5433` before any write. Baseline
+counts recorded before testing: `clients` 0, `booking_inquiries` 0, `events`
+7, `client_access` 0, `guests` 11, `gallery_photos` 0, `cameo_photos` 0.
+
+Created four disposable Plain Card test events (open/recognized/closed, plus
+one throwaway draft to confirm the Copy Invitation Link's draft-hiding
+rule), two disposable guests each on the recognized and closed events (a
+1-seat and a 3-seat guest, to test singular/plural grammar), and set
+itinerary text via the existing edit-update route (creation itself doesn't
+accept `itinerary` — an existing, unrelated, unmodified limitation of
+`createEvent`). Ran the full guest lifecycle (verify → RSVP accept → QR/
+gatepass) for both closed-event test guests. All items above were verified
+against live HTTP responses, not just read from code. Existing Botanical
+Bloom edit/assets pages re-checked for regression — unaffected. All four
+test events deleted via the existing admin delete route afterward. Final
+counts confirmed to match the baseline exactly: `clients` 0,
+`booking_inquiries` 0, `events` 7, `client_access` 0, `guests` 11,
+`gallery_photos` 0, `cameo_photos` 0.
+
+## Confirmations
+
+- No schema, migration, package, route, controller, model, middleware,
+  session, security, access-mode, RSVP, gatepass, QR, scanner, or
+  upload-flow change was made — all six items were resolved entirely within
+  Plain Card's own theme.css/views plus one additive font-map entry in the
+  already-shared `admin/assets.ejs`.
+- No production write occurred at any point in this phase; no production
+  migration was run (none needed).
+- No secret, password, hash, raw token, cookie/session ID, environment
+  value, or database URL was printed or exposed at any point.
+- Admin-preview mode re-confirmed strictly read-only after adding the Copy
+  Invitation Link feature (zero forms, zero real copy buttons — only the
+  inert shared `<script>` text matched a naive search, no rendered
+  `<button class="copy-btn">` element exists in that mode).
+- The other three existing themes were not modified and were re-verified
+  to render without regression.
