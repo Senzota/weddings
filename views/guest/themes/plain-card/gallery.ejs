@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" class="pc-page">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gallery — <%= event.couple_names %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="pc-secondary-page">
+  <div class="pc-secondary-wrap">
+    <h2>Gallery</h2>
+
+    <% if (photos === null) { %>
+      <p class="pc-empty">Enter your passcode to view the gallery.</p>
+      <% if (error) { %>
+        <p class="pc-error"><%= error %></p>
+      <% } %>
+      <form method="GET" action="/invite/<%= event.id %>/gallery">
+        <input type="text" name="passcode" placeholder="Passcode" required autocapitalize="characters" autocomplete="off">
+        <button type="submit" class="rsvp-button">View Gallery</button>
+      </form>
+    <% } else if (photos.length === 0) { %>
+      <p class="pc-empty">No gallery photos yet.</p>
+    <% } else { %>
+      <div class="pc-gallery-grid">
+        <% photos.forEach(function (photo) { %>
+          <a href="<%= photo.image_url %>" target="_blank">
+            <img src="<%= photo.image_url %>" alt="">
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <a class="pc-back-link" href="/invite/<%= event.id %>">&larr; Back to the invitation</a>
+  </div>
+</body>
+</html>

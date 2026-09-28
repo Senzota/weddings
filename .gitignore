@@ -11,3 +11,8 @@ Memory.md
 SystemArc.md
 .claude/
 PROMPT_REPORT.md
+
+# Plain Card theme: approved visual reference package — design evidence only,
+# never a runtime dependency. Production assets/templates are copied and
+# adapted into the real public/themes/ and views/*/themes/ locations instead.
+plain-card-approved/

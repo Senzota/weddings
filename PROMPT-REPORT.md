@@ -346,3 +346,238 @@ recommendation only.
   event created for this purpose, since no Lavender Romance event already
   existed in the local database; Botanical Bloom and Lady Gianna used
   pre-existing local events.
+
+# Phase: Plain Card Theme — Full Implementation and Release
+
+Commit: `feat(theme): add plain card event experience`
+Base commit: `7f5f81e feat(ui): standardize guest tables and add contextual navigation`
+
+Product decisions (from the prior audit) approved by the project owner before
+this phase began: Plain Card is a **universal** theme available for **every**
+existing event type, and all seven previously-inactive event types
+(`bridal-shower`, `baby-shower`, `engagement`, `anniversary`, `graduation`,
+`corporate`, `other`) become active/selectable as a direct result.
+
+## 1. Scope
+
+New theme only. No schema, migration, route, controller, model, middleware,
+session, or access-mode-logic change. The one edit outside brand-new Plain
+Card files is additive registration data in `config/themes.js` (described
+below) — no existing theme's entry, no function signature, and no other
+config file was touched.
+
+## 2. Theme registration
+
+`config/themes.js`'s `AVAILABLE_THEMES` gained nine new entries, one per
+existing `config/eventTypes.js` slug (`wedding`, `birthday`, `bridal-shower`,
+`baby-shower`, `engagement`, `anniversary`, `graduation`, `corporate`,
+`other`), each `{ slug: 'plain-card', label: 'Plain Card', eventType: <type>,
+swatchColors, tagline, googleFonts }` — identical across all nine except
+`eventType`. This is safe under the existing registry architecture: every
+consumer either filters via `themesForEventType()`/`.filter()` (naturally
+partitions by type) or does a global `.find(slug)` (exactly two call sites —
+`admin.controller.js`'s and `clientAccount.controller.js`'s `themeLabel()`
+helpers — both reading only `.label`, identical across every duplicate).
+Verified live: `GET /admin/events/new` now lists all nine event types and
+shows "Plain Card" as a theme option under each.
+
+**Required accompanying fix**: `DEFAULT_THEME_BY_EVENT_TYPE` previously only
+mapped `wedding`/`birthday`. Registering Plain Card made the other seven
+types selectable in the UI for the first time, and both
+`admin.controller.js#resolveTheme()` and `models/inquiry.model.js#approve()`
+fall back to `DEFAULT_THEME_BY_EVENT_TYPE[type]` whenever no valid theme is
+submitted, writing directly into the `NOT NULL` `events.theme` column. Left
+unfixed, approving or manually creating an event of one of those seven types
+without an explicit theme choice would have thrown a Postgres NOT NULL
+violation. Fixed by adding all seven missing keys, each mapping to
+`'plain-card'` — an additive entry in the same map, in the same file already
+in scope, not a new function or a logic change.
+
+## 3. Files created
+
+```
+public/themes/plain-card/theme.css                    — new
+public/themes/plain-card/invitation-background.png    — new (copied from plain-card-approved/)
+public/themes/plain-card/portal-background.png        — new (copied from plain-card-approved/)
+views/guest/themes/plain-card/invitation.ejs           — new
+views/guest/themes/plain-card/gallery.ejs              — new
+views/guest/themes/plain-card/cameos.ejs               — new
+views/guest/themes/plain-card/other-details.ejs        — new
+views/admin/themes/plain-card/dashboard.ejs            — new
+```
+
+## 4. Files edited
+
+```
+.gitignore          — added `plain-card-approved/` (reference package excluded from version control)
+config/themes.js    — 9 new AVAILABLE_THEMES entries + 7 new DEFAULT_THEME_BY_EVENT_TYPE keys
+PROMPT-REPORT.md    — this section
+```
+
+No other file was touched. `db/schema.sql`, `db/migrate.js`, every
+`controllers/*`, `routes/*`, `models/*`, `middleware/*`, `utils/*`,
+`server.js`, `package.json`/`package-lock.json`, `config/accessModes.js`, and
+every file under the three existing themes (Botanical Bloom, Lavender
+Romance, Lady Gianna) were not modified.
+
+## 5. Prototype-to-production mapping
+
+Source: `plain-card-approved/` (invitation.html, portal.html, styles.css, two
+background PNGs) — the approved visual reference package, never itself
+modified, moved, or made a runtime dependency; it stays git-ignored and
+untracked.
+
+- **Visual tokens** (`--ink`, `--paper`, `--gold`, `--gold-soft`, `--muted`,
+  `--white`, `--cut`, the 4-corner invitation chamfer, the 2-corner
+  portal-shell chamfer, both breakpoints at `900px`/`680px`) copied verbatim
+  into `public/themes/plain-card/theme.css`.
+- **Invitation background**: the prototype's static image became
+  `event.card_image || '/themes/plain-card/invitation-background.png'`,
+  rendered via three stacked, non-conflicting layers (`.background-fallback`
+  gradient, `.background-image` conditional URL, `.background-overlay`
+  readability gradient) — reusing the same unconditional, pre-passcode-gate
+  `event.card_image` exposure pattern already established by all three
+  existing themes (verified in `botanical-bloom/invitation.ejs`).
+- **Portal background**: intentionally **not** event-derived — hardcoded as
+  `url("portal-background.png")` (relative to the served CSS path,
+  `/themes/plain-card/portal-background.png`) directly in `.portal-background`,
+  since the admin/client portal chrome is not guest-facing invitation content.
+- **Fake elements removed/replaced**: the prototype's non-functional
+  `#gatepass-toggle` JS button is suppressed (`.gatepass-toggle { display:
+  none; }`) and replaced with real POST forms to the existing
+  `/invite/:id/rsvp` route; the hardcoded placeholder QR/`GUEST CODE`
+  strings are replaced with the real `qrDataUrl`/`guest.passcode` values
+  used by every existing theme; every prototype `href="#"` link is replaced
+  with a real internal route; the prototype's five palette-swatch buttons
+  and "Change" background-picker link (no backing data model exists) were
+  deliberately **omitted entirely** rather than implemented as dead UI.
+- **Guest secondary pages** (gallery/cameos/other-details): no prototype
+  reference existed for these. Built by extending Plain Card's own
+  ivory/gold/serif token language into a new, simple `.pc-secondary-page`
+  treatment, mirroring the same relationship every existing theme already
+  has between its invitation and its own secondary pages.
+- **Long-content safety**: `h1`, `.invitation-message`, `.portal-title`, and
+  mini-card heading `clamp()` minimums were lowered and `line-height`
+  raised from the prototype's originals so long couple names/messages wrap
+  rather than clip; `.event-details`, `.card-footer`, `.portal-topbar`,
+  `.portal-nav`, and `.portal-invites-heading` were all given `flex-wrap:
+  wrap`.
+
+## 6. Access-mode behavior — implementation evidence
+
+All three modes verified live against real local test events, not just read
+from code:
+
+- **Open** (`access_mode = 'open'`): `GET /invite/:id` bypasses the passcode
+  overlay entirely and renders the invitation directly (`YOU ARE INVITED`
+  present, `Enter your passcode` absent). No RSVP form (`name="response"`),
+  no gatepass/QR markup, and no guest-management section at all on the
+  dashboard (`event.access_mode !== 'open'` wraps the entire section) —
+  confirmed by a zero match count for `portal-invites-section` on a live
+  open-mode dashboard render.
+- **Recognized** (`access_mode = 'recognized'`): passcode-gated
+  (`Enter your passcode` present pre-verification); after verifying and
+  submitting a real RSVP accept, the invitation correctly transitions to the
+  `state === 'confirmed'` view ("You're confirmed"); no gatepass/QR section
+  ever renders (`qr-frame` absent). Dashboard guest table renders exactly
+  `Name | Seats | Code | RSVP` (no "Checked in" column).
+- **Closed** (`access_mode = 'closed'`): passcode-gated; after RSVP accept,
+  a real gatepass row is created and the invitation renders a genuine
+  `<img src="data:image/...">` QR code (not a placeholder). Posting that
+  gatepass's real `qr_token` to the existing `/scan/verify` endpoint
+  returned `{"result":"checked_in", ...}`; re-fetching the guest's
+  invitation afterward correctly showed the "already checked in" message.
+  Dashboard guest table renders exactly `Name | Seats | Code | RSVP |
+  Checked in`, and the checked-in guest's row correctly showed `Yes`.
+
+## 7. Role/capability and preview evidence
+
+- **Admin (normal)**: dashboard for a live Plain Card event rendered `200`;
+  Add-Guests form, Download Excel link, and the Danger Zone (status-toggle
+  and delete forms, with the same `confirm()` dialog text pattern as the
+  existing themes) all present.
+- **Client (portal, non-preview)**: nav includes Assets, Other Details, My
+  Events, and a real `POST /client/logout` form; Publish form shown for a
+  draft event.
+- **Admin-preview**: fetched `GET /admin/events/:id/client-preview` for a
+  Plain Card event — confirmed **zero** `<form>` elements anywhere on the
+  page and **zero** Copy-code buttons, alongside the expected read-only
+  `Admin preview` banner and `Return to Admin` link. Matches the existing
+  `isPreview` conditional pattern used by all three prior themes.
+- **Booking → approval fallback**: registered a test client, submitted a
+  booking inquiry for `eventType: 'anniversary'` (a formerly-inactive type)
+  with no preferred theme, then approved it as admin — the resulting event
+  received `theme: 'plain-card'` via the `DEFAULT_THEME_BY_EVENT_TYPE`
+  fallback, with no database error. Also directly created events via the
+  admin form for `engagement` (no theme submitted → fallback), `wedding`
+  (theme explicitly set to `plain-card`), and `corporate` (no theme
+  submitted, `access_mode: open`) — all three succeeded.
+
+## 8. Local test evidence
+
+`.env` confirmed pointed at `localhost:5433` before any write. Baseline
+counts recorded before testing: `clients` 0, `booking_inquiries` 0, `events`
+7, `client_access` 0, `guests` 11, `gallery_photos` 0, `cameo_photos` 0.
+
+- Every Plain Card guest page (invitation, gallery, cameos, other-details)
+  rendered `200` with no EJS error, across open/recognized/closed test
+  events, both before and after passcode verification.
+- Existing themes re-checked for regression: `GET /themes/{botanical-bloom,
+  lavender-romance,lady-gianna}/theme.css` all `200`; an existing live
+  Botanical Bloom event's dashboard and invitation both still rendered
+  `200`.
+- `GET /admin/events/new` confirmed all nine event types and a
+  correctly-labeled "Plain Card" option for each.
+
+### Cleanup
+
+Disposable test records created: three admin-created test events (`engagement`,
+`wedding`, `corporate`, covering all three access modes plus both fallback
+and explicit theme selection), one guest added to each of the recognized and
+closed test events (one carried through a full verify → RSVP-accept →
+gatepass/QR → scanner-check-in cycle), one test client account, and one
+booking inquiry approved into a fourth test event. All events deleted via
+the existing admin delete route (cascading their guests/gatepasses); the
+disposable client and booking-inquiry rows — for which no admin delete route
+exists — were removed directly via SQL, consistent with prior-phase cleanup
+practice for records with no UI delete path. Final counts confirmed to match
+the baseline exactly: `clients` 0, `booking_inquiries` 0, `events` 7,
+`client_access` 0, `guests` 11, `gallery_photos` 0, `cameo_photos` 0. No
+pre-existing business record was changed.
+
+## 9. Responsive design — evidence and limitation
+
+No browser-rendering or screenshot tool was available in this session (only
+`DesignSync`/`WebFetch` were reachable via tool search, and neither can
+render or screenshot `localhost`). All responsive claims are therefore
+structural, not visual:
+
+- Every breakpoint present in the approved prototype's `styles.css`
+  (`900px` portal-workspace collapse with `.portal-preview-panel { order:
+  -1; }`, `680px` fine-grained mobile rules) was preserved verbatim in
+  `theme.css`.
+- Long-content wrapping (`overflow-wrap: break-word`, lowered `clamp()`
+  minimums, raised `line-height`) was added to every heading/body text
+  element identified as fixed-height-risk during the audit.
+- Flex-wrap was added to every horizontal row-layout element identified in
+  the audit as a potential narrow-viewport overflow risk.
+- No pixel-level visual confirmation at 320/375/414/768/900/1024/1280/1440px
+  was performed — this limitation is disclosed honestly rather than implied
+  otherwise.
+
+## 10. Confirmations
+
+- No schema, migration, package, route, controller, model, middleware,
+  session, security, access-mode, RSVP, gatepass, QR, scanner, or
+  upload-flow change was made. The only backend-adjacent edit is the
+  additive `DEFAULT_THEME_BY_EVENT_TYPE` registration data described in
+  Section 2, inside the already-in-scope `config/themes.js`.
+- No production write occurred at any point in this phase; no production
+  migration was run (none is needed — no schema change was made).
+- `plain-card-approved/` was never modified, moved, staged, or committed,
+  and never became a runtime dependency — confirmed ignored via `git
+  status --short` before and after this phase's changes.
+- No secret, password, hash, raw token, cookie/session ID, environment
+  value, or database URL was printed or exposed at any point.
+- Admin-preview mode confirmed strictly read-only for Plain Card, matching
+  the existing three-theme pattern.

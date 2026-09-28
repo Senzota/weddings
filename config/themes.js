@@ -39,6 +39,50 @@ const AVAILABLE_THEMES = [
     tagline: 'Blush, gold, and sage for a joyful birthday celebration.',
     googleFonts: 'https://fonts.googleapis.com/css2?family=Great+Vibes&family=Libre+Baskerville:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap',
   },
+  // Plain Card — a universal theme, approved for every existing event-type
+  // slug in config/eventTypes.js. This registry uses one eventType per
+  // entry (not an array), so one entry per type is the only way to offer
+  // the same theme across types without changing that existing shape —
+  // every field below stays byte-identical across all nine entries except
+  // eventType itself, since the two .find(t => t.slug === slug) label
+  // lookups in admin.controller.js/clientAccount.controller.js resolve to
+  // whichever entry appears first regardless of an event's actual type.
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'wedding',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'birthday',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'bridal-shower',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'baby-shower',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'engagement',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'anniversary',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'graduation',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'corporate',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  { slug: 'plain-card', label: 'Plain Card', eventType: 'other',
+    swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
+    tagline: 'A quiet, editorial keepsake card for any celebration.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
 ];
 
 const DEFAULT_THEME = 'botanical-bloom';
@@ -46,6 +90,13 @@ const DEFAULT_THEME = 'botanical-bloom';
 const DEFAULT_THEME_BY_EVENT_TYPE = {
   wedding: 'botanical-bloom',
   birthday: 'lady-gianna',
+  'bridal-shower': 'plain-card',
+  'baby-shower': 'plain-card',
+  engagement: 'plain-card',
+  anniversary: 'plain-card',
+  graduation: 'plain-card',
+  corporate: 'plain-card',
+  other: 'plain-card',
 };
 
 function themesForEventType(eventType) {

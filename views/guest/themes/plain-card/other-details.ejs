@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" class="pc-page">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Other Details — <%= event.couple_names %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="pc-secondary-page">
+  <div class="pc-secondary-wrap">
+    <h2>Other Details</h2>
+    <% const itineraryItems = (event.itinerary || '').split('\n').map(function (line) { return line.trim(); }).filter(Boolean); %>
+    <% if (itineraryItems.length > 0) { %>
+      <ul style="text-align:left; max-width:420px; margin:0 auto; color:var(--muted);">
+        <% itineraryItems.forEach(function (item) { %>
+          <li><%= item %></li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="pc-empty">No additional event details yet.</p>
+    <% } %>
+
+    <a class="pc-back-link" href="/invite/<%= event.id %>">&larr; Back to the invitation</a>
+  </div>
+</body>
+</html>

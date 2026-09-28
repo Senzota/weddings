@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" class="pc-page">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= event.couple_names %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<body class="pc-page<%= state === null ? ' pc-locked' : '' %>">
+  <main class="invitation-page">
+    <div class="background-fallback" aria-hidden="true"></div>
+    <div class="background-image" style="background-image:url('<%= event.card_image || '/themes/plain-card/invitation-background.png' %>')" aria-hidden="true"></div>
+    <div class="background-overlay" aria-hidden="true"></div>
+
+    <% if (state === null) { %>
+      <!-- Passcode overlay — always shown until a correct passcode is
+           submitted, never reached at all for 'open' events. Everything
+           past this point is omitted from the response entirely (not just
+           hidden by CSS), matching the exact security boundary the other
+           three themes already implement. -->
+      <div class="pc-overlay">
+        <div class="pc-overlay-card">
+          <p class="eyebrow">Enter your passcode</p>
+          <% if (typeof error !== 'undefined' && error) { %>
+            <p class="pc-error"><%= error %></p>
+          <% } %>
+          <form method="POST" action="/invite/<%= event.id %>/verify">
+            <input type="text" name="passcode" placeholder="Passcode" required autocapitalize="characters" autocomplete="off" autofocus>
+            <button type="submit" class="rsvp-button">View Invitation</button>
+          </form>
+        </div>
+      </div>
+    <% } else { %>
+      <!-- Reached because this is an 'open' event (no identity involved at
+           all) or because the passcode for this exact guest has already
+           been verified server-side. -->
+      <section class="invitation-card" aria-labelledby="invitation-title">
+        <p class="eyebrow">YOU ARE INVITED</p>
+        <div class="gold-line"></div>
+        <p class="occasion">TO CELEBRATE WITH</p>
+
+        <h1 id="invitation-title"><%= event.couple_names %></h1>
+
+        <% if (event.invitation_message) { %>
+          <p class="invitation-message"><%= event.invitation_message %></p>
+        <% } %>
+
+        <div class="event-details">
+          <div class="detail">
+            <span class="detail-label">DATE</span>
+            <strong><%= event.wedding_date ? formatEventDate(event.wedding_date) : 'To be announced' %></strong>
+          </div>
+          <div class="detail-divider"></div>
+          <div class="detail">
+            <span class="detail-label">TIME</span>
+            <strong><%= event.event_time_note || 'To be announced' %></strong>
+          </div>
+          <div class="detail-divider"></div>
+          <div class="detail">
+            <span class="detail-label">VENUE</span>
+            <strong><%= event.venue %></strong>
+          </div>
+        </div>
+
+        <% if (state !== 'open') { %>
+          <% if (state === 'card') { %>
+            <% if (welcomeBack) { %>
+              <p class="pc-empty"><%= event.decline_message %></p>
+            <% } %>
+            <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %></p>
+            <div class="pc-actions">
+              <form method="POST" action="/invite/<%= event.id %>/rsvp">
+                <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+                <input type="hidden" name="response" value="accepted">
+                <button type="submit" class="rsvp-button"><%= event.accept_button_text %></button>
+              </form>
+              <% if (!welcomeBack) { %>
+                <form method="POST" action="/invite/<%= event.id %>/rsvp">
+                  <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+                  <input type="hidden" name="response" value="declined">
+                  <button type="submit" class="rsvp-button"><%= event.decline_button_text %></button>
+                </form>
+              <% } %>
+            </div>
+          <% } else if (state === 'confirmed') { %>
+            <p>Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %>. <strong>You're confirmed!</strong></p>
+          <% } else if (state === 'qr') { %>
+            <div class="gatepass-section">
+              <div class="gatepass-divider"></div>
+              <p class="gatepass-label">PRIVATE EVENT ACCESS</p>
+              <p class="gatepass-copy">Hi <%= guest.name %>, seats reserved: <%= guest.seat_count %>. Show this QR code at the door.<% if (checkedIn) { %> You're already checked in — this still works if you need to show it again.<% } %></p>
+              <div class="qr-frame">
+                <img src="<%= qrDataUrl %>" alt="Your gatepass QR code" class="qr-code">
+              </div>
+            </div>
+          <% } else if (state === 'expired') { %>
+            <p class="pc-empty">This invite is no longer active. Thanks for celebrating with us!</p>
+          <% } %>
+        <% } %>
+
+        <div class="card-footer">
+          <p><%= event.contact_details || event.footer_note || '' %></p>
+          <div class="pc-actions">
+            <a class="rsvp-button" href="/invite/<%= event.id %>/cameos<%= (state !== 'open' && guest) ? '?passcode=' + guest.passcode : '' %>">Cameos</a>
+            <a class="rsvp-button" href="/invite/<%= event.id %>/gallery<%= (state !== 'open' && guest) ? '?passcode=' + guest.passcode : '' %>">Gallery</a>
+            <a class="rsvp-button" href="/invite/<%= event.id %>/other-details">Other Details</a>
+          </div>
+        </div>
+      </section>
+    <% } %>
+  </main>
+</body>
+</html>

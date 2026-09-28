@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= event.couple_names %> — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/<%= event.theme %>/theme.css">
+</head>
+<%
+  // Same isClient/isPreview/basePath pattern every other theme dashboard
+  // already uses (see botanical-bloom/dashboard.ejs's identical comment).
+  var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var isPreview = typeof previewMode !== 'undefined' && previewMode;
+  var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
+  var accessModeLabels = { open: 'Open event', recognized: 'Recognised guests', closed: 'Private event' };
+  var accessModeLabel = accessModeLabels[event.access_mode] || event.access_mode;
+%>
+<body class="portal-body">
+  <main class="portal-page">
+    <div class="portal-background" aria-hidden="true"></div>
+    <div class="portal-overlay" aria-hidden="true"></div>
+
+    <section class="portal-shell">
+      <% if (isPreview) { %>
+        <div class="pc-preview-banner">
+          Admin preview — you are viewing this event as the client.
+          <a href="<%= returnToAdminUrl %>">Return to Admin</a>
+        </div>
+      <% } %>
+
+      <header class="portal-topbar">
+        <div class="portal-brand-group">
+          <span class="portal-brand">WEDDINGS 103</span>
+          <span class="portal-mode">PLAIN CARD &middot; <%= accessModeLabel.toUpperCase() %></span>
+        </div>
+        <nav class="portal-nav">
+          <% if (isPreview) { %>
+            <a href="<%= returnToAdminUrl %>">Return to Admin</a>
+          <% } else if (isClient) { %>
+            <a href="<%= basePath %>/assets">Assets</a>
+            <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+            <a href="/client/dashboard">My Events</a>
+            <form method="POST" action="/client/logout" style="margin:0;">
+              <button type="submit" class="portal-logout">Log out</button>
+            </form>
+          <% } else { %>
+            <a href="<%= basePath %>/assets">Assets</a>
+            <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+            <a href="/admin/events">All events</a>
+            <a href="/admin/events/<%= event.id %>/client-preview">View Client Portal</a>
+          <% } %>
+        </nav>
+      </header>
+
+      <section class="portal-intro">
+        <div>
+          <p class="portal-eyebrow">YOUR EVENT</p>
+          <h1 class="portal-title"><%= event.couple_names %></h1>
+          <div class="portal-status-row">
+            <span class="portal-status"><%= event.status === 'live' ? 'Live' : 'Draft' %></span>
+            <span class="portal-status<%= event.access_mode === 'open' ? ' portal-status-open' : '' %>"><%= accessModeLabel %></span>
+          </div>
+        </div>
+        <p class="portal-intro-copy">A simple private workspace to shape your invitation, welcome guests, and prepare for your celebration.</p>
+      </section>
+
+      <section class="portal-workspace">
+        <div class="portal-left-panels">
+          <article class="portal-panel">
+            <p class="panel-label">EVENT DETAILS</p>
+            <h2>Celebration details</h2>
+            <div class="portal-detail-list">
+              <div class="portal-detail-line"><span>Date</span><strong><%= event.wedding_date ? formatEventDate(event.wedding_date) : 'Not set' %></strong></div>
+              <div class="portal-detail-line"><span>Time</span><strong><%= event.event_time_note || 'Not set' %></strong></div>
+              <div class="portal-detail-line"><span>Venue</span><strong><%= event.venue %></strong></div>
+            </div>
+            <% if (!isPreview) { %>
+              <a href="<%= basePath %>/edit" class="portal-outline-button">Edit details</a>
+            <% } %>
+          </article>
+
+          <article class="portal-panel">
+            <p class="panel-label">INVITATION WORDING</p>
+            <h2>Your message</h2>
+            <p class="portal-panel-copy"><%= event.invitation_message || 'No invitation message yet.' %></p>
+            <% if (!isPreview) { %>
+              <a href="<%= basePath %>/edit" class="portal-outline-button">Edit invitation</a>
+            <% } %>
+          </article>
+
+          <article class="portal-panel">
+            <p class="panel-label">DESIGN</p>
+            <h2>Photo &amp; theme</h2>
+            <div class="portal-design-row">
+              <div class="portal-image-thumb" style="background-image:url('<%= event.card_image || '/themes/plain-card/invitation-background.png' %>')" aria-hidden="true"></div>
+              <div>
+                <span class="portal-small-label">BACKGROUND IMAGE</span>
+                <strong class="portal-choice-name"><%= event.card_image ? 'Current event photo' : 'Default Plain Card image' %></strong>
+              </div>
+            </div>
+            <% if (!isPreview) { %>
+              <a href="<%= basePath %>/edit" class="portal-outline-button">Change photo</a>
+            <% } %>
+          </article>
+        </div>
+
+        <article class="portal-preview-panel">
+          <p class="panel-label">INVITATION PREVIEW</p>
+          <h2>What guests see</h2>
+          <div class="portal-preview-stage">
+            <div class="portal-preview-stage-bg" style="position:absolute;inset:-15px;background-image:url('<%= event.card_image || '/themes/plain-card/invitation-background.png' %>');background-size:cover;background-position:center;filter:blur(3px);opacity:0.9;transform:scale(1.08);"></div>
+            <div class="portal-mini-card">
+              <p class="mini-eyebrow">YOU ARE INVITED</p>
+              <div class="mini-gold-line"></div>
+              <h3><%= event.couple_names %></h3>
+              <% if (event.invitation_message) { %><p><%= event.invitation_message %></p><% } %>
+              <div class="mini-event-date"><%= (event.wedding_date ? formatEventDate(event.wedding_date).toUpperCase() : 'DATE TBD') %><% if (event.event_time_note) { %> &middot; <%= event.event_time_note %><% } %></div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <% if (event.access_mode !== 'open') { %>
+        <section class="portal-invites-section" id="guest-list">
+          <div class="portal-invites-heading">
+            <div>
+              <p class="panel-label">INVITATIONS</p>
+              <h2>Guest invitations</h2>
+            </div>
+            <% if (!isClient && !isPreview) { %>
+              <a href="/admin/events/<%= event.id %>/export" class="portal-dark-button">Download Excel</a>
+            <% } %>
+          </div>
+
+          <div class="portal-table-wrap">
+            <table class="portal-invites-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Seats</th>
+                  <th>Code</th>
+                  <th>RSVP</th>
+                  <% if (event.access_mode === 'closed') { %><th>Checked in</th><% } %>
+                </tr>
+              </thead>
+              <tbody>
+                <% guests.forEach(function (guest) { %>
+                  <tr>
+                    <td><%= guest.name %></td>
+                    <td><%= guest.seat_count %></td>
+                    <td>
+                      <span class="guest-code"><%= guest.passcode %></span>
+                      <% if (!isPreview) { %><button type="button" class="pc-copy-code copy-btn" data-copy="<%= guest.passcode %>">Copy</button><% } %>
+                    </td>
+                    <td><span class="rsvp-status <%= guest.rsvp_status %>"><%= guest.rsvp_status %></span></td>
+                    <% if (event.access_mode === 'closed') { %><td><%= guest.checked_in ? 'Yes' : 'No' %></td><% } %>
+                  </tr>
+                <% }) %>
+                <% if (guests.length === 0) { %>
+                  <tr><td colspan="<%= event.access_mode === 'closed' ? 5 : 4 %>">No guests yet.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+
+          <% if (!isPreview) { %>
+            <div class="portal-add-guests" style="margin-top:1.25rem;">
+              <p class="panel-label">ADD GUESTS</p>
+              <form method="POST" action="<%= basePath %>/guests">
+                <p style="color:var(--muted); font-size:0.85rem;">One guest per line: <code>Name, seat count</code></p>
+                <textarea name="guestList" rows="4" placeholder="Sarah, 2&#10;James, 4"></textarea>
+                <button type="submit" class="portal-dark-button" style="margin-top:0.75rem;">Add Guests</button>
+              </form>
+            </div>
+          <% } %>
+        </section>
+      <% } %>
+
+      <section style="margin-top: clamp(18px, 2.5vw, 32px);">
+        <% if (isPreview) { %>
+          <article class="portal-panel">
+            <p>Status: <%= event.status === 'live' ? 'Live' : 'Draft' %></p>
+          </article>
+        <% } else if (isClient) { %>
+          <article class="portal-panel">
+            <% if (typeof error !== 'undefined' && error) { %>
+              <p class="pc-error"><%= error %></p>
+            <% } %>
+            <% if (event.status === 'live') { %>
+              <p>Status: Live</p>
+            <% } else { %>
+              <form method="POST" action="/client/publish">
+                <button type="submit" class="portal-dark-button">Publish</button>
+              </form>
+            <% } %>
+          </article>
+        <% } else { %>
+          <article class="portal-panel pc-danger">
+            <h2>Danger zone</h2>
+            <% if (typeof error !== 'undefined' && error) { %>
+              <p class="pc-error"><%= error %></p>
+            <% } %>
+            <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline-block; margin-right:0.75rem;">
+              <button type="submit" class="portal-outline-button"><%= event.status === 'live' ? 'Switch to Draft' : 'Go Live' %></button>
+            </form>
+            <form method="POST" action="/admin/events/<%= event.id %>/delete" style="display:inline-block;" onsubmit="return confirm('Delete this event permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
+              <button type="submit" class="portal-dark-button pc-danger-button">Delete Event</button>
+            </form>
+            <p style="margin-top:0.75rem; color:var(--muted);">Status: <%= event.status %></p>
+          </article>
+        <% } %>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+          var original = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(function () { btn.textContent = original; }, 1500);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
