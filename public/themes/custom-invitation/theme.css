@@ -49,14 +49,44 @@ body.ci-locked { overflow: hidden; }
 .ci-btn-row { display: flex; flex-wrap: wrap; gap: .75rem; }
 .ci-btn-row .ci-btn { flex: 1 1 10rem; }
 
-/* Page One — the client's own card image, full-bleed, never restyled */
+/* Page One — the client's own card image. */
 .ci-card-stage { position: relative; min-height: 100vh; min-height: 100dvh; background: #e9e2d4; }
 /* Page One is inset 5% from every screen edge (not edge-to-edge), per
    explicit request — a separate 5% margin on the x-axis and y-axis,
-   which both happen to be the same 5% figure here. The stage's own
-   background shows through as the frame. */
-.ci-card-stage img { position: absolute; inset: 5%; width: 90%; height: 90%; object-fit: cover; }
-.ci-scroll-cue { position: absolute; left: 50%; bottom: 1.65rem; transform: translateX(-50%); color: #fffdf8; text-shadow: 0 1px 8px rgba(33, 31, 26, .5); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; }
+   which both happen to be the same 5% figure here. This frame is the
+   positioning context for both the image and the scroll cue below, so
+   neither one depends on guessing where object-fit: contain actually
+   paints the image. border-radius: 1.25rem matches the frosted cards on
+   Page Two (.ci-frost-card) — this theme's existing corner language. */
+.ci-card-frame { position: absolute; inset: 5%; border-radius: 1.25rem; overflow: hidden; background: #e9e2d4; }
+/* object-fit: contain — the whole uploaded image is always visible,
+   never cropped, regardless of its own aspect ratio vs. the frame's.
+   Letterboxed against the frame's own background (set above) rather
+   than stretched or distorted. */
+.ci-card-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.ci-card-frame-missing { position: absolute; inset: 0; display: grid; place-items: center; color: #5c574d; }
+/* A solid-contrast pill instead of text-shadow-on-photo: with
+   object-fit: contain the image can letterbox against the frame's own
+   (light) background on any side, so a cue that only worked against a
+   dark photo could land over that light background or over the stage's
+   outer 5% margin and lose contrast. The pill carries its own contrast
+   regardless of what's behind it, and sits inside the frame (not the
+   outer stage) so it's always over real content, never cut off in the
+   margin. */
+.ci-scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: .85rem;
+  transform: translateX(-50%);
+  padding: .5rem 1rem;
+  border-radius: 999px;
+  background: rgba(33, 31, 26, .6);
+  color: #fffdf8;
+  font-size: .75rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
 /* Page Two — client's background image behind everything, translucent wash for legibility */
 .ci-details-stage { position: relative; isolation: isolate; background: #d7d0c2; padding: 3.5rem 1.1rem 4.5rem; }

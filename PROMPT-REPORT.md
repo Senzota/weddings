@@ -1232,3 +1232,111 @@ already owns this exact layout for all five themes.
   (zero forms, zero mutating controls visible).
 - The other four themes were not modified; Botanical Bloom and Lady
   Gianna were re-verified visually with no regression.
+
+# Phase: Page One Fix — Contain, Not Crop; Rounded Corners; Reliable Scroll Cue
+
+Commit: `fix(theme): fix custom invitation page one crop, corners, scroll cue`
+Base commit: `31da1da fix(theme): fix custom invitation contrast, layout, and dashboard`
+
+The prior phase's 5%-inset change used `object-fit: cover`, which crops
+whatever doesn't match the inset box's own aspect ratio — never actually
+tested against a real image, since no card image was uploaded in any of
+that phase's test events (a gap, corrected here).
+
+## What changed
+
+- `.ci-card-stage img` → new `.ci-card-frame` wrapper div (absolute,
+  `inset: 5%`, `border-radius: 1.25rem` — matching `.ci-frost-card`'s own
+  radius, `overflow: hidden`, `background: #e9e2d4` — the stage's own
+  color) containing the `<img>` at `object-fit: contain` instead of
+  `cover`. The whole uploaded image is now always visible, letterboxed
+  against the frame's own (stage-matching) background rather than cropped
+  or distorted.
+- The "Card image not uploaded yet" placeholder moved into the same frame
+  and was renamed `.ci-card-frame-missing` (not reused from
+  `.ci-image-missing`, which the admin dashboard's asset tiles already use
+  under a different compound selector — kept as two distinct class names
+  specifically to avoid any cross-context CSS bleed between the two).
+- `.ci-scroll-cue` changed from text-shadow-on-photo (which assumed the
+  cue always sat over a dark photo) to a self-contrasting pill
+  (`background: rgba(33,31,26,.6)`, light text) positioned relative to the
+  new `.ci-card-frame` rather than the outer `.ci-card-stage`. A pill
+  carries its own contrast regardless of what's behind it — image,
+  letterboxed stage-color background, or the stage's own outer margin —
+  so its visibility no longer depends on guessing where `object-fit:
+  contain` actually paints the image.
+
+## Visual verification (real screenshots, two different aspect ratios)
+
+No Cloudinary upload was available to test with a real client-uploaded
+image (unchanged limitation, disclosed in every prior phase), so
+`event.card_image` was set directly to two publicly-hosted test images of
+known, deliberately mismatched proportions: a 1600×900 landscape image and
+a 900×1600 portrait image — chosen specifically because neither matches
+the inset frame's own ~16:10-ish box, the exact condition that would have
+shown cropping under the old `cover` behavior.
+
+Screenshotted and measured (via `getBoundingClientRect()`/
+`getComputedStyle()` on the live rendered page) at both 1280px (desktop)
+and 375px (mobile) widths — four combinations in total:
+
+| Test | `object-fit` | Scroll cue in viewport | Visual result |
+|---|---|---|---|
+| Landscape, desktop | `contain` (confirmed) | `true` | Image fills the frame almost edge-to-edge (close aspect match); fully visible, rounded corners clearly visible, cue legible below it |
+| Landscape, mobile | `contain` (confirmed) | `true` | Frame is tall/narrow here, so this wide image letterboxes top/bottom; fully visible, not cropped, cue legible |
+| Portrait, desktop | `contain` (confirmed) | `true` | Frame is wide/short here, so this tall image letterboxes left/right; fully visible, not cropped, cue legible |
+| Portrait, mobile | `contain` (confirmed) | `true` | Closer proportional match; image nearly fills the frame, cue legible |
+
+All four: **no cropping, no stretching/distortion, scroll cue always
+fully inside the viewport with legible contrast**. `object-fit: contain`
+and the frame's `border-radius: 1.25rem` were independently confirmed via
+`getComputedStyle()` in every case, not inferred from the screenshot alone.
+
+**Honest note on rounded corners**: the corners are real and are clearly
+visible whenever the image's own rendered edges reach the frame's actual
+physical boundary (confirmed in the landscape/desktop screenshot, where
+the image nearly fills the frame). In the more extreme letterbox cases
+(e.g. the portrait image on desktop, which renders far narrower than the
+frame), the letterboxed margin — per the explicit instruction to letterbox
+"against the stage's existing background color" — is the *same* color as
+the frame's own background, so that margin is visually indistinguishable
+from the surrounding stage, and the frame's rounded-corner clip (which
+only curves within ~20px of the frame's own far-apart physical corners)
+ends up with nothing visible to curve. This is the correct, literal
+consequence of the instruction as given (same-color letterboxing), not a
+missed implementation — flagged here in the interest of full honesty
+rather than overclaiming "rounded corners visible in all cases."
+
+## Cleanup
+
+Baseline confirmed before testing: `clients` 0, `booking_inquiries` 0,
+`events` 7, `client_access` 0, `guests` 11, `gallery_photos` 0,
+`cameo_photos` 0. One disposable test event was created through the real
+admin UI, its `card_image` swapped between the two test URLs directly via
+SQL (the only way to exercise this specific code path without a working
+local Cloudinary upload), screenshotted in all four combinations above,
+then deleted through the real admin UI. Final counts matched the baseline
+exactly.
+
+## Files changed
+
+```
+public/themes/custom-invitation/theme.css            — .ci-card-frame, contain, pill-style scroll cue
+views/guest/themes/custom-invitation/invitation.ejs   — wraps image/placeholder/cue in .ci-card-frame
+PROMPT-REPORT.md                                      — this section
+```
+
+No other file was touched — this phase is scoped entirely to Page One's
+own image-handling CSS and the one template that renders it.
+
+## Confirmations
+
+- No schema, route, controller, model, or production write of any kind
+  was needed or made.
+- No secret, password, hash, token, cookie, or database URL was printed or
+  exposed.
+- The new `.ci-card-frame-missing` class name was deliberately chosen to
+  avoid colliding with the admin dashboard's own, unrelated
+  `.ci-image-tile.ci-image-missing` asset-tile styling — confirmed by
+  checking the served CSS for exactly one rule under each name afterward.
+- No other theme's files were touched.

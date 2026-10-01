@@ -68,14 +68,16 @@
       });
     %>
 
-    <!-- =========== PAGE ONE — the client's own custom card, full-bleed =========== -->
+    <!-- =========== PAGE ONE — the client's own custom card =========== -->
     <section class="ci-card-stage" aria-label="Invitation card">
-      <% if (event.card_image) { %>
-        <img src="<%= event.card_image %>" alt="Invitation card">
-      <% } else { %>
-        <div class="ci-image-missing" style="position:absolute;inset:5%;display:grid;place-items:center;color:#5c574d;">Card image not uploaded yet</div>
-      <% } %>
-      <div class="ci-scroll-cue">Scroll to explore &#9662;</div>
+      <div class="ci-card-frame">
+        <% if (event.card_image) { %>
+          <img src="<%= event.card_image %>" alt="Invitation card">
+        <% } else { %>
+          <div class="ci-card-frame-missing">Card image not uploaded yet</div>
+        <% } %>
+        <div class="ci-scroll-cue">Scroll to explore &#9662;</div>
+      </div>
     </section>
 
     <!-- =========== PAGE TWO — details over the client's background image =========== -->
