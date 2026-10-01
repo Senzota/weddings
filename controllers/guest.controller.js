@@ -65,6 +65,24 @@ async function galleryPreviewFor(event) {
   return { galleryPreview: photos.slice(0, 6) };
 }
 
+// Custom Invitation's Cameos/Gallery/Other Details open as in-page modals
+// on the invitation itself rather than navigating to a separate page (the
+// other four themes keep their own, pre-existing separate-page behavior —
+// this is a Custom-Invitation-specific requirement, not a bug fix applied
+// elsewhere). Other Details needs no extra data (it only ever reads fields
+// already on `event`), but the modal's Gallery/Cameos panes need their
+// photos fetched up front, same timing rule as galleryPreviewFor above:
+// only once we're actually about to render real content, never for
+// state=null (nothing past the passcode gate leaks pre-verification).
+async function secondaryContentFor(event) {
+  if (event.theme !== 'custom-invitation') return {};
+  const [galleryPhotos, cameoPhotos] = await Promise.all([
+    galleryModel.findByEvent(event.id),
+    cameoModel.findByEvent(event.id),
+  ]);
+  return { modalGalleryPhotos: galleryPhotos, modalCameoPhotos: cameoPhotos };
+}
+
 // One template covers the whole continuous scroll (hero, QR/state area,
 // message, button row, itinerary, contacts). Three broad states reach it:
 //  - 'open' events: always full content, no guest identity at all, no
@@ -77,7 +95,7 @@ async function renderInvitation(res, event, guest, extra = {}) {
   const view = `guest/themes/${event.theme}/invitation`;
 
   if (event.access_mode === 'open') {
-    return res.render(view, { event, guest: null, state: 'open', ...await galleryPreviewFor(event), ...extra });
+    return res.render(view, { event, guest: null, state: 'open', ...await galleryPreviewFor(event), ...await secondaryContentFor(event), ...extra });
   }
 
   if (!guest) {
@@ -85,19 +103,19 @@ async function renderInvitation(res, event, guest, extra = {}) {
   }
 
   if (guest.rsvp_status === 'pending') {
-    return res.render(view, { event, guest, state: 'card', welcomeBack: false, ...await galleryPreviewFor(event), ...extra });
+    return res.render(view, { event, guest, state: 'card', welcomeBack: false, ...await galleryPreviewFor(event), ...await secondaryContentFor(event), ...extra });
   }
   if (guest.rsvp_status === 'declined') {
     // Decline isn't final — same actionable state as pending, plus a
     // welcome-back banner, and only the Accept action.
-    return res.render(view, { event, guest, state: 'card', welcomeBack: true, ...await galleryPreviewFor(event), ...extra });
+    return res.render(view, { event, guest, state: 'card', welcomeBack: true, ...await galleryPreviewFor(event), ...await secondaryContentFor(event), ...extra });
   }
 
   // accepted
   if (event.access_mode === 'recognized') {
     // Tracked, but no gatepass — there's no door check-in step for this
     // mode, so nothing for a QR to be checked against.
-    return res.render(view, { event, guest, state: 'confirmed', ...await galleryPreviewFor(event), ...extra });
+    return res.render(view, { event, guest, state: 'confirmed', ...await galleryPreviewFor(event), ...await secondaryContentFor(event), ...extra });
   }
 
   // 'closed' — final, and shown with the invitation alongside the QR
@@ -108,11 +126,11 @@ async function renderInvitation(res, event, guest, extra = {}) {
   if (gatepass.checked_in) {
     const hoursSinceCheckIn = (Date.now() - new Date(gatepass.checked_in_at).getTime()) / 3600000;
     if (hoursSinceCheckIn >= CHECKED_IN_QR_WINDOW_HOURS) {
-      return res.render(view, { event, guest, state: 'expired', ...await galleryPreviewFor(event), ...extra });
+      return res.render(view, { event, guest, state: 'expired', ...await galleryPreviewFor(event), ...await secondaryContentFor(event), ...extra });
     }
   }
   const qrDataUrl = await generateQrDataUrl(gatepass.qr_token);
-  return res.render(view, { event, guest, state: 'qr', qrDataUrl, checkedIn: gatepass.checked_in, ...await galleryPreviewFor(event), ...extra });
+  return res.render(view, { event, guest, state: 'qr', qrDataUrl, checkedIn: gatepass.checked_in, ...await galleryPreviewFor(event), ...await secondaryContentFor(event), ...extra });
 }
 
 async function showInvitation(req, res) {

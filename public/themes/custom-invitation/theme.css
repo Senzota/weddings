@@ -78,9 +78,18 @@ body.ci-locked { overflow: hidden; }
 .ci-tile:hover { transform: translateY(-1px); }
 
 /* QR gatepass — button-triggered modal, never shown inline on the page */
-.ci-qr-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1rem; background: rgba(24, 23, 20, .68); }
-.ci-qr-modal { width: min(100%, 22rem); padding: 2rem 1.5rem; border-radius: 1.25rem; background: #f8f5ed; text-align: center; box-shadow: 0 28px 70px rgba(0,0,0,.34); }
-.ci-qr-modal img { margin: 1.25rem auto; border-radius: .4rem; }
+/* Generic in-page modal system — shared by the QR gatepass modal and the
+   Cameos/Gallery/Other Details modals (invitation.ejs's one shared
+   open/close script works against these same class names for all four). */
+.ci-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1rem; background: rgba(24, 23, 20, .68); }
+.ci-modal-backdrop[hidden] { display: none; }
+.ci-modal-card { position: relative; width: min(100%, 22rem); padding: 2rem 1.5rem; border-radius: 1.25rem; background: #f8f5ed; text-align: center; box-shadow: 0 28px 70px rgba(0,0,0,.34); max-height: 85vh; overflow-y: auto; }
+.ci-modal-card img { margin: 1.25rem auto; border-radius: .4rem; }
+.ci-modal-card-wide { width: min(100%, 42rem); text-align: left; }
+.ci-modal-card-wide .ci-kicker, .ci-modal-card-wide h3.ci-serif:first-of-type { text-align: center; }
+.ci-modal-card-wide .ci-gallery-grid img, .ci-modal-card-wide .ci-cameo-card img { margin: 0; }
+.ci-modal-close { position: absolute; top: .6rem; right: .7rem; border: none; background: transparent; color: var(--ci-ink-soft); font-size: 1.5rem; line-height: 1; cursor: pointer; padding: .3rem .5rem; }
+.ci-modal-close:hover { color: var(--ci-ink); }
 
 .ci-declined-banner { border-radius: .9rem; padding: .9rem 1.1rem; background: rgba(33, 31, 26, .07); font-size: .9rem; margin-bottom: 1rem; }
 
@@ -114,8 +123,40 @@ body.ci-locked { overflow: hidden; }
    ------------------------------------------------------------ */
 
 .bb-admin { --ci-accent: var(--ci-ink); background: var(--ci-paper); color: var(--ci-ink); font-family: "DM Sans", sans-serif; }
+.bb-admin a { color: var(--ci-ink); }
+.bb-admin h1, .bb-admin h2 { font-family: "Cormorant Garamond", serif; color: var(--ci-ink); font-weight: 600; }
+.bb-admin-header-inner { background: var(--ci-paper-soft); border: 1px solid var(--ci-line); }
+.bb-admin-header-title { font-family: "Cormorant Garamond", serif; font-weight: 600; color: var(--ci-ink); }
+.bb-admin-nav a { color: var(--ci-ink-soft); }
+.bb-admin-nav a:hover, .bb-admin-nav a.bb-admin-nav-active { color: var(--ci-ink); }
 .bb-admin-tile { background: var(--ci-paper-soft); border: 1px solid var(--ci-line); border-radius: 1rem; }
-.bb-btn { background: var(--ci-ink); color: var(--ci-paper-soft); border-radius: .75rem; font-family: "DM Sans", sans-serif; }
+.bb-admin-card { background: var(--ci-paper-soft); border: 1px solid var(--ci-line); border-radius: 1rem; }
+.bb-admin-photo-panel { background: #e9e2d4; }
+.bb-admin-thumb { background: #e9e2d4; }
+/* Found during the cross-theme audit: this was the only theme with no
+   .bb-admin input/textarea/select rule at all, so every field on the
+   shared edit/assets forms (including the Itinerary textarea) rendered in
+   raw browser-default styling — visually inconsistent with the rest of
+   the themed page, and the likely cause of both "Edit Details looks
+   broken" and "Itinerary missing" reports (the field was always there and
+   always worked; it just didn't look like part of the form). */
+.bb-admin input[type="text"], .bb-admin input[type="date"], .bb-admin input[type="email"],
+.bb-admin input[type="password"], .bb-admin input[type="color"], .bb-admin input[type="file"],
+.bb-admin textarea, .bb-admin select {
+  border: 1px solid var(--ci-line);
+  background: var(--ci-paper-soft);
+  color: var(--ci-ink);
+  font-family: "DM Sans", sans-serif;
+  border-radius: .5rem;
+}
+.bb-admin input[readonly] { background: #e9e2d4; }
+.bb-admin th, .bb-admin td { border-bottom: 1px solid var(--ci-line); }
+.bb-admin th { color: var(--ci-ink-soft); font-weight: 700; text-transform: uppercase; font-size: .7rem; }
+.bb-admin .bb-error { color: #a3453d; }
+.bb-admin-gallery-item button { background: rgba(33, 31, 26, .72); color: var(--ci-paper-soft); }
+.bb-admin-gallery-caption { background: rgba(33, 31, 26, .72); color: var(--ci-paper-soft); font-size: .7rem; }
+.bb-btn { background: var(--ci-ink); color: var(--ci-paper-soft); border-radius: .75rem; font-family: "DM Sans", sans-serif; border: 1px solid var(--ci-ink); cursor: pointer; }
+.bb-btn:hover { background: #35312a; border-color: #35312a; }
 
 /* Bespoke Custom Invitation dashboard (views/admin/themes/custom-invitation/dashboard.ejs)
    — this template DOES own its own containers, per §4, so its classes

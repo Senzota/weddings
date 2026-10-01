@@ -980,3 +980,83 @@ pre-existing business record was changed.
 - Admin-preview mode confirmed strictly read-only for Custom Invitation.
 - The four existing themes were not modified and were re-verified to render
   without regression, including their own shared edit/assets pages.
+
+# Phase: Cross-Theme Navigation/Theming Audit + Custom Invitation Fixes
+
+Commit: `fix(theme): fix custom invitation navigation, theming, and in-page modals`
+Base commit: `3aafa9b feat(theme): add custom invitation event experience`
+
+## Step 1 — Audit (all five themes, no fixes made during this step)
+
+| Theme | Page | Reflects theme styling? | Has navigation? | Guest secondary-page behavior |
+|---|---|---|---|---|
+| Botanical Bloom | Dashboard | Yes | Yes — All weddings/View Client Portal present; `#guest-list` and `#wedding-details` anchors both exist | — |
+| Botanical Bloom | Edit Details / Assets | Yes (full `.bb-admin input/textarea/select` styling) | Yes (shared Back link) | — |
+| Botanical Bloom | Gallery/Cameos/Other Details | Yes | Yes (Back to invitation link) | Separate page |
+| Lavender Romance | Dashboard | Yes | Mostly — All weddings/View Client Portal present; own nav links "Wedding Details" straight to `/edit` instead of a same-page anchor, so the shared Assets page's `#wedding-details` anchor link lands with nothing to scroll to (minor, pre-existing, not unique to this theme) | — |
+| Lavender Romance | Edit Details / Assets | Yes | Yes | — |
+| Lavender Romance | Gallery/Cameos/Other Details | Yes | Yes | Separate page |
+| Lady Gianna | Dashboard | Yes | Mostly — All events/View Client Portal present; uses `#event-details` instead of `#wedding-details` (same minor anchor mismatch as Lavender Romance); also has its own inline itinerary/details edit form on the dashboard itself, in addition to the full Edit Details page | — |
+| Lady Gianna | Edit Details / Assets | Yes | Yes | — |
+| Lady Gianna | Gallery/Cameos/Other Details | Yes | Yes | Separate page |
+| Plain Card | Dashboard | Yes | Yes — All events, View Client Portal, My Events, Log out all present (the most complete of the four); same minor `#wedding-details` anchor mismatch as above | — |
+| Plain Card | Edit Details / Assets | Yes | Yes | — |
+| Plain Card | Gallery/Cameos/Other Details | Yes | Yes | Separate page |
+| **Custom Invitation** | **Dashboard** | **Partial** — own `ci-admin-*` chrome was fine, but had **no header nav at all**: no All events/View Client Portal (admin), no My Events/Log out (client), and no `#guest-list`/`#wedding-details` anchor targets | **No** | — |
+| **Custom Invitation** | **Edit Details / Assets** | **No** — the only theme with **zero** `.bb-admin input/textarea/select` CSS rules (confirmed by direct count: every other theme has 3–4 such rules, this one had 0). Every text field, including the Itinerary textarea, fell back to raw unstyled browser defaults | Yes (shared Back link still worked) | — |
+| Custom Invitation | Gallery/Cameos/Other Details | Yes (own `ci-*` styling) | Yes (Back to invitation link existed) | Separate page — same universal pattern every other theme already uses (not an inconsistency; changed anyway per explicit instruction, see below) |
+
+**Headline finding**: the guest-facing "separate page vs modal" behavior is **100% consistent across all five themes** — every one of them, including Custom Invitation as originally shipped, links Cameos/Gallery/Other Details out to their own routes. This is not a Custom-Invitation-specific bug; it is the established, universal pattern. The dashboard navigation gap and the missing form-control styling, however, **are** unique to Custom Invitation, confirmed by direct comparison against all four other themes.
+
+## Step 2 — Fixes
+
+### 1. Guest-facing navigation → in-page modals (Custom Invitation only)
+
+Per explicit instruction, Custom Invitation's Cameos/Gallery/Other Details tiles now open as in-page modals from the invitation itself (same mechanism as the existing QR gatepass modal), instead of navigating away. **The other four themes were left untouched** — their separate-page behavior is their own established, intentional design (confirmed universal in Step 1), not something this audit found broken.
+
+Implementation:
+- `controllers/guest.controller.js`: added `secondaryContentFor(event)`, gated to `event.theme === 'custom-invitation'` only (returns `{}` for every other theme — zero behavior change elsewhere), mirroring the exact existing pattern `galleryPreviewFor()` already uses for Lady Gianna's gallery preview. Fetches gallery/cameo photos up front and threads them into every `renderInvitation` branch that reaches real content — never for `state === null` (nothing past the passcode gate leaks pre-verification, same security boundary as always).
+- `views/guest/themes/custom-invitation/invitation.ejs`: the three tiles are now `<button data-ci-modal-open="...">` instead of `<a href="...">`; three new hidden modals (Gallery, Cameos, Other Details) render inline with real content (reusing the existing `.ci-gallery-grid`/`.ci-cameo-grid` styles and the exact copy-address script other-details.ejs already had). The QR modal's bespoke open/close script was replaced with one generic script driving all four modals uniformly (open via `data-ci-modal-open`, close via a button, backdrop click, or Escape).
+- `public/themes/custom-invitation/theme.css`: generalized `.ci-qr-backdrop`/`.ci-qr-modal` into reusable `.ci-modal-backdrop`/`.ci-modal-card` classes (plus a `.ci-modal-card-wide` variant for the grid-based panes) and a `.ci-modal-close` button style.
+- The standalone `/invite/:id/{gallery,cameos,other-details}` routes and their dedicated `.ejs` files are untouched and still work as real pages — kept as a working fallback/direct-link target, at zero extra cost.
+
+### 2. Dashboard theming + navigation (Custom Invitation only — the only theme Step 1 flagged)
+
+- Added a `.bb-admin-header`/`.bb-admin-nav` header to `views/admin/themes/custom-invitation/dashboard.ejs`, matching Plain Card's pattern exactly: admin mode gets Assets/Other Details/All events/View Client Portal; client mode gets Assets/Other Details/My Events/a real `POST /client/logout` button; preview mode gets only "Return to Admin".
+- Added `id="guest-list"` and `id="wedding-details"` anchor targets so the shared Assets page's existing header links actually scroll somewhere on this theme's dashboard (previously they didn't).
+- Added the full `.bb-admin input/textarea/select` (plus header/table/link color) CSS block to `theme.css` — the missing rule identified in Step 1. This is what actually resolves item 3 and item 4 below.
+
+### 3. "Edit Details bug" — root cause and fix
+
+Reproduced directly: submitted the real rendered edit form (every field, admin and client, exactly as a browser would) against a live Custom Invitation test event. **No save ever failed, no data was ever corrupted, no error page was produced** in either admin or client mode — I could not reproduce a hard failure. What I found instead, and what Step 1's audit directly explains: Custom Invitation was the only theme with zero styling on the shared edit form's input/textarea/select fields (confirmed by comparison: every other theme has 3–4 such CSS rules, this one had 0). Every field — including Itinerary — rendered in raw, unstyled, browser-default appearance, visually inconsistent with the rest of the themed page. This is the most plausible explanation for a page that "looks broken," consistent with the instruction's own "if Step 1's findings explain it, say so." Fixed by adding the missing CSS block (same fix as item 2 above) — no controller, model, or route change was needed or made.
+
+One separate, pre-existing, unrelated-but-noted issue found during this reproduction attempt: `edit-event.ejs`'s admin-mode theme `<select>` renders a `selected` attribute on **every** `custom-invitation` `<option>` (one per event type, all sharing the same `value`), since the comparison `event.theme === t.slug` doesn't also check `t.eventType`. This produces invalid HTML (multiple `selected` options) but — traced through in detail — does not change what actually gets submitted, since every duplicate shares an identical `value` string; `<select>.value` reads correctly regardless of which specific duplicate option the browser's HTML parser treats as "selected". Not fixed in this pass (confirmed harmless, pre-existing since Plain Card introduced the first multi-type theme, out of this task's reported scope) — flagged here for visibility.
+
+### 4. Itinerary "missing" from the edit form
+
+The `itinerary` column is, and was always, a plain `TEXT` field (confirmed directly in `db/schema.sql`/`models/event.model.js`) — the exact same shared field every other theme already edits via the same `<textarea name="itinerary">` on `edit-event.ejs`. No second/different field exists or was ever needed. The field was never actually missing; per Step 1's finding, it almost certainly just didn't *look* like part of the form because of the missing CSS (item 2/3 above). Fixing the styling makes the existing, already-functional field visible and consistent with the rest of the page — no new field, no schema change.
+
+## Regression check (all five themes)
+
+Local test events created and verified live for all five themes (Botanical Bloom and Lady Gianna via existing events; disposable test events for Lavender Romance, Plain Card, and three Custom Invitation events covering open/recognized/closed): every dashboard and every guest invitation rendered `200` with no error. Custom Invitation specifically verified: modal triggers and markup present in open/card/qr states; QR data URL and gatepass flow still work exactly as before; preview mode still renders zero `<form>` elements; client mode shows the new My Events/Log out controls; admin mode shows All events/View Client Portal and a working `#guest-list` anchor.
+
+Baseline counts before testing: `clients` 0, `booking_inquiries` 0, `events` 7, `client_access` 0, `guests` 11, `gallery_photos` 0, `cameo_photos` 0. All disposable test events deleted afterward; final counts matched the baseline exactly.
+
+## Files changed
+
+```
+controllers/guest.controller.js                     — secondaryContentFor() helper, theme-gated
+public/themes/custom-invitation/theme.css            — bb-admin input/textarea/select styling; generic modal classes
+views/admin/themes/custom-invitation/dashboard.ejs    — header nav, #guest-list/#wedding-details anchors
+views/guest/themes/custom-invitation/invitation.ejs   — modal triggers/markup, generic modal script
+PROMPT-REPORT.md                                      — this section
+```
+
+No route, model, schema, or other theme's file was touched.
+
+## Confirmations
+
+- The only controller change is a theme-gated helper that returns `{}` (no-op) for every theme except Custom Invitation — confirmed zero behavior change for the other four themes via live regression testing.
+- No schema, migration, or production write of any kind was needed or made in this phase.
+- No secret, password, hash, token, cookie, or database URL was printed or exposed.
+- Admin-preview mode re-confirmed strictly read-only after all changes.

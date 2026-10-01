@@ -39,11 +39,49 @@
 <body class="bb-admin ci-admin">
 
   <% if (isPreview) { %>
-    <p class="ci-readonly-note" style="margin-bottom:1rem;">Preview mode — read-only simulation of the client view. No controls here are functional.</p>
-    <% if (typeof error !== 'undefined' && error) { %><p class="ci-status-msg"><%= error %></p><% } %>
+    <div style="background:#fff3cd; color:#664d03; border-bottom:1px solid #ffe69c; padding:0.75rem 1.5rem; text-align:center; font-size:0.95rem;">
+      Admin preview — you are viewing this event as the client.
+      <a href="<%= returnToAdminUrl %>" style="margin-left:0.75rem; font-weight:600;">Return to Admin</a>
+    </div>
+    <% if (typeof error !== 'undefined' && error) { %><p class="ci-status-msg" style="padding:0 1.5rem;"><%= error %></p><% } %>
   <% } %>
 
-  <header style="margin-bottom:1.5rem;">
+  <!-- Found during the cross-theme audit: this dashboard had no header nav
+       at all — every other theme's dashboard links back to "All events"/
+       "View Client Portal" (admin) or at least stays reachable from the
+       client's own account dashboard; this one was a dead end. Matches
+       Plain Card's dashboard nav pattern, the most complete of the four
+       existing themes. -->
+  <header class="bb-admin-header">
+    <div class="bb-admin-header-inner">
+      <% if (isPreview) { %>
+        <span class="bb-admin-header-title ci-serif"><%= event.couple_names %></span>
+      <% } else { %>
+        <a class="bb-admin-header-title ci-serif" href="<%= basePath %>"><%= event.couple_names %></a>
+      <% } %>
+      <nav class="bb-admin-nav">
+        <% if (event.access_mode !== 'open') { %><a href="#guest-list">Guest List</a><% } %>
+        <a href="#wedding-details">Event Details</a>
+        <% if (isPreview) { %>
+          <a href="<%= returnToAdminUrl %>">Return to Admin</a>
+        <% } else if (isClient) { %>
+          <a href="<%= basePath %>/assets">Assets</a>
+          <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+          <a href="/client/dashboard">My Events</a>
+          <form method="POST" action="/client/logout" style="display:inline; margin:0;">
+            <button type="submit" class="bb-admin-nav-logout" style="background:none; border:none; padding:0.5em 0.7em; font:inherit; cursor:pointer; color:inherit;">Log out</button>
+          </form>
+        <% } else { %>
+          <a href="<%= basePath %>/assets">Assets</a>
+          <a href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+          <a href="/admin/events">All events</a>
+          <a href="/admin/events/<%= event.id %>/client-preview">View Client Portal</a>
+        <% } %>
+      </nav>
+    </div>
+  </header>
+
+  <header style="margin-bottom:1.5rem;" id="wedding-details">
     <h1 class="ci-serif" style="margin:0 0 .25rem;font-size:1.8rem;"><%= event.couple_names %></h1>
     <p class="ci-readonly-note" style="font-style:normal;">
       <%= event.wedding_date ? formatEventDate(event.wedding_date) : 'Date not set' %> &middot; <%= event.status %> &middot; access mode: <%= event.access_mode %>
@@ -109,7 +147,7 @@
          recognized  -> Name | Seats | Code | RSVP
          closed      -> Name | Seats | Code | RSVP | Checked in -->
   <% if (event.access_mode !== 'open') { %>
-    <section class="ci-admin-card bb-admin-tile" style="margin-top:1.25rem;">
+    <section class="ci-admin-card bb-admin-tile" style="margin-top:1.25rem;" id="guest-list">
       <h3>Guests</h3>
       <table class="ci-guest-table">
         <thead>

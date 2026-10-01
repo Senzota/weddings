@@ -113,7 +113,7 @@
             <% } else if (state === 'qr') { %>
               <h3 class="ci-serif">You're confirmed, <%= guest.name %></h3>
               <p>We'll see you there. Your gatepass is ready whenever you need it.</p>
-              <button class="ci-btn ci-btn-ink" type="button" id="ci-view-qr">View my QR gatepass</button>
+              <button class="ci-btn ci-btn-ink" type="button" data-ci-modal-open="ci-modal-qr">View my QR gatepass</button>
 
             <% } else if (state === 'expired') { %>
               <h3 class="ci-serif">Thank you, <%= guest.name %></h3>
@@ -135,11 +135,15 @@
           </article>
         <% } %>
 
-        <!-- Cameos / Gallery / Other Details — each its own route, not inline content -->
+        <!-- Cameos / Gallery / Other Details — in-page modals (not separate
+             pages), same mechanism as the QR gatepass modal below. Content
+             is fetched up front by guest.controller.js#secondaryContentFor,
+             scoped to this theme only — see that function's own comment for
+             why this doesn't change any other theme's behavior. -->
         <div class="ci-tile-row">
-          <a class="ci-tile" href="/invite/<%= event.id %>/cameos<%= (state !== 'open' && guest) ? '?passcode=' + guest.passcode : '' %>">Cameos</a>
-          <a class="ci-tile" href="/invite/<%= event.id %>/gallery<%= (state !== 'open' && guest) ? '?passcode=' + guest.passcode : '' %>">Gallery</a>
-          <a class="ci-tile" href="/invite/<%= event.id %>/other-details">Other Details</a>
+          <button type="button" class="ci-tile" data-ci-modal-open="ci-modal-cameos">Cameos</button>
+          <button type="button" class="ci-tile" data-ci-modal-open="ci-modal-gallery">Gallery</button>
+          <button type="button" class="ci-tile" data-ci-modal-open="ci-modal-other-details">Other Details</button>
         </div>
 
         <footer class="ci-footer ci-serif">We cannot wait to celebrate with you.</footer>
@@ -151,37 +155,136 @@
            inline — only ever reached for a verified closed-event guest with
            a non-expired gatepass (the exact server-side condition
            guest.controller.js already computes for state === 'qr'). -->
-      <div id="ci-qr-backdrop" class="ci-qr-backdrop" hidden>
-        <div class="ci-qr-modal" role="dialog" aria-modal="true" aria-label="Your QR gatepass">
+      <div id="ci-modal-qr" class="ci-modal-backdrop" hidden>
+        <div class="ci-modal-card" role="dialog" aria-modal="true" aria-label="Your QR gatepass">
+          <button type="button" class="ci-modal-close" data-ci-modal-close aria-label="Close">&times;</button>
           <p class="ci-kicker">Your gatepass</p>
           <h3 class="ci-serif" style="margin:.4rem 0 0;">Show this at the door</h3>
           <img src="<%= qrDataUrl %>" alt="QR gatepass code" width="220" height="220">
-          <button class="ci-btn ci-btn-outline" type="button" id="ci-close-qr">Close</button>
         </div>
       </div>
-      <script>
-        (function () {
-          var trigger = document.getElementById('ci-view-qr');
-          var backdrop = document.getElementById('ci-qr-backdrop');
-          var closeBtn = document.getElementById('ci-close-qr');
-          if (!trigger || !backdrop || !closeBtn) return;
-          trigger.addEventListener('click', function () {
-            backdrop.hidden = false;
-            document.body.classList.add('ci-locked');
-          });
-          closeBtn.addEventListener('click', function () {
-            backdrop.hidden = true;
-            document.body.classList.remove('ci-locked');
-          });
-          document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !backdrop.hidden) {
-              backdrop.hidden = true;
-              document.body.classList.remove('ci-locked');
-            }
-          });
-        })();
-      </script>
     <% } %>
+
+    <!-- Gallery modal — same photos the standalone /invite/:id/gallery route
+         serves; fetched inline so the tile above can open this instantly
+         instead of navigating away. -->
+    <div id="ci-modal-gallery" class="ci-modal-backdrop" hidden>
+      <div class="ci-modal-card ci-modal-card-wide" role="dialog" aria-modal="true" aria-label="Gallery">
+        <button type="button" class="ci-modal-close" data-ci-modal-close aria-label="Close">&times;</button>
+        <p class="ci-kicker">A few moments</p>
+        <h3 class="ci-serif" style="margin:.2rem 0 1rem;">Gallery</h3>
+        <% if (modalGalleryPhotos && modalGalleryPhotos.length > 0) { %>
+          <div class="ci-gallery-grid">
+            <% modalGalleryPhotos.forEach(function (photo) { %>
+              <img src="<%= photo.image_url %>" alt="" loading="lazy">
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p class="ci-empty-state">No photos have been shared yet — check back soon.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Cameos modal -->
+    <div id="ci-modal-cameos" class="ci-modal-backdrop" hidden>
+      <div class="ci-modal-card ci-modal-card-wide" role="dialog" aria-modal="true" aria-label="Cameos">
+        <button type="button" class="ci-modal-close" data-ci-modal-close aria-label="Close">&times;</button>
+        <p class="ci-kicker">Featured</p>
+        <h3 class="ci-serif" style="margin:.2rem 0 1rem;">Cameos</h3>
+        <% if (modalCameoPhotos && modalCameoPhotos.length > 0) { %>
+          <div class="ci-cameo-grid">
+            <% modalCameoPhotos.forEach(function (photo) { %>
+              <div class="ci-cameo-card">
+                <img src="<%= photo.image_url %>" alt="" loading="lazy">
+                <% if (photo.title) { %><p class="ci-serif" style="font-size:1.2rem;margin:0;"><%= photo.title %></p><% } %>
+              </div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p class="ci-empty-state">No cameos have been added yet.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Other Details modal — same content other-details.ejs serves,
+         reusing fields already on `event` (no extra data fetch needed). -->
+    <div id="ci-modal-other-details" class="ci-modal-backdrop" hidden>
+      <div class="ci-modal-card ci-modal-card-wide" role="dialog" aria-modal="true" aria-label="Other Details">
+        <button type="button" class="ci-modal-close" data-ci-modal-close aria-label="Close">&times;</button>
+        <p class="ci-kicker">For your planning</p>
+        <h3 class="ci-serif" style="margin:.2rem 0 1rem;">Other Details</h3>
+
+        <article class="ci-frost-card">
+          <h3 class="ci-serif" style="font-size:1.05rem;text-transform:uppercase;letter-spacing:.1em;">Venue</h3>
+          <p id="ci-modal-venue-address"><%= event.venue %></p>
+          <button class="ci-btn ci-btn-outline" type="button" id="ci-modal-copy-address">Copy address</button>
+          <p class="ci-status-msg" id="ci-modal-copy-feedback" aria-live="polite"></p>
+        </article>
+
+        <% if (event.dress_code_note) { %>
+          <article class="ci-frost-card">
+            <h3 class="ci-serif" style="font-size:1.05rem;text-transform:uppercase;letter-spacing:.1em;">Dress code</h3>
+            <p><%= event.dress_code_note %></p>
+          </article>
+        <% } %>
+
+        <% if (event.accessibility_note) { %>
+          <article class="ci-frost-card">
+            <h3 class="ci-serif" style="font-size:1.05rem;text-transform:uppercase;letter-spacing:.1em;">Accessibility</h3>
+            <p><%= event.accessibility_note %></p>
+          </article>
+        <% } %>
+
+        <% if (event.contact_details) { %>
+          <article class="ci-frost-card">
+            <h3 class="ci-serif" style="font-size:1.05rem;text-transform:uppercase;letter-spacing:.1em;">Questions</h3>
+            <p><%= event.contact_details %></p>
+          </article>
+        <% } %>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        function openModal(id) {
+          var modal = document.getElementById(id);
+          if (!modal) return;
+          modal.hidden = false;
+          document.body.classList.add('ci-locked');
+        }
+        function closeModal(modal) {
+          modal.hidden = true;
+          document.body.classList.remove('ci-locked');
+        }
+        document.querySelectorAll('[data-ci-modal-open]').forEach(function (btn) {
+          btn.addEventListener('click', function () { openModal(btn.dataset.ciModalOpen); });
+        });
+        document.querySelectorAll('.ci-modal-backdrop').forEach(function (modal) {
+          modal.addEventListener('click', function (e) {
+            if (e.target === modal || e.target.hasAttribute('data-ci-modal-close')) closeModal(modal);
+          });
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key !== 'Escape') return;
+          document.querySelectorAll('.ci-modal-backdrop').forEach(function (modal) {
+            if (!modal.hidden) closeModal(modal);
+          });
+        });
+        var copyBtn = document.getElementById('ci-modal-copy-address');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', async function () {
+            var feedback = document.getElementById('ci-modal-copy-feedback');
+            try {
+              await navigator.clipboard.writeText(document.getElementById('ci-modal-venue-address').textContent.trim());
+              feedback.textContent = 'Address copied.';
+            } catch (e) {
+              feedback.textContent = 'Please select and copy the address above.';
+            }
+            setTimeout(function () { feedback.textContent = ''; }, 2600);
+          });
+        }
+      })();
+    </script>
 
   <% } %>
 </body>
