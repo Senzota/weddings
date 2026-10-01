@@ -90,37 +90,38 @@
 
   <div class="ci-admin-grid">
 
-    <!-- Card image (Page One) — still edited via the shared edit form's
-         existing single-file upload, unchanged by this release. -->
+    <!-- Consolidated: Card image + Background image were two separate
+         tiles that both only ever routed to Assets anyway — merged into
+         one, per explicit request. No route changed, just the tile
+         layout. -->
     <section class="ci-admin-card bb-admin-tile">
-      <h3>Card image (Page One)</h3>
-      <% if (event.card_image) { %>
-        <div class="ci-image-tile"><img src="<%= event.card_image %>" alt=""></div>
-      <% } else { %>
-        <div class="ci-image-tile ci-image-missing">Not uploaded yet</div>
-      <% } %>
+      <h3>Manage Assets</h3>
+      <div class="ci-asset-thumb-row">
+        <div>
+          <p class="ci-small-label">Card image (Page One)</p>
+          <% if (event.card_image) { %>
+            <div class="ci-image-tile"><img src="<%= event.card_image %>" alt=""></div>
+          <% } else { %>
+            <div class="ci-image-tile ci-image-missing">Not uploaded yet</div>
+          <% } %>
+        </div>
+        <div>
+          <p class="ci-small-label">Background image (Page Two)</p>
+          <% if (event.background_image) { %>
+            <div class="ci-image-tile"><img src="<%= event.background_image %>" alt=""></div>
+          <% } else { %>
+            <div class="ci-image-tile ci-image-missing">Not uploaded yet</div>
+          <% } %>
+        </div>
+      </div>
       <% if (!isPreview) { %>
-        <a class="bb-btn ci-btn" href="<%= basePath %>/edit" style="display:inline-block;text-decoration:none;padding:.6rem 1rem;">Change in Edit Details</a>
-      <% } %>
-    </section>
-
-    <!-- Background image (Page Two) — new generic field, managed on the
-         shared Assets page (this release), not a bespoke route here. -->
-    <section class="ci-admin-card bb-admin-tile">
-      <h3>Background image (Page Two)</h3>
-      <% if (event.background_image) { %>
-        <div class="ci-image-tile"><img src="<%= event.background_image %>" alt=""></div>
-      <% } else { %>
-        <div class="ci-image-tile ci-image-missing">Not uploaded yet</div>
-      <% } %>
-      <% if (!isPreview) { %>
-        <a class="bb-btn ci-btn" href="<%= basePath %>/assets" style="display:inline-block;text-decoration:none;padding:.6rem 1rem;">Manage in Assets</a>
+        <a class="bb-btn ci-btn" href="<%= basePath %>/assets" style="display:inline-block;text-decoration:none;padding:.6rem 1rem;">Manage Assets</a>
       <% } %>
     </section>
 
     <!-- Event details — edited via the SHARED edit-event.ejs, never here -->
     <section class="ci-admin-card bb-admin-tile">
-      <h3>Event details</h3>
+      <h3>Edit Event Details</h3>
       <p>Venue: <%= event.venue || '—' %></p>
       <p>Access mode: <%= event.access_mode %></p>
       <% if (!isPreview) { %>
@@ -128,18 +129,20 @@
       <% } %>
     </section>
 
-    <!-- Quick links to the guest-facing secondary pages -->
-    <section class="ci-admin-card bb-admin-tile">
-      <h3>Guest-facing pages</h3>
-      <div class="ci-tile-row">
-        <a class="ci-tile" href="/invite/<%= event.id %>" target="_blank">Invitation</a>
-        <a class="ci-tile" href="/invite/<%= event.id %>/gallery" target="_blank">Gallery</a>
-        <a class="ci-tile" href="/invite/<%= event.id %>/cameos" target="_blank">Cameos</a>
-        <a class="ci-tile" href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
-      </div>
-    </section>
-
   </div>
+
+  <% if (!isPreview && event.status === 'live') { %>
+    <!-- Copy Invitation Link — same pattern other-details.ejs's own
+         "Copy address" button already uses (navigator.clipboard, with a
+         text-swap for feedback). Never shown in preview or for a draft
+         event — guest routes 404/refuse a non-live event either way. -->
+    <section class="ci-admin-card bb-admin-tile" style="margin-top:1.25rem;">
+      <h3>Share</h3>
+      <p id="ci-invite-link" style="word-break:break-all;"><%= baseUrl %>/invite/<%= event.id %></p>
+      <button class="bb-btn ci-btn" type="button" id="ci-copy-invite-link">Copy Invitation Link</button>
+      <p class="ci-status-msg" id="ci-copy-invite-feedback" aria-live="polite"></p>
+    </section>
+  <% } %>
 
   <!-- Guest table — column set depends on access_mode, identical rule
        for every theme (Themes-plan §4 table):
@@ -149,6 +152,7 @@
   <% if (event.access_mode !== 'open') { %>
     <section class="ci-admin-card bb-admin-tile" style="margin-top:1.25rem;" id="guest-list">
       <h3>Guests</h3>
+      <div class="ci-table-wrap">
       <table class="ci-guest-table">
         <thead>
           <tr>
@@ -176,6 +180,7 @@
           <% } %>
         </tbody>
       </table>
+      </div>
 
       <% if (!isPreview) { %>
         <div style="margin-top:1rem;">
@@ -238,6 +243,19 @@
           });
         });
       });
+      var copyLinkBtn = document.getElementById('ci-copy-invite-link');
+      if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', async function () {
+          var feedback = document.getElementById('ci-copy-invite-feedback');
+          try {
+            await navigator.clipboard.writeText(document.getElementById('ci-invite-link').textContent.trim());
+            feedback.textContent = 'Link copied.';
+          } catch (e) {
+            feedback.textContent = 'Please select and copy the link above.';
+          }
+          setTimeout(function () { feedback.textContent = ''; }, 2600);
+        });
+      }
     </script>
   <% } %>
 </body>

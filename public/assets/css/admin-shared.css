@@ -67,8 +67,18 @@
    each theme's own inline dashboard details form. minmax(170px,1fr) lands
    around six columns on a ~1200px container and narrows on its own down to
    the phone-width single column, no separate breakpoint rules needed. */
-.bb-details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1.25rem; }
-.bb-details-grid .bb-admin-tile { display: flex; flex-direction: column; }
+/* min(170px, 100%) instead of a bare 170px keeps the track minimum itself
+   from ever exceeding the viewport. The actual overflow culprit (found
+   via real computed-geometry inspection, pre-existing, affecting every
+   theme equally at narrow widths — the Card image tile's native
+   <input type="file"> has a non-shrinkable intrinsic width) is CSS
+   Grid's default `min-width: auto` on grid items, which lets a track grow
+   past its `1fr` share to fit content that refuses to shrink. min-width: 0
+   here is the standard fix — it lets the track (and the file input inside
+   it) shrink to the column's actual width instead of forcing the grid
+   wider than its own container. */
+.bb-details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 1.25rem; }
+.bb-details-grid .bb-admin-tile { display: flex; flex-direction: column; min-width: 0; }
 .bb-details-grid .bb-admin-tile.bb-tile-wide { grid-column: span 2; }
 .bb-details-grid label { margin: 0 0 0.4rem; }
 .bb-details-grid textarea { flex: 1; min-height: 90px; }

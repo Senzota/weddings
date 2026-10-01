@@ -1060,3 +1060,175 @@ No route, model, schema, or other theme's file was touched.
 - No schema, migration, or production write of any kind was needed or made in this phase.
 - No secret, password, hash, token, cookie, or database URL was printed or exposed.
 - Admin-preview mode re-confirmed strictly read-only after all changes.
+
+# Phase: Custom Invitation Consolidated Fix Pass (with real visual verification)
+
+Commit: `fix(theme): fix custom invitation contrast, layout, and dashboard`
+Base commit: `0de301a fix(theme): fix custom invitation navigation, theming, and in-page modals`
+
+The task explicitly required visual proof, not just HTTP-status checks, for
+items previously reported fixed and found still broken. No browser/
+screenshot tool was available via this session's own tools, but this
+machine has Chrome installed locally — `playwright-core` (an older release,
+1.48.0, compatible with this machine's Node 18) was installed into a
+scratch directory outside the repo and driven against the real local
+Chrome executable. This gave real rendered screenshots and real
+`getComputedStyle()` readouts for the rest of this phase — genuine visual
+verification, not inference from source code.
+
+## Item 10 — button text contrast (previously reported fixed, wasn't)
+
+Computed-style inspection of every `.bb-btn`/`.ci-btn` element on the live
+dashboard found the exact bug: `<a class="bb-btn ci-btn">Manage Assets</a>`
+rendered with `color: rgb(33,31,26)` on `background-color: rgb(33,31,26)`
+— identical values, invisible text. `<button>` elements with the same
+classes were unaffected (`color: rgb(251,250,246)`, correct). Root cause:
+a prior phase's `.bb-admin a { color: var(--ci-ink); }` rule (added to
+theme the shared edit/assets pages) has higher CSS specificity
+(class+element, 0,0,1,1) than `.bb-btn`'s own color rule (single class,
+0,0,1,0) — so it silently overrode `.bb-btn`'s intended light text on
+every `<a>`-tag button, while never touching `<button>`-tag ones. Fixed
+with `.bb-admin a.bb-btn, .bb-admin a.ci-btn:not(.ci-btn-outline) { color:
+var(--ci-paper-soft); }`. **Re-verified after the fix**: the same
+computed-style check now shows `color: rgb(251,250,246)` on all three
+previously-broken buttons (Manage Assets / Edit details / Export Excel),
+and a full-page screenshot confirms all button text is visibly legible.
+
+## Item 3 — Edit Details page theming (previously reported fixed, wasn't)
+
+Confirmed via the rendered page itself (not just the CSS source) that
+`custom-invitation/theme.css` is genuinely in the page's `<link>` tags and
+`class="bb-admin"` is genuinely on the rendered `<body>` — both correct.
+A full screenshot of the edit page shows a properly themed ivory page with
+serif headings, visible form-field borders/backgrounds, and (after the
+item-10 fix) a legible "Save Changes" button. This appears to have
+actually been fixed by the prior phase's CSS additions; the "still broken"
+report may predate that deploy, or may have been about the then-real
+button-contrast bug (item 10) rather than theming as such. Reported here
+only on the strength of an actual rendered screenshot, not a repeat claim.
+
+## Item 2 — Page One 5% inset
+
+Changed `.ci-card-stage img`/the no-image placeholder from `inset: 0`
+(edge-to-edge) to `inset: 5%` (`width/height: 90%`). Verified via
+`getBoundingClientRect()` on the live rendered page: stage spans
+8px-1288px (1280px wide) and 8px-908px (900px tall); the image box spans
+72px-1224px (1152px — exactly 64px/5% margin each side) and 53px-863px
+(810px — exactly 45px/5% margin top and bottom). Mathematically exact on
+both axes. (The screenshot itself doesn't show a visible "frame" in this
+local test only because no real card image is uploaded — Cloudinary isn't
+configured in this environment, consistent with every prior phase — so the
+placeholder's transparent background blends with the stage's own identical
+background color; the geometry check is the real proof here, and is more
+precise than eyeballing a screenshot would be regardless.)
+
+## Items 1, 4, 5, 6, 7, 8, 9 — re-verified, some with new evidence
+
+- **Item 1** (in-page modals): confirmed via screenshot — clicking the QR
+  trigger opens a centered, backdrop-darkened modal with a real QR image
+  and a working close button, with Cameos/Gallery/Other Details rendered
+  as buttons (not links) beneath it. No other theme was touched; all four
+  still use separate pages by their own established design.
+- **Item 4** (Edit Details back-link): still present and working — visible
+  in every edit-page screenshot (`← Back to <event>`), unchanged since the
+  shared `edit-event.ejs` was not touched.
+- **Item 5** (Edit Details save bug): driven a real save through the
+  actual rendered form (fill → click Save Changes → redirect →
+  reload-and-compare). Zero console/page errors, correct redirect, and the
+  saved values read back identical to what was submitted. No failure
+  reproduced, now with real-browser evidence instead of only a curl-based
+  simulation.
+- **Item 6** (itinerary input): already on the shared edit form
+  (`itinerary` is a plain `TEXT` column, confirmed in schema/model);
+  visually confirmed present, labeled, and populated correctly in the
+  edit-page screenshot.
+- **Item 7** (remove guest-facing quick-links tile): removed from
+  `dashboard.ejs`; confirmed absent in the dashboard screenshot.
+- **Item 8** (consolidate two image tiles into one): "Manage Assets" now
+  shows both thumbnails side by side under one heading with one button;
+  confirmed in the dashboard screenshot — exactly two top-level tiles
+  remain (Manage Assets, Edit Event Details).
+- **Item 9** (Copy Invitation Link): added, reusing the exact
+  `navigator.clipboard` + text-swap-feedback pattern from other-details.ejs's
+  own "Copy address" button. Confirmed visible and correctly styled (white
+  text on black) in the dashboard screenshot; shown only when
+  `!isPreview && event.status === 'live'`.
+
+## New issue found during mobile-width visual testing (not previously reported)
+
+The guest table on Custom Invitation's dashboard had no horizontal-scroll
+wrapper — at a 375px viewport its "Checked in" column pushed the whole
+page 20px past the screen edge (`document.body.scrollWidth: 395` vs
+`window.innerWidth: 375`). Fixed with a `.ci-table-wrap { overflow-x: auto;
+}` wrapper div, matching every other theme's own existing
+`.lr-table-wrap`/`.lg-table-wrap` convention. Re-verified: `scrollWidth`
+now equals `innerWidth` exactly, and the mobile screenshot shows no
+overflow.
+
+A second, **pre-existing, cross-theme** overflow was found and fixed while
+testing this: the shared `.bb-details-grid` (in `admin-shared.css`, used
+by every theme's edit-event.ejs) overflowed its own container by ~20-25px
+at 375px width — confirmed on **both** Custom Invitation's and an existing
+Botanical Bloom event's edit pages before the fix
+(`bodyScrollWidth: 395`/`398` vs `vw: 375` on both). Root cause: CSS
+Grid's default `min-width: auto` on grid items lets a track grow past its
+`1fr` share to fit non-shrinkable content (here, the Card image tile's
+native `<input type="file">`), overflowing the grid past its own
+container regardless of the track's nominal minmax. Fixed with the
+standard `min-width: 0` on `.bb-details-grid .bb-admin-tile`, plus
+`minmax(min(170px, 100%), 1fr)` as a second line of defense. Re-verified
+on both themes: `bodyScrollWidth` now equals `375` exactly on both. This
+is a shared-infrastructure fix (not a per-theme override) because
+`admin-shared.css` is explicitly the one file that owns this grid's layout
+for every theme — duplicating the fix five times in each theme's own
+stylesheet was the wrong place for it.
+
+## Regression evidence
+
+Full-page screenshots taken and visually inspected (not just HTTP status)
+for: Custom Invitation dashboard (desktop + mobile, before and after
+fixes), Custom Invitation edit page (desktop + mobile, before and after
+fixes), Custom Invitation guest invitation (desktop + mobile, plus the
+open QR modal), Custom Invitation admin-preview (confirmed zero `<form>`
+elements), an existing Botanical Bloom event's dashboard and edit page,
+and an existing Lady Gianna event's dashboard — all rendered correctly,
+all buttons legible, no layout breakage. A real guest RSVP (verify →
+accept) was driven through the actual browser UI, not curl, and the
+resulting "accepted" status was confirmed in both the guest page and the
+admin guest table.
+
+Baseline counts before testing: `clients` 0, `booking_inquiries` 0,
+`events` 7, `client_access` 0, `guests` 11, `gallery_photos` 0,
+`cameo_photos` 0. One disposable test event (with one guest) was created
+through the real admin UI, exercised across every screenshot above, then
+deleted through the real admin UI. Final counts matched the baseline
+exactly.
+
+## Files changed
+
+```
+public/assets/css/admin-shared.css                  — grid-blowout fix (all themes)
+public/themes/custom-invitation/theme.css            — button-contrast, 5% inset, table-wrap, asset-tile CSS
+views/admin/themes/custom-invitation/dashboard.ejs    — remove quick-links, consolidate tiles, add Copy Link, table-wrap
+views/guest/themes/custom-invitation/invitation.ejs   — 5% inset on the no-image placeholder
+PROMPT-REPORT.md                                      — this section
+```
+
+No route, controller, model, or schema file was touched. The
+`admin-shared.css` change is the only edit outside Custom Invitation's own
+files, and only because the bug it fixes lives in the one file that
+already owns this exact layout for all five themes.
+
+## Confirmations
+
+- All eleven Step-2 items addressed; items 3 and 10 specifically carry
+  real screenshot/computed-style evidence, not just a repeated claim.
+- No schema, migration, route, controller, model, or production write of
+  any kind was needed or made in this phase.
+- No secret, password, hash, token, cookie, or database URL was printed,
+  logged, or exposed — the scratch Playwright script reads `.env` directly
+  into `process.env` and never logs any value from it.
+- Admin-preview mode re-confirmed strictly read-only with a screenshot
+  (zero forms, zero mutating controls visible).
+- The other four themes were not modified; Botanical Bloom and Lady
+  Gianna were re-verified visually with no regression.
