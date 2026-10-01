@@ -16,3 +16,8 @@ PROMPT_REPORT.md
 # never a runtime dependency. Production assets/templates are copied and
 # adapted into the real public/themes/ and views/*/themes/ locations instead.
 plain-card-approved/
+
+# Custom Invitation theme: same rule as plain-card-approved/ above — design
+# drop, never a runtime dependency. Corrected copies live under the real
+# public/themes/ and views/*/themes/ locations.
+custom-invitation-theme/

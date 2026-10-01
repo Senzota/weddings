@@ -32,6 +32,8 @@ router.post('/events/:id/gallery', requireAdmin, upload.array('photos', 20), asy
 router.post('/events/:id/gallery/:photoId/delete', requireAdmin, asyncHandler(adminController.deleteGalleryPhoto));
 router.post('/events/:id/cameos', requireAdmin, upload.single('photo'), asyncHandler(adminController.uploadCameoPhoto));
 router.post('/events/:id/cameos/:photoId/delete', requireAdmin, asyncHandler(adminController.deleteCameoPhoto));
+router.post('/events/:id/background-image', requireAdmin, upload.single('backgroundImage'), asyncHandler(adminController.uploadBackgroundImage));
+router.post('/events/:id/background-image/delete', requireAdmin, asyncHandler(adminController.deleteBackgroundImage));
 
 router.get('/inquiries', requireAdmin, asyncHandler(adminController.listInquiries));
 router.get('/inquiries/:id', requireAdmin, asyncHandler(adminController.showInquiryDetail));

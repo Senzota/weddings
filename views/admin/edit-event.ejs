@@ -138,6 +138,18 @@
           <label>Footer note</label>
           <textarea name="footerNote" placeholder="A short quote and/or closing note."><%= event.footer_note || '' %></textarea>
         </div>
+        <div class="bb-admin-tile">
+          <label>Invitation heading</label>
+          <input type="text" name="invitationHeading" value="<%= event.invitation_heading || '' %>" placeholder="e.g. For the day, and all that follows">
+        </div>
+        <div class="bb-admin-tile bb-tile-wide">
+          <label>Dress code note</label>
+          <textarea name="dressCodeNote" placeholder="e.g. Garden formal — soft colors welcome."><%= event.dress_code_note || '' %></textarea>
+        </div>
+        <div class="bb-admin-tile bb-tile-wide">
+          <label>Accessibility note</label>
+          <textarea name="accessibilityNote" placeholder="e.g. Step-free entrance available at the west door."><%= event.accessibility_note || '' %></textarea>
+        </div>
       </div>
       <button type="submit" class="bb-btn" style="margin-top:1.25rem;">Save Changes</button>
     </form>

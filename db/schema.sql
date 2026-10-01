@@ -282,3 +282,22 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS client_id INTEGER
 -- untouched — this is additive on booking_inquiries only.
 ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS preferred_access_mode TEXT
   CHECK (preferred_access_mode IN ('open', 'recognized', 'closed'));
+
+-- Custom Invitation theme: a second, optional client-supplied image shown
+-- behind that theme's "Page Two" details area — same Cloudinary-backed
+-- url + public_id pair as card_image, fully nullable/optional (no default,
+-- no NOT NULL) so every existing event and every other theme is completely
+-- unaffected. Uploaded/deleted through its own dedicated route (mirroring
+-- gallery_photos/cameo_photos' own upload/delete pattern), not through the
+-- existing single-file card-image upload on the shared edit form.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS background_image TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS background_image_public_id TEXT;
+
+-- Custom Invitation theme: three optional free-text fields, same shape and
+-- editability as the existing subtitle/footer_note/event_time_note fields
+-- (added on the shared edit-event.ejs form, COALESCE-preserved on save).
+-- Nullable, no default — every existing event simply has none of these set,
+-- and every other theme's templates never reference them.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS invitation_heading TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS dress_code_note TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS accessibility_note TEXT;

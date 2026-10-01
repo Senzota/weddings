@@ -761,3 +761,222 @@ counts confirmed to match the baseline exactly: `clients` 0,
   `<button class="copy-btn">` element exists in that mode).
 - The other three existing themes were not modified and were re-verified
   to render without regression.
+
+# Phase: Custom Invitation Theme — Implementation from an External Design Drop
+
+Commit: `feat(theme): add custom invitation event experience`
+Base commit: `3176e73 fix(theme): complete plain card guest experience`
+
+Note on file naming: the task instructions asked for findings to be written
+to a new `input_N.md`. No such file convention exists anywhere in this
+repository — `input_20`, `input_13`, etc. are phase labels used only in code
+comments, from a numbering scheme that predates this file. This section is
+added to `PROMPT-REPORT.md` instead, consistent with how every prior phase
+in this project has actually been documented.
+
+## Source and audit
+
+Source: `custom-invitation-theme/` (theme.css, invitation.ejs, gallery.ejs,
+cameos.ejs, other-details.ejs, dashboard.ejs, README-integration-notes.md) —
+an external design drop, explicitly built against *assumed* variable/route
+names per its own README, never a runtime dependency, added to `.gitignore`
+(same rule as `plain-card-approved/`).
+
+No audit of this package existed anywhere in the prior conversation — one
+was performed from scratch before any file was touched, by reading the
+package in full and cross-checking every assumption against the real
+`guest.controller.js`, `admin.controller.js`, `event.model.js`,
+`db/schema.sql`, and `utils/assetExists.js`. This surfaced issues well
+beyond simple renames:
+
+- `event.card_image` / `event.background_image` are plain TEXT URL strings
+  in the database, not `{ url, public_id }` objects — the package's
+  `event.card_image.url` pattern was wrong, as was its use of `assetExists()`
+  (a *local filesystem* check for bundled static assets, via
+  `fs.existsSync` — never appropriate for a Cloudinary URL) to gate whether
+  an image had been uploaded. Fixed to plain truthy checks
+  (`if (event.card_image)`), matching every existing theme.
+- `event.itinerary` is plain newline-separated text (parsed with
+  `.split('\n')`), not an array of `{ time, label }` objects — a real
+  data-shape mismatch, not a rename. Rather than changing how `itinerary` is
+  stored (shared by all four other themes), each line is now parsed as
+  `"TIME - LABEL"` — the exact convention already established by
+  `edit-event.ejs`'s own placeholder text and every real itinerary anyone
+  types into this app — falling back to a label-only row when a line has no
+  `" - "` in it.
+- The guest-facing templates assumed a `basePath` variable for routes like
+  `<%= basePath %>/verify` — `guest.controller.js` never passes `basePath`
+  to guest pages; real routes are absolute (`/invite/:eventId/verify`,
+  `/rsvp`, `/gallery`, `/cameos`, `/other-details`). Fixed throughout.
+- `gallery.ejs`/`cameos.ejs` assumed `photos`/`cameos` are always arrays,
+  with no passcode-prompt branch — the real controller returns
+  `photos: null` until a passcode is resolved (session or `?passcode=`
+  query fallback), exactly like every existing theme's own gallery/cameos
+  page. Added the missing null-state branch to both files; also renamed
+  `cameos` to `photos` in `cameos.ejs` (the controller uses one shared
+  variable name for both routes).
+- The dashboard assumed `event.event_date` (real field: `wedding_date`), a
+  GET `/guests/new` page (real: a bulk-textarea POST to `<basePath>/guests`),
+  a basePath-relative guest-export link (real: a fixed, admin-only
+  `/admin/events/:id/export`, no client equivalent), and one shared
+  `<basePath>/status` toggle for both admin and client (the client side is
+  actually only ever a one-way `/client/publish`, with no draft-toggle and
+  no delete — matches every other theme's own client-status section). All
+  corrected.
+- No CSRF middleware exists anywhere in this app — the package's
+  `csrfToken` guards were dead code, removed.
+- The theme's own CSS was missing the `--bb-admin-radius` custom property
+  that `admin-shared.css` reads for border-radius on the shared edit/assets
+  pages (every other theme defines it) — added.
+- A real bug introduced during my own correction pass, caught by local
+  testing (not by inspection): moving the `welcomeBack` decline-banner check
+  to use the controller's own precise flag (instead of re-deriving it from
+  `guest.rsvp_status === 'declined'`, as the original package did) initially
+  left that check outside the `state === 'card'` branch — `welcomeBack` is
+  only ever passed by the controller when `state === 'card'`, so visiting
+  the invitation in `state === 'confirmed'`/`'qr'`/`'expired'` threw a
+  `ReferenceError` and produced a raw 500. Reproduced live (`GET
+  /invite/:id` returned "Something went wrong." for an already-accepted
+  recognized-mode guest), then fixed by moving the check inside the
+  `state === 'card'` branch where the variable is always defined. Re-tested
+  and confirmed working afterward.
+- What the package *already got right*, confirmed by inspection (not
+  reworked): the QR-in-modal mechanic (hidden by default, opened by a
+  button that only exists in `state === 'qr'`, closed by button/Escape,
+  built from the real `qrDataUrl`), the accept/decline submit-button pattern
+  (`name="response" value="accepted|declined"` on two buttons in one form —
+  valid HTML, works correctly against the real `submitRsvp` handler once the
+  form's `action` URL was fixed), `cameo_photos`' `image_url`/`title`
+  fields, and the overall admin/client/preview dashboard structure
+  (`isClient`/`isPreview`/`basePath`).
+
+## `background_image`, `invitation_heading`, `dress_code_note`,
+`accessibility_note` — product decisions
+
+The README flagged these as needing explicit sign-off before implementation
+rather than guessing. Before touching any file, the project owner confirmed:
+add `background_image` with its full real scope (schema column pair, a
+dedicated upload/delete route mirroring gallery/cameo's own pattern, and a
+generic field on the shared `assets.ejs` — not the smaller "just a template
+field" scope the README's own wording implied), and add all three new
+TEXT fields (`invitation_heading`, `dress_code_note`, `accessibility_note`)
+to the schema and the shared edit form.
+
+**Judgment call**: the task instruction said to add `custom-invitation` to
+`DEFAULT_THEME_BY_EVENT_TYPE` "for each" of the nine event types, which read
+literally would also reassign `wedding`/`birthday`'s own deliberately-chosen
+flagship defaults (`botanical-bloom`, `lady-gianna`) — predating Plain Card
+— to `custom-invitation`. Those two were left untouched when Plain Card
+became the default for the other seven types in the prior release; the same
+precedent was kept here. `custom-invitation` replaces `plain-card` as the
+fallback only for the seven types that had no prior deliberate default
+(`bridal-shower`, `baby-shower`, `engagement`, `anniversary`, `graduation`,
+`corporate`, `other`). Flagged here for the project owner to correct if
+`wedding`/`birthday` were actually meant to change too.
+
+## Files changed
+
+```
+db/schema.sql                                  — 5 new additive columns on events
+models/event.model.js                          — 3 new update() fields; setBackgroundImage/clearBackgroundImage
+controllers/admin.controller.js                — 3 new updateEventCore fields; upload/deleteBackgroundImage(Core)
+controllers/client.controller.js               — uploadBackgroundImage/deleteBackgroundImage wrappers
+routes/admin.routes.js                         — 2 new background-image routes
+routes/client.routes.js                        — 2 new background-image routes
+views/admin/edit-event.ejs                     — 3 new shared text fields
+views/admin/assets.ejs                         — new Background Image section; custom-invitation font entry
+config/themes.js                               — 9 new AVAILABLE_THEMES entries; 7 new DEFAULT_THEME_BY_EVENT_TYPE keys
+.gitignore                                     — added custom-invitation-theme/
+public/themes/custom-invitation/theme.css      — new (corrected copy)
+views/guest/themes/custom-invitation/*.ejs     — new, 4 files (corrected copies)
+views/admin/themes/custom-invitation/dashboard.ejs — new (corrected copy)
+PROMPT-REPORT.md                               — this section
+```
+
+No route/controller/model file outside the additions listed above was
+touched. `server.js`, `package.json`/`package-lock.json`, `db/migrate.js`,
+`middleware/*`, `utils/*`, `config/accessModes.js`, and every file under the
+four existing themes (Botanical Bloom, Lavender Romance, Lady Gianna, Plain
+Card) were not modified.
+
+## Local test evidence
+
+`.env` confirmed pointed at `localhost:5433` before any write. Baseline
+counts recorded before testing: `clients` 0, `booking_inquiries` 0, `events`
+7, `client_access` 0, `guests` 11, `gallery_photos` 0, `cameo_photos` 0.
+`npm run db:migrate` applied the 5 new columns locally — verified via
+`information_schema.columns` (all nullable, no default) and a row-count
+check confirming zero rows were touched.
+
+Created four disposable Custom Invitation test events (open/recognized/
+closed on `wedding`, plus a `corporate` event created with no explicit
+theme to confirm the new `DEFAULT_THEME_BY_EVENT_TYPE` fallback), set
+itinerary text (including one line with no `" - "` separator, to test the
+label-only fallback), `invitation_heading`, `dress_code_note`, and
+`accessibility_note` via the shared edit form, and set a test
+`background_image` value directly via SQL (Cloudinary isn't configured in
+this local environment — consistent with every prior phase — so the actual
+upload call couldn't be exercised end-to-end; the display path was
+confirmed via a manually-set value, and the delete route was confirmed to
+run and clear both columns correctly even when the Cloudinary API call
+itself fails, exactly mirroring gallery/cameo's existing error handling).
+
+Verified against live HTTP responses, not just read from code:
+- Open event: full invitation renders directly (no passcode gate), shows
+  the background image, parsed itinerary, and heading; no RSVP/QR markup.
+- Recognized event: passcode gate present when unverified; full
+  pending → declined (welcomeBack banner) → reconsider → accepted →
+  confirmed lifecycle exercised on one guest; no QR/gatepass markup at any
+  point.
+- Closed event: same lifecycle through to a real gatepass — the "Show my QR
+  gatepass" button and hidden modal (containing a real base64 QR `<img>`)
+  render only in `state === 'qr'`; posting the real `qr_token` to the
+  existing `/scan/verify` endpoint returned `{"result":"checked_in", ...}`,
+  and the admin dashboard's guest table correctly showed "Yes" for Checked
+  in afterward.
+- Gallery/Cameos: unverified access to a recognized/closed event's
+  secondary pages now correctly shows the passcode-prompt form instead of
+  crashing; open-event access shows the (empty) grid directly.
+- Dashboard: admin, client (via a disposable test `client_access` token),
+  and admin-preview modes all rendered correctly; preview mode confirmed
+  strictly read-only (0 `<form>` elements, 0 rendered `copy-btn` buttons —
+  only the inert shared `<script>` text matched a naive search); client
+  mode correctly hides Delete/Export/All-events and shows only the one-way
+  Publish control for a draft event.
+- Shared `edit-event.ejs`/`assets.ejs` regression-checked on an existing
+  Botanical Bloom event and a fresh Lady Gianna event, plus fresh disposable
+  Lavender Romance and Plain Card test events — all four rendered `200`
+  with their own unchanged fonts/styling; the three new shared text fields
+  and the new Background Image section correctly appear on all of them too
+  (an accepted, explicitly-approved side effect of making these generic
+  shared fields, not a regression).
+
+### Cleanup
+
+Disposable test records: four Custom Invitation test events (deleted via
+the existing admin delete route, cascading their guests/gatepasses), one
+disposable Lavender Romance and one disposable Plain Card regression-test
+event (deleted the same way), and one manually-inserted `client_access` test
+token (cascade-deleted along with its event). Final counts confirmed to
+match the baseline exactly: `clients` 0, `booking_inquiries` 0, `events` 7,
+`client_access` 0, `guests` 11, `gallery_photos` 0, `cameo_photos` 0. No
+pre-existing business record was changed.
+
+## Confirmations
+
+- The only backend changes made are the ones explicitly authorized before
+  implementation began: 5 additive, nullable `events` columns; the
+  `background_image` upload/delete route pair (mirroring gallery/cameo's
+  existing pattern exactly); and 3 new fields on the existing, already-open
+  `updateEventCore`/`update()` text-field list. No existing column, route,
+  or function signature was changed or removed.
+- No production write occurred during local testing; production migration
+  handling follows this project's established practice — the project owner
+  switches their own local `.env` to production, the hostname is verified
+  via URL parsing (never printed), then `npm run db:migrate` is run. No raw
+  connection string was requested or handled in this conversation.
+- No secret, password, hash, raw token, cookie/session ID, environment
+  value, or database URL was printed or exposed at any point.
+- Admin-preview mode confirmed strictly read-only for Custom Invitation.
+- The four existing themes were not modified and were re-verified to render
+  without regression, including their own shared edit/assets pages.

@@ -1,0 +1,132 @@
+/* ============================================================
+   Custom Invitation — theme.css
+   Registered slug: custom-invitation
+   Scoped to ALL event types (registered once per event type in
+   config/themes.js, per Themes-plan.md's multi-event-type pattern —
+   every entry must stay byte-identical: same label/colors/tagline/fonts).
+   ============================================================ */
+
+:root {
+  --ci-ink: #211f1a;
+  --ci-ink-soft: #5c574d;
+  --ci-paper: #f5f1e8;
+  --ci-paper-soft: #fbfaf6;
+  --ci-line: rgba(33, 31, 26, 0.16);
+  --ci-glass: rgba(250, 248, 241, 0.74);
+  /* admin-shared.css's .bb-admin-header-inner / .bb-admin-card /
+     .bb-admin-tile / .bb-admin-photo-panel / .bb-admin-thumb all read
+     this variable for border-radius (Themes-plan §3) — every other
+     theme defines it, this one was missing it. */
+  --bb-admin-radius: 1rem;
+}
+
+/* ------------------------------------------------------------
+   GUEST-FACING — these pages "own their containers" (Themes-plan
+   §3): fully bespoke, never shared with another theme.
+   ------------------------------------------------------------ */
+
+.ci-shell { width: 100%; overflow-x: hidden; font-family: "DM Sans", sans-serif; color: var(--ci-ink); background: var(--ci-paper); }
+.ci-shell img { max-width: 100%; display: block; }
+.ci-serif { font-family: "Cormorant Garamond", serif; }
+body.ci-locked { overflow: hidden; }
+
+/* passcode overlay */
+.ci-access-overlay { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 1.5rem; background: rgba(245, 241, 232, 0.97); }
+.ci-access-panel { width: min(100%, 28rem); padding: 2.25rem 1.5rem; border: 1px solid var(--ci-line); border-radius: 1.5rem; background: var(--ci-paper-soft); box-shadow: 0 20px 55px rgba(33, 31, 26, 0.14); }
+.ci-kicker { font-size: .75rem; text-transform: uppercase; letter-spacing: .18em; color: var(--ci-ink-soft); margin: 0 0 .75rem; }
+.ci-title { font-weight: 600; line-height: 1.05; margin: 0 0 .75rem; font-size: clamp(1.7rem, 4.5vw, 2.4rem); overflow-wrap: break-word; }
+.ci-copy { font-size: .95rem; line-height: 1.55; color: var(--ci-ink-soft); margin: 0 0 1.5rem; overflow-wrap: break-word; }
+.ci-input { width: 100%; border: 1px solid rgba(33, 31, 26, 0.32); border-radius: .85rem; padding: .9rem 1rem; background: #fffefb; font: inherit; }
+.ci-input:focus { outline: none; border-color: var(--ci-ink); box-shadow: 0 0 0 3px rgba(33, 31, 26, 0.13); }
+.ci-status-msg { min-height: 1.25rem; font-size: .85rem; }
+
+/* buttons (guest side) */
+.ci-btn { display: inline-block; border: none; border-radius: .85rem; padding: .85rem 1.3rem; font: inherit; font-weight: 500; cursor: pointer; text-align: center; text-decoration: none; transition: transform 150ms ease; }
+.ci-btn:hover { transform: translateY(-1px); }
+.ci-btn:focus-visible { outline: 3px solid rgba(33, 31, 26, 0.45); outline-offset: 3px; }
+.ci-btn-ink { background: var(--ci-ink); color: var(--ci-paper-soft); }
+.ci-btn-outline { background: transparent; color: var(--ci-ink); border: 1px solid rgba(33, 31, 26, .35); }
+.ci-btn-row { display: flex; flex-wrap: wrap; gap: .75rem; }
+.ci-btn-row .ci-btn { flex: 1 1 10rem; }
+
+/* Page One — the client's own card image, full-bleed, never restyled */
+.ci-card-stage { position: relative; min-height: 100vh; min-height: 100dvh; background: #e9e2d4; }
+.ci-card-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ci-scroll-cue { position: absolute; left: 50%; bottom: 1.65rem; transform: translateX(-50%); color: #fffdf8; text-shadow: 0 1px 8px rgba(33, 31, 26, .5); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; }
+
+/* Page Two — client's background image behind everything, translucent wash for legibility */
+.ci-details-stage { position: relative; isolation: isolate; background: #d7d0c2; padding: 3.5rem 1.1rem 4.5rem; }
+.ci-details-photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
+.ci-details-wash { position: absolute; inset: 0; z-index: -1; background: rgba(241, 237, 228, .72); }
+.ci-details-inner { max-width: 40rem; margin: 0 auto; }
+.ci-details-header { text-align: center; margin-bottom: 2rem; }
+.ci-details-header h2 { font-weight: 600; margin: 0; line-height: 1.05; font-size: clamp(1.9rem, 5vw, 2.75rem); overflow-wrap: break-word; }
+
+/* frosted-glass content cards — neutral by design so they never clash
+   with whatever colors the client's own images happen to be */
+.ci-frost-card { border: 1px solid rgba(33, 31, 26, .13); border-radius: 1.25rem; background: var(--ci-glass); box-shadow: 0 16px 38px rgba(33, 31, 26, .09); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); padding: 1.5rem 1.4rem; margin-bottom: 1.25rem; overflow-wrap: break-word; }
+.ci-frost-card h3 { font-weight: 600; margin: 0 0 1.1rem; line-height: 1; font-size: clamp(1.3rem, 3.5vw, 1.7rem); }
+
+.ci-timeline-row { display: flex; flex-wrap: wrap; gap: .5rem 1rem; padding: .85rem 0; border-bottom: 1px solid rgba(33, 31, 26, .12); }
+.ci-timeline-row:last-child { border-bottom: none; }
+.ci-timeline-row .ci-time { flex: 0 0 5.5rem; font-size: .85rem; font-weight: 500; color: var(--ci-ink-soft); }
+.ci-timeline-row .ci-what { flex: 1 1 10rem; }
+
+/* Cameos / Gallery / Other Details — each is its own ROUTE, these are link tiles only */
+.ci-tile-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem; }
+.ci-tile { flex: 1 1 8rem; display: block; text-decoration: none; color: var(--ci-ink); text-align: center; padding: 1.1rem .75rem; border-radius: 1rem; border: 1px solid rgba(33, 31, 26, .13); background: var(--ci-glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); font-weight: 500; font-size: .95rem; }
+.ci-tile:hover { transform: translateY(-1px); }
+
+/* QR gatepass — button-triggered modal, never shown inline on the page */
+.ci-qr-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1rem; background: rgba(24, 23, 20, .68); }
+.ci-qr-modal { width: min(100%, 22rem); padding: 2rem 1.5rem; border-radius: 1.25rem; background: #f8f5ed; text-align: center; box-shadow: 0 28px 70px rgba(0,0,0,.34); }
+.ci-qr-modal img { margin: 1.25rem auto; border-radius: .4rem; }
+
+.ci-declined-banner { border-radius: .9rem; padding: .9rem 1.1rem; background: rgba(33, 31, 26, .07); font-size: .9rem; margin-bottom: 1rem; }
+
+.ci-footer { text-align: center; padding-top: 1rem; font-style: italic; font-size: clamp(1.1rem, 3vw, 1.4rem); }
+
+/* Gallery / Cameos / Other-Details secondary pages */
+.ci-secondary-stage { position: relative; isolation: isolate; min-height: 100vh; min-height: 100dvh; background: #d7d0c2; padding: 3rem 1.1rem 4rem; }
+.ci-back-link { display: inline-block; margin-bottom: 1.5rem; font-size: .85rem; text-decoration: none; color: var(--ci-ink-soft); }
+.ci-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: .85rem; }
+.ci-gallery-grid img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: .8rem; }
+.ci-cameo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1.25rem; }
+.ci-cameo-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: .9rem; margin-bottom: .6rem; }
+.ci-empty-state { text-align: center; padding: 3rem 1rem; color: var(--ci-ink-soft); }
+
+@media (min-width: 640px) {
+  .ci-access-panel { padding: 3.2rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ci-shell { scroll-behavior: auto; }
+}
+
+/* ------------------------------------------------------------
+   ADMIN / CLIENT DASHBOARD — Themes-plan §3: edit-event.ejs and
+   assets.ejs are SHARED across every theme and are never modified
+   or restyled with new class names. They use fixed, theme-agnostic
+   class names historically prefixed "bb-" (from Botanical Bloom,
+   the original theme) — every theme's own theme.css re-skins THOSE
+   SAME class names with its own color/font/background only. Do not
+   rename or duplicate layout rules here; layout stays owned by
+   public/assets/css/admin-shared.css.
+   ------------------------------------------------------------ */
+
+.bb-admin { --ci-accent: var(--ci-ink); background: var(--ci-paper); color: var(--ci-ink); font-family: "DM Sans", sans-serif; }
+.bb-admin-tile { background: var(--ci-paper-soft); border: 1px solid var(--ci-line); border-radius: 1rem; }
+.bb-btn { background: var(--ci-ink); color: var(--ci-paper-soft); border-radius: .75rem; font-family: "DM Sans", sans-serif; }
+
+/* Bespoke Custom Invitation dashboard (views/admin/themes/custom-invitation/dashboard.ejs)
+   — this template DOES own its own containers, per §4, so its classes
+   are namespaced ci-admin-* rather than reusing bb-*. */
+.ci-admin { font-family: "DM Sans", sans-serif; color: var(--ci-ink); background: var(--ci-paper); min-height: 100vh; padding: 1.5rem; }
+.ci-admin-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.ci-admin-card { background: var(--ci-paper-soft); border: 1px solid var(--ci-line); border-radius: 1.1rem; padding: 1.25rem; }
+.ci-admin-card h3 { font-family: "Cormorant Garamond", serif; margin: 0 0 .9rem; font-size: 1.3rem; }
+.ci-image-tile { position: relative; border-radius: .9rem; overflow: hidden; aspect-ratio: 16 / 10; background: #e9e2d4; margin-bottom: .75rem; }
+.ci-image-tile img { width: 100%; height: 100%; object-fit: cover; }
+.ci-image-tile.ci-image-missing { display: grid; place-items: center; color: var(--ci-ink-soft); font-size: .85rem; text-align: center; padding: 1rem; }
+.ci-guest-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.ci-guest-table th, .ci-guest-table td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--ci-line); }
+.ci-readonly-note { font-size: .8rem; color: var(--ci-ink-soft); font-style: italic; }

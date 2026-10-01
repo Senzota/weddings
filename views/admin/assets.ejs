@@ -25,6 +25,7 @@
       // `themes.find(...)`; this file never received the theme registry,
       // hence its own separate map — see this map's original comment).
       'plain-card': 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap',
+      'custom-invitation': 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap',
     };
   %>
   <link href="<%= assetsGoogleFontsBySlug[event.theme] || assetsGoogleFontsBySlug['botanical-bloom'] %>" rel="stylesheet">
@@ -117,6 +118,29 @@
         <% } else { %>
           <p>No cameos uploaded yet.</p>
         <% } %>
+      </div>
+
+      <!-- Generic, theme-agnostic second image field (Themes-plan §3):
+           added for the Custom Invitation theme, but reusable by any
+           future theme rather than a bespoke per-theme upload route. Most
+           themes simply never reference event.background_image. -->
+      <div class="bb-admin-card">
+        <h2>Background Image</h2>
+        <p>An optional second image some themes display behind their details page. Most themes don't use this.</p>
+        <% if (event.background_image) { %>
+          <div class="bb-admin-gallery-item" style="max-width:220px;">
+            <img src="<%= event.background_image %>" alt="">
+            <form method="POST" action="<%= assetsActionBase %>/background-image/delete" onsubmit="return confirm('Remove the background image?');">
+              <button type="submit" title="Remove background image">&times;</button>
+            </form>
+          </div>
+        <% } else { %>
+          <p>No background image uploaded yet.</p>
+        <% } %>
+        <form method="POST" action="<%= assetsActionBase %>/background-image" enctype="multipart/form-data" style="margin-top:0.75rem;">
+          <input type="file" name="backgroundImage" accept="image/png,image/jpeg,image/webp" required>
+          <button type="submit" class="bb-btn" style="margin-top:0.75rem;">Upload Background Image</button>
+        </form>
       </div>
     </div>
   </div>

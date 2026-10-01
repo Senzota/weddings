@@ -215,6 +215,7 @@ async function updateEventCore(eventId, fields, file, isClient) {
     coupleNames, weddingDate, venue, themeColor, acceptButtonText, declineButtonText,
     declineMessage, itinerary, invitationMessage, contactDetails, theme, accessMode,
     eventType, subtitle, footerNote, eventTimeNote,
+    invitationHeading, dressCodeNote, accessibilityNote,
   } = fields;
   if (!coupleNames || !venue) return { ok: false, reason: 'validation' };
 
@@ -270,6 +271,7 @@ async function updateEventCore(eventId, fields, file, isClient) {
     accessMode: isClient ? undefined : accessMode,
     eventType: isClient ? undefined : eventType,
     subtitle, footerNote, eventTimeNote,
+    invitationHeading, dressCodeNote, accessibilityNote,
   });
   return { ok: true };
 }
@@ -475,6 +477,53 @@ async function deleteCameoPhoto(req, res) {
   res.redirect(`/admin/events/${req.params.id}/assets`);
 }
 
+// Custom Invitation theme: a second, optional Cloudinary-backed image on
+// the events row itself (not a child table like gallery/cameo) — mirrors
+// their own upload/delete core shape at the single-row level instead.
+// Generic on purpose (Themes-plan §3's "reusable field, not a bespoke
+// per-theme route"): any future theme can use this same field/route.
+async function uploadBackgroundImageCore(eventId, file) {
+  const event = await findEventForMutation(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+  if (!file) return { ok: true };
+
+  const result = await uploadImage(file.buffer, `weddings103/events/${eventId}/background`);
+  if (event.background_image_public_id) {
+    deleteImage(event.background_image_public_id).catch((err) => {
+      console.error(`Failed to delete replaced Cloudinary background image ${event.background_image_public_id}:`, err);
+    });
+  }
+  await eventModel.setBackgroundImage(eventId, result.secure_url, result.public_id);
+  return { ok: true };
+}
+
+async function uploadBackgroundImage(req, res) {
+  const result = await uploadBackgroundImageCore(req.params.id, req.file);
+  if (!result.ok) return res.status(404).send('Wedding not found.');
+  res.redirect(`/admin/events/${req.params.id}/assets`);
+}
+
+async function deleteBackgroundImageCore(eventId) {
+  const event = await findEventForMutation(eventId);
+  if (!event) return { ok: false, reason: 'not_found' };
+
+  if (event.background_image_public_id) {
+    try {
+      await deleteImage(event.background_image_public_id);
+    } catch (err) {
+      console.error(`Failed to delete Cloudinary background image ${event.background_image_public_id}:`, err);
+    }
+  }
+  await eventModel.clearBackgroundImage(eventId);
+  return { ok: true };
+}
+
+async function deleteBackgroundImage(req, res) {
+  const result = await deleteBackgroundImageCore(req.params.id);
+  if (!result.ok) return res.status(404).send('Wedding not found.');
+  res.redirect(`/admin/events/${req.params.id}/assets`);
+}
+
 async function exportGuestList(req, res) {
   const event = await eventModel.findById(req.params.id);
   if (!event) return res.status(404).send('Wedding not found.');
@@ -628,6 +677,7 @@ module.exports = {
   showDashboard, showEditForm, showAssets, updateEvent, toggleStatus, bulkAddGuests, deleteEvent,
   exportGuestList, uploadGalleryPhotos, deleteGalleryPhoto,
   uploadCameoPhoto, deleteCameoPhoto,
+  uploadBackgroundImage, deleteBackgroundImage,
   showClientPreview,
   listInquiries, showInquiryDetail, approveInquiry, declineInquiry,
   listClients, showClientDetail,
@@ -639,5 +689,6 @@ module.exports = {
   updateEventCore, bulkAddGuestsCore,
   uploadGalleryPhotosCore, deleteGalleryPhotoCore,
   uploadCameoPhotoCore, deleteCameoPhotoCore,
+  uploadBackgroundImageCore, deleteBackgroundImageCore,
   publishCore,
 };

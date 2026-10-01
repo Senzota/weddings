@@ -1,0 +1,75 @@
+<%#
+  Custom Invitation — other-details.ejs
+  guest.controller.js#showOtherDetails passes only { event } — no basePath,
+  no gating (other-details is never passcode-protected in this app, same
+  as every other theme). event.background_image is a plain TEXT URL.
+  dress_code_note / accessibility_note are new, optional TEXT columns
+  (added alongside background_image in this same release).
+%>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= event.couple_names %> — Other Details</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/custom-invitation/theme.css">
+</head>
+<body class="ci-shell">
+  <section class="ci-secondary-stage">
+    <% if (event.background_image) { %>
+      <img class="ci-details-photo" src="<%= event.background_image %>" alt="">
+    <% } %>
+    <div class="ci-details-wash"></div>
+
+    <div class="ci-details-inner">
+      <a class="ci-back-link" href="/invite/<%= event.id %>">&larr; Back to invitation</a>
+      <header class="ci-details-header">
+        <p class="ci-kicker">For your planning</p>
+        <h2 class="ci-serif">Other Details</h2>
+      </header>
+
+      <article class="ci-frost-card">
+        <h3 class="ci-serif" style="font-size:1.1rem;text-transform:uppercase;letter-spacing:.1em;">Venue</h3>
+        <p id="ci-venue-address"><%= event.venue %></p>
+        <button class="ci-btn ci-btn-outline" type="button" id="ci-copy-address">Copy address</button>
+        <p class="ci-status-msg" id="ci-copy-feedback" aria-live="polite"></p>
+      </article>
+
+      <% if (event.dress_code_note) { %>
+        <article class="ci-frost-card">
+          <h3 class="ci-serif" style="font-size:1.1rem;text-transform:uppercase;letter-spacing:.1em;">Dress code</h3>
+          <p><%= event.dress_code_note %></p>
+        </article>
+      <% } %>
+
+      <% if (event.accessibility_note) { %>
+        <article class="ci-frost-card">
+          <h3 class="ci-serif" style="font-size:1.1rem;text-transform:uppercase;letter-spacing:.1em;">Accessibility</h3>
+          <p><%= event.accessibility_note %></p>
+        </article>
+      <% } %>
+
+      <% if (event.contact_details) { %>
+        <article class="ci-frost-card">
+          <h3 class="ci-serif" style="font-size:1.1rem;text-transform:uppercase;letter-spacing:.1em;">Questions</h3>
+          <p><%= event.contact_details %></p>
+        </article>
+      <% } %>
+    </div>
+  </section>
+
+  <script>
+    document.getElementById('ci-copy-address').addEventListener('click', async function () {
+      var feedback = document.getElementById('ci-copy-feedback');
+      try {
+        await navigator.clipboard.writeText(document.getElementById('ci-venue-address').textContent.trim());
+        feedback.textContent = 'Address copied.';
+      } catch (e) {
+        feedback.textContent = 'Please select and copy the address above.';
+      }
+      setTimeout(function () { feedback.textContent = ''; }, 2600);
+    });
+  </script>
+</body>
+</html>

@@ -108,6 +108,7 @@ async function update(id, fields) {
     acceptButtonText, declineButtonText, declineMessage, cardImage, cardImagePublicId,
     itinerary, invitationMessage, contactDetails, theme, accessMode,
     eventType, subtitle, footerNote, eventTimeNote,
+    invitationHeading, dressCodeNote, accessibilityNote,
   } = fields;
   // input_20 Phase 2: wedding_date deliberately does NOT use absentToNull()'s
   // rule (explicit '' = clear it) — a date has no meaningful "cleared but not
@@ -145,8 +146,11 @@ async function update(id, fields) {
        event_type = COALESCE($15, event_type),
        subtitle = COALESCE($16, subtitle),
        footer_note = COALESCE($17, footer_note),
-       event_time_note = COALESCE($18, event_time_note)
-     WHERE id = $19 RETURNING *`,
+       event_time_note = COALESCE($18, event_time_note),
+       invitation_heading = COALESCE($19, invitation_heading),
+       dress_code_note = COALESCE($20, dress_code_note),
+       accessibility_note = COALESCE($21, accessibility_note)
+     WHERE id = $22 RETURNING *`,
     [
       coupleNames, weddingDate, venue,
       themeColor || null, acceptButtonText || null, declineButtonText || null, declineMessage || null,
@@ -154,8 +158,30 @@ async function update(id, fields) {
       absentToNull(itinerary), absentToNull(invitationMessage), absentToNull(contactDetails),
       theme || null, accessMode || null, eventType || null,
       absentToNull(subtitle), absentToNull(footerNote), absentToNull(eventTimeNote),
+      absentToNull(invitationHeading), absentToNull(dressCodeNote), absentToNull(accessibilityNote),
       id,
     ]
+  );
+  return rows[0];
+}
+
+// Custom Invitation theme: background_image lives directly on the events
+// row (unlike gallery/cameo photos, which are separate child tables) —
+// these two mirror galleryModel/cameoModel's own upload/delete shape at
+// the row level, kept separate from update() above since the edit form's
+// existing single-file upload (cardImage) never touches this field.
+async function setBackgroundImage(id, url, publicId) {
+  const { rows } = await pool.query(
+    'UPDATE events SET background_image = $1, background_image_public_id = $2 WHERE id = $3 RETURNING *',
+    [url, publicId, id]
+  );
+  return rows[0];
+}
+
+async function clearBackgroundImage(id) {
+  const { rows } = await pool.query(
+    'UPDATE events SET background_image = NULL, background_image_public_id = NULL WHERE id = $1 RETURNING *',
+    [id]
   );
   return rows[0];
 }
@@ -187,4 +213,5 @@ async function getStats(id) {
 module.exports = {
   create, findAll, findById, update, setStatus, getStats,
   findAllByClientId, findByIdAndClientId, findAllByClientIdForAdmin,
+  setBackgroundImage, clearBackgroundImage,
 };

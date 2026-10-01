@@ -78,7 +78,18 @@ async function deleteCameoPhoto(req, res) {
   res.redirect('/client/assets');
 }
 
+async function uploadBackgroundImage(req, res) {
+  await adminController.uploadBackgroundImageCore(req.session.clientEventId, req.file);
+  res.redirect('/client/assets');
+}
+
+async function deleteBackgroundImage(req, res) {
+  await adminController.deleteBackgroundImageCore(req.session.clientEventId);
+  res.redirect('/client/assets');
+}
+
 module.exports = {
   bootstrap, showDashboard, showEditForm, showAssets, updateEvent, publish,
   addGuests, uploadGalleryPhotos, deleteGalleryPhoto, uploadCameoPhoto, deleteCameoPhoto,
+  uploadBackgroundImage, deleteBackgroundImage,
 };

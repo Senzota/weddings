@@ -1,0 +1,206 @@
+<%#
+  Custom Invitation — admin/client/preview dashboard.ejs
+  =====================================================================
+  Follows Themes-plan §4: one file, three audiences, driven by two flags
+  the controller passes in.
+
+  Corrections against the real app (verified, not assumed):
+    - event.event_date does not exist; the real field is wedding_date.
+    - There is no GET "/guests/new" page — guests are bulk-added via a
+      POST <basePath>/guests form with a one-guest-per-line textarea
+      (admin.controller.js#bulkAddGuestsCore / client.controller.js
+      #addGuests both read req.body.guestList this way).
+    - Export is a fixed admin-only path, /admin/events/:id/export — never
+      basePath-relative (no client equivalent exists at all).
+    - Admin and client do NOT share one "<basePath>/status" toggle: admin
+      has POST <basePath>/status (draft<->live toggle) and POST
+      <basePath>/delete; the client instead only ever gets a one-way
+      POST /client/publish (no toggle back to draft, no delete).
+    - background_image is now managed on the shared Assets page (this
+      release's new generic field there), not a second upload slot here
+      — this dashboard only shows its current state with a link to Assets.
+  =====================================================================
+%>
+<%
+  var isClient = typeof clientMode !== 'undefined' && clientMode;
+  var isPreview = typeof previewMode !== 'undefined' && previewMode;
+  var basePath = isClient ? '/client' : ('/admin/events/' + event.id);
+%>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= event.couple_names %> — <%= isClient ? 'Your Event' : 'Admin' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/admin-shared.css">
+  <link rel="stylesheet" href="/themes/custom-invitation/theme.css">
+</head>
+<body class="bb-admin ci-admin">
+
+  <% if (isPreview) { %>
+    <p class="ci-readonly-note" style="margin-bottom:1rem;">Preview mode — read-only simulation of the client view. No controls here are functional.</p>
+    <% if (typeof error !== 'undefined' && error) { %><p class="ci-status-msg"><%= error %></p><% } %>
+  <% } %>
+
+  <header style="margin-bottom:1.5rem;">
+    <h1 class="ci-serif" style="margin:0 0 .25rem;font-size:1.8rem;"><%= event.couple_names %></h1>
+    <p class="ci-readonly-note" style="font-style:normal;">
+      <%= event.wedding_date ? formatEventDate(event.wedding_date) : 'Date not set' %> &middot; <%= event.status %> &middot; access mode: <%= event.access_mode %>
+    </p>
+  </header>
+
+  <div class="ci-admin-grid">
+
+    <!-- Card image (Page One) — still edited via the shared edit form's
+         existing single-file upload, unchanged by this release. -->
+    <section class="ci-admin-card bb-admin-tile">
+      <h3>Card image (Page One)</h3>
+      <% if (event.card_image) { %>
+        <div class="ci-image-tile"><img src="<%= event.card_image %>" alt=""></div>
+      <% } else { %>
+        <div class="ci-image-tile ci-image-missing">Not uploaded yet</div>
+      <% } %>
+      <% if (!isPreview) { %>
+        <a class="bb-btn ci-btn" href="<%= basePath %>/edit" style="display:inline-block;text-decoration:none;padding:.6rem 1rem;">Change in Edit Details</a>
+      <% } %>
+    </section>
+
+    <!-- Background image (Page Two) — new generic field, managed on the
+         shared Assets page (this release), not a bespoke route here. -->
+    <section class="ci-admin-card bb-admin-tile">
+      <h3>Background image (Page Two)</h3>
+      <% if (event.background_image) { %>
+        <div class="ci-image-tile"><img src="<%= event.background_image %>" alt=""></div>
+      <% } else { %>
+        <div class="ci-image-tile ci-image-missing">Not uploaded yet</div>
+      <% } %>
+      <% if (!isPreview) { %>
+        <a class="bb-btn ci-btn" href="<%= basePath %>/assets" style="display:inline-block;text-decoration:none;padding:.6rem 1rem;">Manage in Assets</a>
+      <% } %>
+    </section>
+
+    <!-- Event details — edited via the SHARED edit-event.ejs, never here -->
+    <section class="ci-admin-card bb-admin-tile">
+      <h3>Event details</h3>
+      <p>Venue: <%= event.venue || '—' %></p>
+      <p>Access mode: <%= event.access_mode %></p>
+      <% if (!isPreview) { %>
+        <a class="bb-btn ci-btn" href="<%= basePath %>/edit" style="display:inline-block;text-decoration:none;padding:.6rem 1rem;">Edit details</a>
+      <% } %>
+    </section>
+
+    <!-- Quick links to the guest-facing secondary pages -->
+    <section class="ci-admin-card bb-admin-tile">
+      <h3>Guest-facing pages</h3>
+      <div class="ci-tile-row">
+        <a class="ci-tile" href="/invite/<%= event.id %>" target="_blank">Invitation</a>
+        <a class="ci-tile" href="/invite/<%= event.id %>/gallery" target="_blank">Gallery</a>
+        <a class="ci-tile" href="/invite/<%= event.id %>/cameos" target="_blank">Cameos</a>
+        <a class="ci-tile" href="/invite/<%= event.id %>/other-details" target="_blank">Other Details</a>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Guest table — column set depends on access_mode, identical rule
+       for every theme (Themes-plan §4 table):
+         open        -> no guest table at all
+         recognized  -> Name | Seats | Code | RSVP
+         closed      -> Name | Seats | Code | RSVP | Checked in -->
+  <% if (event.access_mode !== 'open') { %>
+    <section class="ci-admin-card bb-admin-tile" style="margin-top:1.25rem;">
+      <h3>Guests</h3>
+      <table class="ci-guest-table">
+        <thead>
+          <tr>
+            <th>Name</th><th>Seats</th><th>Code</th><th>RSVP</th>
+            <% if (event.access_mode === 'closed') { %><th>Checked in</th><% } %>
+          </tr>
+        </thead>
+        <tbody>
+          <% (guests || []).forEach(function (g) { %>
+            <tr>
+              <td><%= g.name %></td>
+              <td><%= g.seat_count %></td>
+              <td>
+                <span><%= g.passcode %></span>
+                <% if (!isPreview) { %><button type="button" class="ci-btn ci-btn-outline copy-btn" data-copy="<%= g.passcode %>" style="padding:.2rem .6rem;font-size:.75rem;margin-left:.4rem;">Copy</button><% } %>
+              </td>
+              <td><%= g.rsvp_status %></td>
+              <% if (event.access_mode === 'closed') { %>
+                <td><%= g.checked_in ? 'Yes' : 'No' %></td>
+              <% } %>
+            </tr>
+          <% }) %>
+          <% if (!guests || guests.length === 0) { %>
+            <tr><td colspan="<%= event.access_mode === 'closed' ? 5 : 4 %>">No guests yet.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <% if (!isPreview) { %>
+        <div style="margin-top:1rem;">
+          <p style="font-size:.85rem;color:var(--ci-ink-soft);">One guest per line: <code>Name, seat count</code></p>
+          <form method="POST" action="<%= basePath %>/guests">
+            <textarea name="guestList" rows="4" placeholder="Sarah, 2&#10;James, 4" style="width:100%;padding:.6em .8em;border:1px solid var(--ci-line);border-radius:.6rem;font:inherit;"></textarea>
+            <div class="ci-btn-row" style="margin-top:.75rem;">
+              <button type="submit" class="bb-btn ci-btn" style="padding:.7rem 1rem;">Add Guests</button>
+              <% if (!isClient) { %>
+                <a class="bb-btn ci-btn" href="/admin/events/<%= event.id %>/export" style="text-decoration:none;padding:.7rem 1rem;">Export Excel</a>
+              <% } %>
+            </div>
+          </form>
+        </div>
+      <% } %>
+    </section>
+  <% } %>
+
+  <!-- Draft/Live + Delete — admin gets a full toggle plus delete; the
+       client only ever gets a one-way Publish (no draft-toggle, no
+       delete: matches every other theme's own client-side status
+       section, e.g. views/admin/themes/plain-card/dashboard.ejs). Never
+       shown in preview at all. -->
+  <% if (isPreview) { %>
+    <section class="ci-admin-card bb-admin-tile" style="margin-top:1.25rem;">
+      <p>Status: <%= event.status === 'live' ? 'Live' : 'Draft' %></p>
+    </section>
+  <% } else if (isClient) { %>
+    <section class="ci-admin-card bb-admin-tile" style="margin-top:1.25rem;">
+      <% if (event.status === 'live') { %>
+        <p>Status: Live</p>
+      <% } else { %>
+        <form method="POST" action="/client/publish">
+          <button type="submit" class="bb-btn ci-btn" style="padding:.7rem 1.1rem;">Publish (Go Live)</button>
+        </form>
+      <% } %>
+    </section>
+  <% } else { %>
+    <section class="ci-admin-card bb-admin-tile" style="margin-top:1.25rem;">
+      <form method="POST" action="/admin/events/<%= event.id %>/status" style="display:inline;">
+        <button class="bb-btn ci-btn" type="submit" style="padding:.7rem 1.1rem;">
+          <%= event.status === 'live' ? 'Move to Draft' : 'Publish (Go Live)' %>
+        </button>
+      </form>
+      <form method="POST" action="/admin/events/<%= event.id %>/delete" style="display:inline;margin-left:.75rem;" onsubmit="return confirm('Delete this event permanently? Summary metrics will be kept, but all guest and gatepass data will be gone for good.');">
+        <button class="ci-btn ci-btn-outline" type="submit">Delete Event</button>
+      </form>
+      <p style="margin-top:.75rem;color:var(--ci-ink-soft);">Status: <%= event.status %></p>
+    </section>
+  <% } %>
+
+  <% if (!isPreview) { %>
+    <script>
+      document.querySelectorAll('.copy-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+            var original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(function () { btn.textContent = original; }, 1500);
+          });
+        });
+      });
+    </script>
+  <% } %>
+</body>
+</html>

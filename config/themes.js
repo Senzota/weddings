@@ -83,20 +83,70 @@ const AVAILABLE_THEMES = [
     swatchColors: ['#f4eee5', '#a98456', '#241f1a', '#fffdf9'],
     tagline: 'A quiet, editorial keepsake card for any celebration.',
     googleFonts: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap' },
+  // Custom Invitation — same multi-event-type pattern as Plain Card: one
+  // entry per type, every field byte-identical except eventType, for the
+  // same .find(slug)-safety reason documented above.
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'wedding',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'birthday',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'bridal-shower',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'baby-shower',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'engagement',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'anniversary',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'graduation',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'corporate',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
+  { slug: 'custom-invitation', label: 'Custom Invitation', eventType: 'other',
+    swatchColors: ['#211f1a', '#f5f1e8', '#5c574d', '#fbfaf6'],
+    tagline: 'Your own design, presented exactly as you made it.',
+    googleFonts: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap' },
 ];
 
 const DEFAULT_THEME = 'botanical-bloom';
 
+// Judgment call (see PROMPT-REPORT.md's Custom Invitation phase, "Issues
+// found"): the task instruction said
+// "add it to DEFAULT_THEME_BY_EVENT_TYPE for each [of the nine types]",
+// which read literally would also reassign wedding/birthday's own
+// deliberately-chosen flagship defaults (botanical-bloom, lady-gianna) to
+// custom-invitation. Those two predate Plain Card and were left untouched
+// when Plain Card became the default for the other seven types in the
+// prior release — kept that same precedent here rather than silently
+// changing what an un-themed new wedding/birthday event falls back to.
+// custom-invitation replaces plain-card as the fallback for the other
+// seven types, which had no prior deliberate default.
 const DEFAULT_THEME_BY_EVENT_TYPE = {
   wedding: 'botanical-bloom',
   birthday: 'lady-gianna',
-  'bridal-shower': 'plain-card',
-  'baby-shower': 'plain-card',
-  engagement: 'plain-card',
-  anniversary: 'plain-card',
-  graduation: 'plain-card',
-  corporate: 'plain-card',
-  other: 'plain-card',
+  'bridal-shower': 'custom-invitation',
+  'baby-shower': 'custom-invitation',
+  engagement: 'custom-invitation',
+  anniversary: 'custom-invitation',
+  graduation: 'custom-invitation',
+  corporate: 'custom-invitation',
+  other: 'custom-invitation',
 };
 
 function themesForEventType(eventType) {

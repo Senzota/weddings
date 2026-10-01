@@ -1,0 +1,54 @@
+<%#
+  Custom Invitation — gallery.ejs
+  Real contract (guest.controller.js#showGallery): for a recognized/closed
+  event, `photos` is null until a passcode is resolved (session or
+  ?passcode= query fallback) — the package's original version assumed
+  photos is always an array and had no passcode-prompt branch at all,
+  which would have thrown on direct/bookmarked access. `photos` items
+  use `image_url`, not `url` (galleryModel.findByEvent's real column).
+  `event.background_image` is a plain TEXT URL, not { url }.
+%>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= event.couple_names %> — Gallery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/custom-invitation/theme.css">
+</head>
+<body class="ci-shell">
+  <section class="ci-secondary-stage">
+    <% if (event.background_image) { %>
+      <img class="ci-details-photo" src="<%= event.background_image %>" alt="">
+    <% } %>
+    <div class="ci-details-wash"></div>
+
+    <div class="ci-details-inner">
+      <a class="ci-back-link" href="/invite/<%= event.id %>">&larr; Back to invitation</a>
+      <header class="ci-details-header">
+        <p class="ci-kicker">A few moments</p>
+        <h2 class="ci-serif">Gallery</h2>
+      </header>
+
+      <% if (photos === null) { %>
+        <article class="ci-frost-card" style="text-align:center;">
+          <p class="ci-status-msg" style="margin-bottom:1rem;"><%= typeof error !== 'undefined' && error ? error : 'Enter your passcode to view the gallery.' %></p>
+          <form method="GET" action="/invite/<%= event.id %>/gallery">
+            <input class="ci-input" type="text" name="passcode" placeholder="Passcode" required autocapitalize="characters" autocomplete="off">
+            <button class="ci-btn ci-btn-ink" type="submit" style="width:100%;margin-top:.75rem;">View Gallery</button>
+          </form>
+        </article>
+      <% } else if (photos.length === 0) { %>
+        <p class="ci-empty-state">No photos have been shared yet — check back soon.</p>
+      <% } else { %>
+        <div class="ci-gallery-grid">
+          <% photos.forEach(function (photo) { %>
+            <img src="<%= photo.image_url %>" alt="" loading="lazy">
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </section>
+</body>
+</html>

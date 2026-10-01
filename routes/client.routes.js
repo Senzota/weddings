@@ -56,6 +56,8 @@ router.post('/assets/gallery', requireClient, upload.array('photos', 20), asyncH
 router.post('/assets/gallery/:photoId/delete', requireClient, asyncHandler(clientController.deleteGalleryPhoto));
 router.post('/assets/cameo', requireClient, upload.single('photo'), asyncHandler(clientController.uploadCameoPhoto));
 router.post('/assets/cameo/:photoId/delete', requireClient, asyncHandler(clientController.deleteCameoPhoto));
+router.post('/assets/background-image', requireClient, upload.single('backgroundImage'), asyncHandler(clientController.uploadBackgroundImage));
+router.post('/assets/background-image/delete', requireClient, asyncHandler(clientController.deleteBackgroundImage));
 
 // Public bootstrap — no requireClient (this route IS the way clientEventId
 // gets set in the first place). Must stay registered after /edit and

@@ -1,0 +1,188 @@
+<%#
+  Custom Invitation — invitation.ejs
+  =====================================================================
+  Real variables passed by guest.controller.js#renderInvitation (verified
+  against the actual controller, not assumed):
+
+    event         — event row. card_image / background_image are plain
+                    TEXT URL strings (or null), not { url, public_id }
+                    objects. itinerary is plain newline-separated text,
+                    not an array — each line is parsed below as
+                    "TIME - LABEL" (the convention every itinerary in this
+                    app is already typed in, per edit-event.ejs's own
+                    placeholder text), falling back to a label-only row if
+                    a line has no " - " in it.
+    state         — one of: null | 'open' | 'card' | 'confirmed' | 'qr' | 'expired'
+    guest         — { name, seat_count, passcode, rsvp_status } — absent
+                    entirely when access_mode === 'open'
+    welcomeBack   — true only when state === 'card' and the guest
+                    previously declined (server-computed; more precise
+                    than re-deriving it from guest.rsvp_status here)
+    qrDataUrl     — base64 PNG data URL, present only when state === 'qr'
+    error         — passcode-mismatch message, set only after a failed
+                    /verify redirect (not "passcodeError")
+    assetExists   — a LOCAL FILESYSTEM check (fs.existsSync under public/),
+                    for bundled static assets — never appropriate for a
+                    Cloudinary URL like card_image/background_image, which
+                    are simple truthy checks instead.
+  No csrfToken: this app has no CSRF middleware anywhere.
+  =====================================================================
+%>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= event.couple_names %> — Invitation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/themes/custom-invitation/theme.css">
+</head>
+<body class="ci-shell<%= state === null ? ' ci-locked' : '' %>">
+
+  <% if (state === null) { %>
+    <!-- =========== PASSCODE GATE (recognized / closed, not yet verified) ===========
+         Security-by-omission: nothing below this overlay is ever rendered
+         into the response for this request — it is not just hidden with
+         CSS. This form posts the passcode to the server as every other
+         theme does. -->
+    <aside class="ci-access-overlay" role="dialog" aria-modal="true" aria-labelledby="ci-access-title">
+      <div class="ci-access-panel">
+        <p class="ci-kicker">Private invitation</p>
+        <h1 id="ci-access-title" class="ci-title ci-serif">A small key to enter</h1>
+        <p class="ci-copy">Please enter the passcode shared with you to view the celebration details.</p>
+        <form method="POST" action="/invite/<%= event.id %>/verify" novalidate>
+          <label for="passcode" class="ci-kicker" style="display:block;margin-bottom:.4rem;">Passcode</label>
+          <input id="passcode" class="ci-input" type="text" name="passcode" autocapitalize="characters" autocomplete="off" autofocus>
+          <p class="ci-status-msg" aria-live="polite"><%= typeof error !== 'undefined' && error ? error : '' %></p>
+          <button class="ci-btn ci-btn-ink" type="submit" style="width:100%;margin-top:.5rem;">Enter invitation</button>
+        </form>
+      </div>
+    </aside>
+
+  <% } else { %>
+    <%
+      var itineraryLines = (event.itinerary || '').split('\n').map(function (line) { return line.trim(); }).filter(Boolean);
+      var itineraryItems = itineraryLines.map(function (line) {
+        var idx = line.indexOf(' - ');
+        return idx === -1 ? { time: '', label: line } : { time: line.slice(0, idx), label: line.slice(idx + 3) };
+      });
+    %>
+
+    <!-- =========== PAGE ONE — the client's own custom card, full-bleed =========== -->
+    <section class="ci-card-stage" aria-label="Invitation card">
+      <% if (event.card_image) { %>
+        <img src="<%= event.card_image %>" alt="Invitation card">
+      <% } else { %>
+        <div class="ci-image-missing" style="position:absolute;inset:0;display:grid;place-items:center;color:#5c574d;">Card image not uploaded yet</div>
+      <% } %>
+      <div class="ci-scroll-cue">Scroll to explore &#9662;</div>
+    </section>
+
+    <!-- =========== PAGE TWO — details over the client's background image =========== -->
+    <section class="ci-details-stage">
+      <% if (event.background_image) { %>
+        <img class="ci-details-photo" src="<%= event.background_image %>" alt="">
+      <% } %>
+      <div class="ci-details-wash"></div>
+
+      <div class="ci-details-inner">
+        <header class="ci-details-header">
+          <p class="ci-kicker">The gathering</p>
+          <h2 class="ci-serif"><%= event.invitation_heading || 'For the day, and all that follows' %></h2>
+        </header>
+
+        <% if (state !== 'open') { %>
+          <!-- status / RSVP block — only exists for recognized/closed (personalized) -->
+          <article class="ci-frost-card">
+            <% if (state === 'card') { %>
+              <% if (welcomeBack) { %>
+                <div class="ci-declined-banner">Welcome back — you previously declined. You're still very welcome to accept.</div>
+              <% } %>
+              <h3 class="ci-serif">Will you join us, <%= guest.name %>?</h3>
+              <p><%= event.invitation_message || 'We would love to celebrate with you. Please let us know.' %></p>
+              <form method="POST" action="/invite/<%= event.id %>/rsvp" class="ci-btn-row">
+                <input type="hidden" name="passcode" value="<%= guest.passcode %>">
+                <button class="ci-btn ci-btn-ink" type="submit" name="response" value="accepted"><%= event.accept_button_text %></button>
+                <button class="ci-btn ci-btn-outline" type="submit" name="response" value="declined"><%= event.decline_button_text %></button>
+              </form>
+
+            <% } else if (state === 'confirmed') { %>
+              <h3 class="ci-serif">You're confirmed, <%= guest.name %></h3>
+              <p>Thank you for letting us know — we can't wait to celebrate with you.</p>
+
+            <% } else if (state === 'qr') { %>
+              <h3 class="ci-serif">You're confirmed, <%= guest.name %></h3>
+              <p>We'll see you there. Your gatepass is ready whenever you need it.</p>
+              <button class="ci-btn ci-btn-ink" type="button" id="ci-view-qr">View my QR gatepass</button>
+
+            <% } else if (state === 'expired') { %>
+              <h3 class="ci-serif">Thank you, <%= guest.name %></h3>
+              <p>Thank you for celebrating with us.</p>
+            <% } %>
+          </article>
+        <% } %>
+
+        <!-- itinerary — always shown once Page Two is visible -->
+        <% if (itineraryItems.length > 0) { %>
+          <article class="ci-frost-card">
+            <h3 class="ci-serif">Itinerary</h3>
+            <% itineraryItems.forEach(function (item) { %>
+              <div class="ci-timeline-row">
+                <% if (item.time) { %><span class="ci-time"><%= item.time %></span><% } %>
+                <span class="ci-what"><%= item.label %></span>
+              </div>
+            <% }) %>
+          </article>
+        <% } %>
+
+        <!-- Cameos / Gallery / Other Details — each its own route, not inline content -->
+        <div class="ci-tile-row">
+          <a class="ci-tile" href="/invite/<%= event.id %>/cameos<%= (state !== 'open' && guest) ? '?passcode=' + guest.passcode : '' %>">Cameos</a>
+          <a class="ci-tile" href="/invite/<%= event.id %>/gallery<%= (state !== 'open' && guest) ? '?passcode=' + guest.passcode : '' %>">Gallery</a>
+          <a class="ci-tile" href="/invite/<%= event.id %>/other-details">Other Details</a>
+        </div>
+
+        <footer class="ci-footer ci-serif">We cannot wait to celebrate with you.</footer>
+      </div>
+    </section>
+
+    <% if (state === 'qr') { %>
+      <!-- QR shown only inside this modal, opened by the button above, never
+           inline — only ever reached for a verified closed-event guest with
+           a non-expired gatepass (the exact server-side condition
+           guest.controller.js already computes for state === 'qr'). -->
+      <div id="ci-qr-backdrop" class="ci-qr-backdrop" hidden>
+        <div class="ci-qr-modal" role="dialog" aria-modal="true" aria-label="Your QR gatepass">
+          <p class="ci-kicker">Your gatepass</p>
+          <h3 class="ci-serif" style="margin:.4rem 0 0;">Show this at the door</h3>
+          <img src="<%= qrDataUrl %>" alt="QR gatepass code" width="220" height="220">
+          <button class="ci-btn ci-btn-outline" type="button" id="ci-close-qr">Close</button>
+        </div>
+      </div>
+      <script>
+        (function () {
+          var trigger = document.getElementById('ci-view-qr');
+          var backdrop = document.getElementById('ci-qr-backdrop');
+          var closeBtn = document.getElementById('ci-close-qr');
+          if (!trigger || !backdrop || !closeBtn) return;
+          trigger.addEventListener('click', function () {
+            backdrop.hidden = false;
+            document.body.classList.add('ci-locked');
+          });
+          closeBtn.addEventListener('click', function () {
+            backdrop.hidden = true;
+            document.body.classList.remove('ci-locked');
+          });
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !backdrop.hidden) {
+              backdrop.hidden = true;
+              document.body.classList.remove('ci-locked');
+            }
+          });
+        })();
+      </script>
+    <% } %>
+
+  <% } %>
+</body>
+</html>
